@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · CareConnect Babysitting</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="border-bottom bg-white"><nav class="navbar container py-3" aria-label="Main navigation"><a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">CareConnect <span class="brand-service">Babysitting</span></a><a class="nav-link" asp-controller="Home" asp-action="Privacy">Privacy</a></nav></header>
+    <main id="main-content" class="container">@RenderBody()</main>
+    <footer class="border-top mt-auto py-4"><div class="container text-secondary">CareConnect · Babysitting · Care with confidence</div></footer>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
