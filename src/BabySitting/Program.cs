@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using BabySitting.Data;
+using BabySitting.Repositories;
 using BabySitting.Services.Auth;
 using BabySitting.Services.Messaging;
 
@@ -10,6 +11,8 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<BabySittingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.EnableRetryOnFailure()));
+// Scoped (one per HTTP request) because it uses the scoped DbContext.
+builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>

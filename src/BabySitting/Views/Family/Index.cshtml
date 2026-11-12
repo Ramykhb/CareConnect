@@ -1,0 +1,70 @@
+@model FamilyProfile?
+@{
+    ViewData["Title"] = "My family";
+}
+
+@if (Model is null)
+{
+    <div class="page-header">
+        <div>
+            <h1>My family</h1>
+            <p>Tell sitters about your children’s ages, health needs and routines.</p>
+        </div>
+    </div>
+    <section class="empty-state">
+        <span class="add-circle"><svg class="line-icon" width="40" height="40"><use href="#icon-family" /></svg></span>
+        <h2>No family profile yet</h2>
+        <p>Create your family profile so sitters know who they’ll be caring for.</p>
+        <a class="btn btn-lime" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>Create family profile</a>
+    </section>
+}
+else
+{
+    string ages = Model.YoungestChildAgeYears == Model.OldestChildAgeYears
+        ? $"{Model.YoungestChildAgeYears} {(Model.YoungestChildAgeYears == 1 ? "year" : "years")}"
+        : $"{Model.YoungestChildAgeYears}–{Model.OldestChildAgeYears} years";
+
+    <div class="page-header">
+        <div>
+            <h1>My family</h1>
+            <p>Sitters see this information before they accept a request.</p>
+        </div>
+        <div class="header-actions">
+            <a class="btn btn-ghost" asp-action="Delete"><svg class="line-icon"><use href="#icon-trash" /></svg>Delete</a>
+            <a class="btn btn-dark" asp-action="Edit"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit profile</a>
+        </div>
+    </div>
+
+    <div class="details-layout">
+        <section class="card profile-card" aria-label="Family summary">
+            <div class="pet-photo species-rabbit">
+                <span class="pet-initial" aria-hidden="true"><svg class="line-icon" width="56" height="56"><use href="#icon-family" /></svg></span>
+            </div>
+            <div>
+                <h2>@Model.NumberOfChildren @(Model.NumberOfChildren == 1 ? "child" : "children")</h2>
+                <span class="pet-meta">@Model.City</span>
+            </div>
+            <div class="facts">
+                <div class="fact"><small>Children</small><strong>@Model.NumberOfChildren</strong></div>
+                <div class="fact"><small>Ages</small><strong>@ages</strong></div>
+                <div class="fact"><small>City</small><strong>@Model.City</strong></div>
+                <div class="fact"><small>Created</small><strong>@Model.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy")</strong></div>
+            </div>
+        </section>
+
+        <section class="card" aria-label="Care details">
+            <div class="info-section">
+                <h3>Health notes</h3>
+                @if (string.IsNullOrWhiteSpace(Model.HealthNotes)) { <p class="muted">No health notes yet.</p> } else { <p>@Model.HealthNotes</p> }
+            </div>
+            <div class="info-section">
+                <h3>Daily routines</h3>
+                @if (string.IsNullOrWhiteSpace(Model.Routines)) { <p class="muted">No routines yet.</p> } else { <p>@Model.Routines</p> }
+            </div>
+            <div class="info-section">
+                <h3>Care preferences</h3>
+                @if (string.IsNullOrWhiteSpace(Model.CarePreferences)) { <p class="muted">No care preferences yet.</p> } else { <p>@Model.CarePreferences</p> }
+            </div>
+        </section>
+    </div>
+}

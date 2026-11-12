@@ -1,0 +1,49 @@
+@* Shared by Create and Edit, like _CourseForm in the course tutorial. *@
+@using BabySitting.ViewModels
+@model FamilyFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+<h2>Your family</h2>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="NumberOfChildren"></label>
+        <input asp-for="NumberOfChildren" type="number" min="1" max="20" />
+        <span asp-validation-for="NumberOfChildren" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="City"></label>
+        <input asp-for="City" placeholder="e.g. Beirut" />
+        <span asp-validation-for="City" class="field-error"></span>
+    </div>
+</div>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="YoungestChildAgeYears"></label>
+        <input asp-for="YoungestChildAgeYears" type="number" min="0" max="17" />
+        <span asp-validation-for="YoungestChildAgeYears" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="OldestChildAgeYears"></label>
+        <input asp-for="OldestChildAgeYears" type="number" min="0" max="17" />
+        <span asp-validation-for="OldestChildAgeYears" class="field-error"></span>
+    </div>
+</div>
+
+<h2>Care details</h2>
+<p class="pet-meta">For privacy we never ask for children’s names, birth dates or schools.</p>
+<div class="field">
+    <label asp-for="HealthNotes"></label>
+    <textarea asp-for="HealthNotes" placeholder="Allergies, medication and dosage, conditions, paediatrician contact…"></textarea>
+    <span asp-validation-for="HealthNotes" class="field-error"></span>
+</div>
+<div class="field">
+    <label asp-for="Routines"></label>
+    <textarea asp-for="Routines" placeholder="Meal times, nap and bedtime, screen-time rules…"></textarea>
+    <span asp-validation-for="Routines" class="field-error"></span>
+</div>
+<div class="field">
+    <label asp-for="CarePreferences"></label>
+    <textarea asp-for="CarePreferences" placeholder="Languages, activities, things to avoid…"></textarea>
+    <span asp-validation-for="CarePreferences" class="field-error"></span>
+</div>
