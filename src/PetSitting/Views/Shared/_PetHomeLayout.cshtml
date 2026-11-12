@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f7f3" />
+    <title>@ViewData["Title"] · CareConnect</title>
+    <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pet-home.css" asp-append-version="true" />
+</head>
+<body class="pet-home">
+    <a class="auth-skip" href="#main-content">Skip to content</a>
+    <partial name="_PetIcons" />
+    <header class="home-header">
+        <a class="auth-brand" asp-controller="Home" asp-action="Index"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>CareConnect</a>
+        <nav class="desktop-nav" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#services">Services</a><a asp-area="Identity" asp-page="/Account/Register">Find sitters</a><a href="#care-pricing">Pricing</a><a href="#become-a-sitter">Become a sitter</a></nav>
+        <div class="header-actions">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="header-login" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                <a class="home-button dark" asp-area="Identity" asp-page="/Account/Manage/Index">My account<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
+            }
+            else
+            {
+                <a class="header-login" asp-area="Identity" asp-page="/Account/Login">Log in</a>
+                <a class="home-button dark" asp-area="Identity" asp-page="/Account/Register"><svg class="line-icon"><use href="#icon-arrow" /></svg>Get started</a>
+            }
+        </div>
+        <button type="button" class="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-navigation" aria-label="Toggle navigation"><svg class="line-icon"><use href="#icon-menu" /></svg></button>
+        <nav id="mobile-navigation" class="mobile-navigation" aria-label="Mobile navigation" hidden><a href="#how-it-works">How it works</a><a href="#services">Services</a><a asp-area="Identity" asp-page="/Account/Register">Find sitters</a><a href="#care-pricing">Pricing</a><a href="#become-a-sitter">Become a sitter</a></nav>
+    </header>
+    <main id="main-content">@RenderBody()</main>
+    <footer class="home-footer">
+        <div class="footer-intro"><a class="auth-brand" asp-controller="Home" asp-action="Index"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>CareConnect</a><p>A little more care for Lebanon’s pet lovers.</p><div class="footer-icons"><a asp-controller="Home" asp-action="Privacy" aria-label="Privacy and contact information"><svg class="line-icon"><use href="#icon-mail" /></svg></a><a href="#trust-and-care" aria-label="Our approach to care"><svg class="line-icon"><use href="#icon-heart" /></svg></a><a href="#how-it-works" aria-label="How CareConnect works"><svg class="line-icon"><use href="#icon-chat" /></svg></a></div></div>
+        <div class="footer-column"><h2>Owners</h2><a asp-area="Identity" asp-page="/Account/Register">Find sitters</a><a href="#services">Services</a><a href="#care-pricing">Pricing</a><a href="#how-it-works">How it works</a></div>
+        <div class="footer-column"><h2>Sitters</h2><a asp-area="Identity" asp-page="/Account/Register" asp-route-accountType="Sitter">Become a sitter</a><a asp-area="Identity" asp-page="/Account/Login">Sitter portal</a><a href="#trust-and-care">Care &amp; safety</a><a href="#become-a-sitter">Sitting with CareConnect</a></div>
+        <div class="footer-column"><h2>CareConnect</h2><a href="#trust-and-care">Our approach</a><a asp-area="Identity" asp-page="/Account/Register">Join our community</a><a asp-area="Identity" asp-page="/Account/Login">Your account</a><a asp-controller="Home" asp-action="Privacy">Privacy policy</a></div>
+        <div class="footer-bottom"><span>© @DateTime.UtcNow.Year CareConnect. All rights reserved.</span><a asp-controller="Home" asp-action="Privacy">Privacy</a></div>
+    </footer>
+    <script src="~/js/pet-home.js" asp-append-version="true"></script>
+</body>
+</html>

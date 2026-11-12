@@ -1,12 +1,49 @@
-@{ ViewData["Title"] = "Welcome"; }
-<section class="welcome py-5">
-    <span class="badge rounded-pill text-bg-light mb-3">CareConnect · Pet Sitting</span>
-    <h1 class="display-4 fw-semibold">Care that feels like home.</h1>
-    <p class="lead mt-3">Thoughtful care for your pets, wherever life takes you.</p>
-    <p class="text-secondary">The foundation is ready. Accounts, care requests, and bookings are coming in the next development phases.</p>
+@{
+    Layout = "/Views/Shared/_PetHomeLayout.cshtml";
+    ViewData["Title"] = "Loving care for your pet";
+}
+<section class="home-hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+        <a class="hero-announcement" href="#how-it-works"><span>Made for you</span>A little care. A lot of peace of mind.</a>
+        <h1 id="hero-title">Loving care <span class="title-heart" aria-hidden="true"><svg class="line-icon"><use href="#icon-heart" /></svg></span><br />for your pet,<br /><span class="title-paw" aria-hidden="true"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span> anytime</h1>
+        <p class="hero-description">Find your pet’s kind of person. From daily walks to overnight stays — make room for more happy tails.</p>
+        <div class="care-finder" aria-label="Find your pet's care">
+            <a class="finder-detail" href="#services"><svg class="line-icon"><use href="#icon-moon" /></svg><span><small>Service</small>Overnight care</span></a>
+            <div class="finder-detail"><svg class="line-icon"><use href="#icon-pin" /></svg><span><small>Where</small>Lebanon</span></div>
+            <div class="finder-detail"><svg class="line-icon"><use href="#icon-calendar" /></svg><span><small>When</small>On your schedule</span></div>
+            <a class="home-button lime" asp-area="Identity" asp-page="/Account/Register"><svg class="line-icon"><use href="#icon-search" /></svg>Find a sitter</a>
+        </div>
+        <div class="hero-community"><div class="community-avatars" aria-hidden="true"><span>S</span><span>M</span><span>R</span><span>J</span></div><div><span class="community-heading"><span aria-hidden="true">♡</span> Big love for little paws</span><small>For pet people, by pet people.</small></div></div>
+    </div>
+    <div class="hero-art" aria-label="Illustration of a happy dog and cat">
+        <div class="pet-orbit"></div><img src="~/images/home-pets.svg" alt="A golden dog and a grey cat framed by a lime circle" width="440" height="440" fetchpriority="high" />
+        <div class="floating-review"><span aria-hidden="true">★★★★★</span>“Their home away from home.”</div>
+        <div class="floating-match"><span class="match-avatar" aria-hidden="true">O</span><span>Your kind of sitter<small>Care that fits their routine</small></span><span class="match-paw" aria-hidden="true"><svg><use href="#icon-paw" /></svg></span></div>
+        <div class="floating-accepted"><span class="accepted-icon"><svg class="line-icon"><use href="#icon-check" /></svg></span><span>A little peace of mind<small>For you. For them.</small></span></div>
+    </div>
 </section>
-<section class="row g-4 pb-5" aria-label="Our approach">
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Find your care</h2><p class="mb-0">Share your needs and discover sitters who fit your routine.</p></div></div>
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Stay connected</h2><p class="mb-0">Keep offers, bookings, and updates together in one place.</p></div></div>
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Plan together</h2><p class="mb-0">Coordinate pet sitting and babysitting for the same occasion.</p></div></div>
+<section class="home-stats home-container" aria-label="CareConnect at a glance">
+    <div><strong>4</strong><span>ways to care for your pet</span></div><div><strong>2</strong><span>dedicated care platforms</span></div><div><strong>1</strong><span>place to plan your care</span></div><div><strong>You</strong><span>choose the right sitter</span></div>
+</section>
+<section class="how-section home-container" id="how-it-works" aria-labelledby="how-title">
+    <div class="section-heading"><span class="eyebrow">How it works</span><h2 id="how-title">Care in three simple steps</h2><p>From their usual routine to a new best friend — it starts with you.</p></div>
+    <div class="steps-grid">
+        <article class="step-card"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-plus" /></svg></span><span class="step-number">01</span></div><h3>Tell us about your pet</h3><p>Their personality, their routine, and the kind of care they need. Every little detail matters.</p></article>
+        <article class="step-card lime-card"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-bolt" /></svg></span><span class="step-number">02</span></div><h3>Find their kind of sitter</h3><p>A familiar face for walks, company at home, or a cosy place to stay. Choose the right fit for your pet.</p></article>
+        <article class="step-card dark-card" id="care-pricing"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-card" /></svg></span><span class="step-number">03</span></div><h3>Plan the care, together</h3><p>Share your dates and budget, review offers, and agree on the details with your chosen sitter.</p></article>
+    </div>
+    <div class="service-list" id="services" aria-label="Pet care services"><span>Care for every kind of day</span><span class="service-chip">Pet sitting</span><span class="service-chip">Dog walking</span><span class="service-chip">Boarding</span><span class="service-chip">Drop-in visits</span></div>
+</section>
+<section class="trust-section home-container" id="trust-and-care" aria-labelledby="trust-title">
+    <div class="trust-heading"><span class="eyebrow">Trust &amp; care</span><h2 id="trust-title">Their comfort.<br />Your peace of mind.<br />Our starting point.</h2></div>
+    <div class="trust-grid">
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-shield" /></svg></span><div><h3>People before profiles</h3><p>Get to know your sitter’s experience and approach before you choose.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-lock" /></svg></span><div><h3>Your account, protected</h3><p>Email confirmation, secure sign-in, and optional two-factor authentication.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-bolt" /></svg></span><div><h3>Their routine comes first</h3><p>Walks, mealtimes, favourite toys — make the little things part of the plan.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-heart" /></svg></span><div><h3>A little extra understanding</h3><p>Because every pet has their own personality, pace, and way of feeling at home.</p></div></article>
+    </div>
+</section>
+<section class="sitter-section home-container" id="become-a-sitter" aria-labelledby="sitter-title">
+    <div class="sitter-copy"><span class="eyebrow">For pet lovers</span><h2 id="sitter-title">Turn your love for pets<br />into something rewarding</h2><p>Make time for what you love. Share your experience, set your availability, and help pets feel right at home.</p><div class="sitter-actions"><a class="home-button dark" asp-area="Identity" asp-page="/Account/Register" asp-route-accountType="Sitter"><svg class="line-icon"><use href="#icon-arrow" /></svg>Become a sitter</a><a class="home-button white" asp-area="Identity" asp-page="/Account/Login">Sitter log in</a></div></div>
+    <div class="sitter-art"><img src="~/images/home-sitter.svg" alt="A friendly pet sitter with a small black dog" width="400" height="350" loading="lazy" /><div class="sitter-bubble"><span class="accepted-icon"><svg class="line-icon"><use href="#icon-heart" /></svg></span><span>Good company<small>Goes both ways.</small></span></div></div>
 </section>
