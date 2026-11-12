@@ -1,0 +1,9 @@
+@page
+@model PetSitting.Areas.Identity.Pages.Account.Manage.DeletePersonalDataModel
+@{ ViewData["Title"] = "Delete account"; }
+<h1>Delete account</h1>
+<p class="alert alert-warning">Deleting your account is permanent. Accounts linked to care records require assistance from a platform manager.</p>
+<form method="post"><div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+<div class="mb-3"><label asp-for="Input.Password"></label><input asp-for="Input.Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Input.Password" class="text-danger"></span></div>
+<button type="submit" class="btn btn-danger">Delete my account permanently</button></form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

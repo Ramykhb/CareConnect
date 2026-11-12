@@ -109,7 +109,8 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             foreach (var foreignKey in entityType.GetForeignKeys())
-                foreignKey.DeleteBehavior = DeleteBehavior.NoAction;
+                foreignKey.DeleteBehavior = entityType.ClrType.Namespace == typeof(IdentityUserRole<Guid>).Namespace
+                    ? DeleteBehavior.Cascade : DeleteBehavior.NoAction;
             foreach (var property in entityType.GetProperties())
             {
                 if (property.ClrType == typeof(decimal) || property.ClrType == typeof(decimal?))

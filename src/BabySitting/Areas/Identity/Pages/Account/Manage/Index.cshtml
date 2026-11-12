@@ -1,0 +1,14 @@
+@page
+@model BabySitting.Areas.Identity.Pages.Account.Manage.IndexModel
+@{ ViewData["Title"] = "My profile"; }
+<h1>My profile</h1>
+@if (Model.StatusMessage is not null) { <p role="status" class="alert alert-info">@Model.StatusMessage</p> }
+<form method="post">
+<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+<div class="mb-3"><label asp-for="Input.FirstName"></label><input asp-for="Input.FirstName" class="form-control" /><span asp-validation-for="Input.FirstName" class="text-danger"></span></div>
+<div class="mb-3"><label asp-for="Input.LastName"></label><input asp-for="Input.LastName" class="form-control" /><span asp-validation-for="Input.LastName" class="text-danger"></span></div>
+<div class="mb-3"><label asp-for="Input.City"></label><input asp-for="Input.City" class="form-control" /><span asp-validation-for="Input.City" class="text-danger"></span></div>
+<div class="mb-3"><label asp-for="Input.PhoneNumber"></label><input asp-for="Input.PhoneNumber" class="form-control" /><span asp-validation-for="Input.PhoneNumber" class="text-danger"></span></div>
+<button class="btn btn-primary" type="submit">Save profile</button>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -102,11 +102,11 @@ Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit
 
 Incoming linked requests can have no local customer initially, but must carry a valid source, external request ID, and correlation ID. Attaching them to a verified local account is a later application workflow. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
-These are persistence models, not implemented workflows. Authorization, status transitions, matching request/offer/booking ownership, preventing overlapping sitter bookings, review eligibility, and payment processing must be enforced by application services in later work. Identity tables are present; registration/login UI and role initialization are not implemented yet.
+Identity authentication and role authorization are implemented. Care workflow status transitions, matching request/offer/booking ownership, preventing overlapping sitter bookings, review eligibility, and payment processing remain future service work.
 
 ## RabbitMQ
 
-Docker Compose manages RabbitMQ only, reusing your existing SQL Server. Copy `.env.example` to `.env`, set RabbitMQ credentials, and run:
+The main Docker Compose file manages RabbitMQ, reusing your existing SQL Server. The separate authentication Compose file runs Mailpit for local confirmation and recovery email. Copy `.env.example` to `.env`, set RabbitMQ credentials, and run:
 
 ```sh
 docker compose up -d rabbitmq
@@ -131,7 +131,7 @@ Planned topic exchange: `careconnect.events`, with durable `petsitting.events` a
 7. Advanced features: SignalR, dummy payments, AI matching, reporting.
 8. Quality assurance: business and integration tests, messaging reliability, deployment verification.
 
-Current verification: both MVC applications build without warnings; both initial migrations have been applied to the independent databases on `localhost:1433`. All 18 checks pass, including ten SQL Server integration checks for migration consistency, payment and consumer idempotency, rating bounds, and date constraints. SQL test data is rolled back.
+Current verification: both MVC applications build without warnings; InitialCreate and ConfigureIdentity migrations have been applied independently on `localhost:1433`. All 28 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
 
 Run route/configuration checks with `dotnet test`. To include the actual SQL Server checks using local user secrets:
 
@@ -139,4 +139,62 @@ Run route/configuration checks with `dotnet test`. To include the actual SQL Ser
 CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln
 ```
 
-RabbitMQ connectivity, authentication UI, and care workflows are not implemented or verified yet.
+RabbitMQ connectivity and care workflows remain future work.
+
+## Authentication
+
+Both applications use ASP.NET Core Identity and its built-in Razor account UI, with local customizations under `Areas/Identity/Pages`. Each application has independent users, roles, cookies, antiforgery cookies, two-factor cookies, and data-protection application names. The MVC folder structure is preserved.
+
+### Local setup
+
+SQL Server must be available on port 1433 with each connection string in user secrets. Start the local email inbox:
+
+```sh
+docker compose -f docker-compose.auth.yml up -d
+```
+
+Apply migrations (commands above), then initialize roles in each database once:
+
+```sh
+dotnet run --project src/PetSitting -- --initialize-identity
+dotnet run --project src/BabySitting -- --initialize-identity
+```
+
+These commands exit after setup. Start both MVC apps normally with `dotnet run --project src/PetSitting` and `dotnet run --project src/BabySitting`. Register using the navigation links, open the confirmation email in [Mailpit](http://localhost:8025), confirm the account, and log in. Mailpit captures local email without delivering to external recipients. SMTP listens on localhost:1025.
+
+Registration allows customer, sitter, or both roles. PetSitting uses PetOwner/PetSitter; BabySitting uses Parent/Babysitter. Public registration cannot assign PlatformManager. A sitter role does not constitute professional verification; verification remains a separate profile field.
+
+### Account features
+
+- `/Identity/Account/Register`: first/last name, email, password, allowed role choice; user and roles saved atomically.
+- `/Identity/Account/Login`: email/password, remember me, confirmed email requirement, five-attempt lockout for 15 minutes, and authenticator challenge when enabled.
+- `/Identity/Account/Logout`: POST with antiforgery protection.
+- `/Identity/Account/ResendEmailConfirmation` and `/Identity/Account/ForgotPassword`: email confirmation and recovery.
+- `/Identity/Account/Manage`: edit name, city, and phone; change password/email; enable authenticator, manage recovery codes, export personal data, and delete an unused account after password verification.
+- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. These are access-controlled placeholders for future care features.
+
+Use an authenticator app's manual time-based setup with the secret shown on the setup page. Save recovery codes privately. Accounts linked to care records cannot be hard-deleted through self-service; the form explains that a platform manager must handle account closure while retaining those records.
+
+Passwords require at least 12 characters, uppercase/lowercase, a digit, a symbol, and four distinct characters. Confirmation and reset tokens expire after two hours. Password/security-stamp changes and deactivation invalidate stale sessions on the next request. Auth POSTs are limited to 30 per minute per remote IP per application. The two-factor setup customization refreshes the current session after changing its security stamp.
+
+### Provision a platform manager
+
+Manager creation is an explicit local CLI operation. Choose a new email and a strong password; store them in that application's user secrets:
+
+```sh
+dotnet user-secrets set "BootstrapAdmin:Email" "<manager-email>" --project src/PetSitting
+dotnet user-secrets set "BootstrapAdmin:Password" "<strong-password>" --project src/PetSitting
+dotnet run --project src/PetSitting -- --initialize-identity
+dotnet user-secrets remove "BootstrapAdmin:Password" --project src/PetSitting
+dotnet user-secrets remove "BootstrapAdmin:Email" --project src/PetSitting
+```
+
+Repeat with `src/BabySitting` for its independent manager. There are no default manager credentials. Provisioning refuses to promote an existing public account and never resets an existing manager's password. The operator-provisioned manager email is marked confirmed; enable two-factor authentication after first login.
+
+### Deployment configuration
+
+Outside Development, configure `Auth:PublicOrigin` as the application's public HTTPS origin, `Email:Host`, `Email:Port`, `Email:From`, `Email:EnableSsl=true`, and SMTP credentials (`Email:UserName`/`Email:Password`) through your deployment secret store. The public origin is used for Identity email links rather than trusting incoming Host headers. Configure each app separately.
+
+Set `DataProtection:KeysPath` to a protected persistent directory mounted into the container, retain those keys across deployments, and protect them at rest. Replicas of the same app need the same key ring; the two applications must keep their distinct application names. Production cookies require HTTPS. Configure trusted proxy handling for your actual hosting topology before deploying behind a reverse proxy. Local SMTP was tested; delivery through a production provider requires that provider's credentials and deployment verification.
+
+SQL authentication tests use unique temporary accounts and a test email sender. They exercise registration-role tampering, email confirmation, restricted dashboards, profile updates, password change/reset and token replay, inactive sessions, authenticator setup/login, recovery-code login, lockout, and logout CSRF protection. Run them with `CARECONNECT_SQL_TESTS=1 dotnet test` after applying migrations and initializing roles.

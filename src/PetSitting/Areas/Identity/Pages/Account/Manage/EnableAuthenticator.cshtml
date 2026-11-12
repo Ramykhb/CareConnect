@@ -1,0 +1,11 @@
+@page
+@model PetSitting.Areas.Identity.Pages.Account.Manage.EnableAuthenticatorModel
+@{ ViewData["Title"] = "Set up authenticator"; }
+<h1>Set up an authenticator app</h1>
+<p>In your authenticator app, add a time-based account named CareConnect (@User.Identity?.Name) and enter this secret key:</p>
+<p><code>@Model.SharedKey</code></p>
+<p>Keep this key private. Enter the six-digit code from your authenticator to finish setup.</p>
+<form method="post"><div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+<div class="mb-3"><label asp-for="Input.Code"></label><input asp-for="Input.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" /><span asp-validation-for="Input.Code" class="text-danger"></span></div>
+<button type="submit" class="btn btn-primary">Enable authenticator</button></form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
