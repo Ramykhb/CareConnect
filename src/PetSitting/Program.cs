@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using PetSitting.Data;
+using PetSitting.Repositories;
 using PetSitting.Services.Auth;
 using PetSitting.Services.Messaging;
 
@@ -10,6 +11,8 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<PetSittingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.EnableRetryOnFailure()));
+// Scoped (one per HTTP request) because it uses the scoped DbContext.
+builder.Services.AddScoped<IPetRepository, PetRepository>();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>

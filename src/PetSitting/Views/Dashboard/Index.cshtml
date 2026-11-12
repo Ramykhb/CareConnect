@@ -3,7 +3,7 @@
 <h1 class="mt-5">Your dashboard</h1>
 <p>You are signed in to CareConnect.</p>
 <ul>
-@if (User.IsInRole(Roles.Customer)) { <li><a asp-action="Customer">Customer dashboard</a></li> }
+@if (User.IsInRole(Roles.Customer)) { <li><a asp-action="Customer">Customer dashboard</a></li><li><a asp-controller="Pets" asp-action="Index">My pets</a></li> }
 @if (User.IsInRole(Roles.Sitter)) { <li><a asp-action="Sitter">Sitter dashboard</a></li> }
 @if (User.IsInRole(Roles.PlatformManager)) { <li><a asp-action="Manager">Management dashboard</a></li> }
 </ul>
