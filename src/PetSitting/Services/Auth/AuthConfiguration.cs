@@ -73,6 +73,10 @@ public static class AuthConfiguration
             .ValidateOnStart();
         services.AddTransient<IEmailSender, SmtpEmailSender>();
         services.AddScoped<RegistrationService>();
+        services.AddMemoryCache();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddSingleton<PasswordResetCooldown>();
+        services.AddScoped<PasswordResetService>();
         services.AddRazorPages(options => options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
         return services;
     }

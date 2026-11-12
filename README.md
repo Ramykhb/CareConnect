@@ -131,7 +131,7 @@ Planned topic exchange: `careconnect.events`, with durable `petsitting.events` a
 7. Advanced features: SignalR, dummy payments, AI matching, reporting.
 8. Quality assurance: business and integration tests, messaging reliability, deployment verification.
 
-Current verification: both MVC applications build without warnings; InitialCreate, ConfigureIdentity, and EnforceSingleAccountRole migrations have been applied independently on `localhost:1433`. All 34 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
+Current verification: both MVC applications build without warnings; InitialCreate, ConfigureIdentity, and EnforceSingleAccountRole migrations have been applied independently on `localhost:1433`. All 35 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
 
 Run route/configuration checks with `dotnet test`. To include the actual SQL Server checks using local user secrets:
 
@@ -198,3 +198,11 @@ Outside Development, configure `Auth:PublicOrigin` as the application's public H
 Set `DataProtection:KeysPath` to a protected persistent directory mounted into the container, retain those keys across deployments, and protect them at rest. Replicas of the same app need the same key ring; the two applications must keep their distinct application names. Production cookies require HTTPS. Configure trusted proxy handling for your actual hosting topology before deploying behind a reverse proxy. Local SMTP was tested; delivery through a production provider requires that provider's credentials and deployment verification.
 
 SQL authentication tests use unique temporary accounts and a test email sender. They exercise forbidden account types and database role exclusivity, registration-role tampering, email confirmation, restricted dashboards, profile updates, password change/reset and token replay, inactive sessions, authenticator setup/login, recovery-code login, lockout, and logout CSRF protection. Run them with `CARECONNECT_SQL_TESTS=1 dotnet test` after applying migrations and initializing roles.
+
+### PetSitting password recovery UI
+
+The custom forgot-password and inbox-confirmation pages share the full-height CareConnect auth layout. They preserve Identity reset tokens and the two-hour configured lifetime. Confirmation uses the same wording for unknown, unconfirmed, inactive, and eligible accounts.
+
+Resend requests have a 45-second per-email cooldown enforced on the server, including concurrent requests. The cooldown is kept in memory per application instance; the existing per-IP auth rate limit remains active. The browser shows the remaining time and enables resend when it finishes. Recovery state is held in the protected TempData cookie rather than an email-address query parameter.
+
+In Development, `Email:InboxUrl` points to Mailpit at `http://localhost:8025`. A deployment can configure its own HTTPS inbox URL, or leave it unset to show a return-to-login button. Reset and resend continue to require antiforgery validation. No schema changes are required.

@@ -34,3 +34,19 @@
     confirmation.addEventListener('input', update);
     update();
 })();
+
+(() => {
+    const form = document.querySelector('[data-resend-form]');
+    const button = document.querySelector('[data-resend-button]');
+    if (!form || !button) return;
+    const availableAt = Number(form.dataset.resendAt);
+    const update = () => {
+        const remaining = Math.max(0, Math.ceil((availableAt - Date.now()) / 1000));
+        button.disabled = remaining > 0;
+        button.textContent = remaining > 0 ? `Resend in ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : 'Resend email';
+        return remaining;
+    };
+    if (update() > 0) {
+        const timer = setInterval(() => { if (update() === 0) clearInterval(timer); }, 1000);
+    }
+})();

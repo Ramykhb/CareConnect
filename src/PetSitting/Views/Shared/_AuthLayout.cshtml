@@ -7,7 +7,7 @@
     <title>@ViewData["Title"] · CareConnect Pet Sitting</title>
     <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
 </head>
-<body class="pet-auth">
+<body class="pet-auth @ViewData["AuthVariant"]">
     <a class="auth-skip" href="#auth-main">Skip to form</a>
     <partial name="_PetIcons" />
     <div class="auth-shell">

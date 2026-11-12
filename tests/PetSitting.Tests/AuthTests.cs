@@ -16,12 +16,34 @@ namespace PetSitting.Tests;
 
 public sealed class AuthTests
 {
+    private sealed class TestClock : TimeProvider
+    {
+        private DateTimeOffset current = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => current;
+        public void Advance(TimeSpan duration) => current += duration;
+    }
+
     private sealed class Mailbox : IEmailSender
     {
         public ConcurrentQueue<string> Messages { get; } = new();
         public Task SendEmailAsync(string email, string subject, string htmlMessage)
         { Messages.Enqueue(htmlMessage); return Task.CompletedTask; }
         public string LastLink() => WebUtility.HtmlDecode(Regex.Match(Messages.Last(), "href=['\"]([^'\"]+)").Groups[1].Value);
+    }
+
+    [Fact]
+    public void Reset_cooldown_is_atomic_case_insensitive_and_expires()
+    {
+        using var cache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+        var clock = new TestClock();
+        var cooldown = new PasswordResetCooldown(cache, clock);
+        var reservations = new ConcurrentBag<bool>();
+        Parallel.For(0, 12, i => reservations.Add(cooldown.Reserve(i % 2 == 0 ? "person@example.test" : " PERSON@EXAMPLE.TEST ").Allowed));
+        Assert.Single(reservations, allowed => allowed);
+        clock.Advance(TimeSpan.FromSeconds(44));
+        Assert.False(cooldown.Reserve("person@example.test").Allowed);
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.True(cooldown.Reserve("person@example.test").Allowed);
     }
 
     [Theory]
@@ -54,9 +76,13 @@ public sealed class AuthTests
     public async Task Registration_confirmation_login_authorization_recovery_and_profile_work_end_to_end()
     {
         var mail = new Mailbox();
+        var clock = new TestClock();
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
             b.UseEnvironment("Development").ConfigureServices(s =>
-            { s.RemoveAll<IEmailSender>(); s.AddSingleton<IEmailSender>(mail); }));
+            {
+                s.RemoveAll<IEmailSender>(); s.AddSingleton<IEmailSender>(mail);
+                s.RemoveAll<TimeProvider>(); s.AddSingleton<TimeProvider>(clock);
+            }));
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         var email = $"auth-{Guid.NewGuid():N}@example.test";
         const string password = "Original!Password123";
@@ -111,6 +137,18 @@ public sealed class AuthTests
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = "unknown@example.test" })).StatusCode);
             Assert.Equal(before, mail.Messages.Count);
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = email })).StatusCode);
+            var confirmation = await client.GetStringAsync("/Identity/Account/ForgotPasswordConfirmation");
+            Assert.Contains("Check your inbox", confirmation);
+            Assert.Contains("2 hours", confirmation);
+            Assert.Contains(email, confirmation);
+            Assert.Contains("http://localhost:8025/", confirmation);
+            var resetCount = mail.Messages.Count;
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/Identity/Account/ForgotPasswordConfirmation?handler=Resend", new FormUrlEncodedContent([]))).StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/ForgotPasswordConfirmation?handler=Resend", new())).StatusCode);
+            Assert.Equal(resetCount, mail.Messages.Count);
+            clock.Advance(TimeSpan.FromSeconds(46));
+            Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/ForgotPasswordConfirmation?handler=Resend", new())).StatusCode);
+            Assert.Equal(resetCount + 1, mail.Messages.Count);
             var resetLink = mail.LastLink();
             var code = System.Text.Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(QueryHelpers.ParseQuery(new Uri(resetLink).Query)["code"].ToString()));
             var resetFields = new Dictionary<string, string> { ["Input.Email"] = email, ["Input.Code"] = code,
