@@ -741,3 +741,67 @@ a:focus-visible,button:focus-visible,input:focus-visible {
         transition:none!important;
     }
 }
+
+/* Keep authentication on one viewport, including short laptop and phone screens. */
+body.pet-auth {
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+}
+
+.auth-shell {
+    height:100%;
+    min-height:0;
+}
+
+.auth-story {
+    position:relative;
+    top:0;
+    height:100%;
+    min-height:0;
+}
+
+.auth-main {
+    min-height:0;
+    min-width:0;
+    padding-block:24px;
+}
+
+.auth-form {
+    flex-shrink:0;
+    transform:scale(var(--auth-scale, 1));
+    transform-origin:center;
+}
+
+@media (max-height:800px) and (min-width:761px) {
+    .auth-story h2 { margin-top:36px; font-size:40px; }
+    .story-review { top:44%; }
+    .story-pets { width:400px; }
+    .auth-main { padding-block:12px; }
+    .auth-back { margin-bottom:12px; }
+    .auth-subtitle { margin-bottom:14px; }
+    .auth-field, .role-field { margin-bottom:13px; }
+    .password-meter { margin-top:10px; }
+    .role-note { margin-bottom:12px; }
+}
+
+@media (max-width:760px) {
+    .auth-shell { display:grid; grid-template-columns:1fr; grid-template-rows:auto minmax(0, 1fr); }
+    .auth-story { padding:12px 18px; height:auto; border-radius:20px; }
+    .auth-story h2 { display:none; }
+    .auth-main { padding:12px 10px; }
+    .auth-back { margin-bottom:10px; }
+    .auth-form h1 { font-size:28px; }
+    .auth-subtitle { margin-bottom:14px; }
+    .auth-field, .role-field { margin-bottom:12px; }
+    .auth-field label, .role-field legend { margin-bottom:5px; }
+    .input-wrap { min-height:42px; }
+    .input-wrap input { height:40px; }
+    .role-options span { padding:10px; }
+    .password-meter { margin-top:9px; }
+    .role-note { margin-bottom:12px; }
+    .auth-switch { margin-top:14px; margin-bottom:12px; }
+    .auth-submit { min-height:44px; }
+    .auth-divider { margin-block:12px; }
+    .auth-resend { margin-top:10px; }
+}

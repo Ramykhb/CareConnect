@@ -1,3 +1,21 @@
+// Scale only when content exceeds the available viewport; retain every control and error.
+(() => {
+    const main = document.querySelector('.auth-main');
+    const form = document.querySelector('.auth-form');
+    if (!main || !form) return;
+    const fit = () => {
+        const style = getComputedStyle(main);
+        const available = main.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 6;
+        form.style.setProperty('--auth-scale', Math.min(1, Math.max(0, available) / form.offsetHeight));
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(main);
+    observer.observe(form);
+    document.fonts.ready.then(fit);
+    window.addEventListener('resize', fit);
+    fit();
+})();
+
 (() => {
     const password = document.querySelector('[data-password]');
     const confirmation = document.querySelector('[data-confirm]');
