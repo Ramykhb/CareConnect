@@ -1,0 +1,72 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var user = await UserManager.GetUserAsync(User);
+    var displayName = user is null ? "Parent" : $"{user.FirstName} {user.LastName}";
+    var initial = string.IsNullOrEmpty(user?.FirstName) ? "?" : user!.FirstName[..1].ToUpperInvariant();
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    string Active(string c) => c == controller ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f7f3" />
+    <title>@ViewData["Title"] · CareConnect</title>
+    <link rel="stylesheet" href="~/css/baby-auth.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/baby-portal.css" asp-append-version="true" />
+</head>
+<body class="baby-portal">
+    <a class="auth-skip" href="#main-content">Skip to content</a>
+    <partial name="_BabyIcons" />
+    <svg class="auth-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></symbol>
+        <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+        <symbol id="icon-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+        <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+        <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    </svg>
+    <div class="portal-shell">
+        <aside class="portal-sidebar" aria-label="Parent navigation">
+            <div>
+                <a class="portal-brand" asp-controller="Home" asp-action="Index"><span class="brand-icon"><svg><use href="#icon-family" /></svg></span>CareConnect</a>
+                <p class="portal-menu-label">Menu</p>
+                <nav class="portal-nav">
+                    <a class="@Active("Dashboard")" asp-controller="Dashboard" asp-action="Customer"><svg class="line-icon"><use href="#icon-grid" /></svg>Dashboard</a>
+                    <a class="@Active("Family")" asp-controller="Family" asp-action="Index"><svg class="line-icon"><use href="#icon-family" /></svg>My family</a>
+                    <a asp-area="Identity" asp-page="/Account/Manage/Index"><svg class="line-icon"><use href="#icon-user" /></svg>My account</a>
+                </nav>
+            </div>
+            <div class="portal-user">
+                <span class="portal-avatar" aria-hidden="true">@initial</span>
+                <span class="portal-user-text"><strong>@displayName</strong><small>Parent</small></span>
+                <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                    <button type="submit" class="portal-icon-button" aria-label="Log out"><svg class="line-icon"><use href="#icon-logout" /></svg></button>
+                </form>
+            </div>
+        </aside>
+        <div class="portal-main">
+            <header class="portal-topbar">
+                <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>Parent portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
+            </header>
+            <main id="main-content">
+                @if (TempData["Success"] is string success)
+                {
+                    <div class="portal-notice success" role="status"><svg class="line-icon"><use href="#icon-check" /></svg>@success</div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="portal-notice error" role="alert"><svg class="line-icon"><use href="#icon-alert" /></svg>@error</div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

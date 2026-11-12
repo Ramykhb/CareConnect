@@ -110,6 +110,7 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
         modelBuilder.Entity<FamilyProfile>().ToTable(t =>
         {
             t.HasCheckConstraint("CK_FamilyProfile_Children", "[NumberOfChildren] BETWEEN 1 AND 20");
+            t.HasCheckConstraint("CK_FamilyProfile_Ages", "[YoungestChildAgeYears] BETWEEN 0 AND 17 AND [OldestChildAgeYears] BETWEEN [YoungestChildAgeYears] AND 17");
         });
 
         // Avoid SQL Server multiple cascade paths and accidental removal of booking history.

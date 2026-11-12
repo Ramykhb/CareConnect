@@ -451,8 +451,19 @@ namespace BabySitting.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("HealthNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<int>("NumberOfChildren")
                         .HasColumnType("int");
+
+                    b.Property<int>("OldestChildAgeYears")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Routines")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -463,6 +474,9 @@ namespace BabySitting.Data.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("YoungestChildAgeYears")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId")
@@ -470,6 +484,8 @@ namespace BabySitting.Data.Migrations
 
                     b.ToTable("FamilyProfiles", t =>
                         {
+                            t.HasCheckConstraint("CK_FamilyProfile_Ages", "[YoungestChildAgeYears] BETWEEN 0 AND 17 AND [OldestChildAgeYears] BETWEEN [YoungestChildAgeYears] AND 17");
+
                             t.HasCheckConstraint("CK_FamilyProfile_Children", "[NumberOfChildren] BETWEEN 1 AND 20");
                         });
                 });

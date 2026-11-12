@@ -1,0 +1,36 @@
+@using BabySitting.ViewModels
+@model FamilyFormViewModel
+@{
+    ViewData["Title"] = "Create family profile";
+    ViewData["Breadcrumb"] = "My family / Create";
+}
+
+<div class="page-header">
+    <div class="page-title-row">
+        <a class="btn btn-circle" asp-action="Index" aria-label="Back to my family"><svg class="line-icon"><use href="#icon-back" /></svg></a>
+        <div>
+            <h1>Create family profile</h1>
+            <p>Sitters see this information before they accept a request.</p>
+        </div>
+    </div>
+</div>
+
+<div class="form-layout">
+    @* The form tag helper adds the anti-forgery token checked by [ValidateAntiForgeryToken]. *@
+    <form class="card form-card" asp-action="Create" method="post" novalidate>
+        <partial name="_FamilyForm" model="Model" />
+        <div class="form-actions">
+            <a class="btn btn-light" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save profile</button>
+        </div>
+    </form>
+    <aside class="card side-card">
+        <h3>Why these details matter</h3>
+        <p>Allergies, medication and bedtime routines help sitters prepare before they arrive.</p>
+        <p>Only sitters you send a request to can see these notes.</p>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

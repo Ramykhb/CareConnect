@@ -1,0 +1,29 @@
+@model FamilyProfile
+@{
+    ViewData["Title"] = "Delete family profile";
+    ViewData["Breadcrumb"] = "My family / Delete";
+    var isUsed = (bool)ViewBag.IsUsed;
+}
+
+<section class="card confirm-card" aria-labelledby="confirm-title">
+    <span class="confirm-icon"><svg class="line-icon"><use href="#icon-trash" /></svg></span>
+    <h2 id="confirm-title">Delete your family profile?</h2>
+    <div class="confirm-pet">
+        <span class="pet-initial species-rabbit" aria-hidden="true"><svg class="line-icon"><use href="#icon-family" /></svg></span>
+        <div><strong>@Model.NumberOfChildren @(Model.NumberOfChildren == 1 ? "child" : "children")</strong><br /><span class="pet-meta">@Model.City</span></div>
+    </div>
+    @if (isUsed)
+    {
+        <p>Your family profile is linked to a childcare request, so it has to stay for the booking history. You can still edit it.</p>
+        <form><a class="btn btn-dark" asp-action="Index">Back to my family</a></form>
+    }
+    else
+    {
+        <p>This removes your family profile, health notes and routines. This can’t be undone.</p>
+        @* Deleting is a POST with an anti-forgery token, never a plain link (course: Delete safely). *@
+        <form asp-action="Delete" method="post">
+            <a class="btn btn-light" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-danger"><svg class="line-icon"><use href="#icon-trash" /></svg>Yes, delete</button>
+        </form>
+    }
+</section>

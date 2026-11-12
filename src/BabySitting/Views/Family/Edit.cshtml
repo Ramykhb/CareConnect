@@ -1,0 +1,34 @@
+@using BabySitting.ViewModels
+@model FamilyFormViewModel
+@{
+    ViewData["Title"] = "Edit family profile";
+    ViewData["Breadcrumb"] = "My family / Edit";
+}
+
+<div class="page-header">
+    <div class="page-title-row">
+        <a class="btn btn-circle" asp-action="Index" aria-label="Back to my family"><svg class="line-icon"><use href="#icon-back" /></svg></a>
+        <div>
+            <h1>Edit family profile</h1>
+            <p>Sitters see this information before they accept a request.</p>
+        </div>
+    </div>
+</div>
+
+<div class="form-layout">
+    <form class="card form-card" asp-action="Edit" method="post" novalidate>
+        <partial name="_FamilyForm" model="Model" />
+        <div class="form-actions">
+            <a class="btn btn-light" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
+        </div>
+    </form>
+    <aside class="card side-card">
+        <h3>Keep it current</h3>
+        <p>A new allergy, a changed bedtime or a birthday? Update it here before your next booking.</p>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
