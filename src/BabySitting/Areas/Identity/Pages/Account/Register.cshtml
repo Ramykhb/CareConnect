@@ -1,18 +1,26 @@
 @page
 @model BabySitting.Areas.Identity.Pages.Account.RegisterModel
-@{ ViewData["Title"] = "Create account"; }
-<div class="row py-5"><div class="col-md-6 mx-auto">
-<h1>Create your account</h1>
-<p>Choose how you want to use CareConnect. Sitter registration does not grant verification.</p>
-<form method="post" asp-route-returnUrl="@Model.ReturnUrl">
-<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-<div class="mb-3"><label asp-for="Input.FirstName" class="form-label"></label><input asp-for="Input.FirstName" class="form-control" autocomplete="given-name" /><span asp-validation-for="Input.FirstName" class="text-danger"></span></div>
-<div class="mb-3"><label asp-for="Input.LastName" class="form-label"></label><input asp-for="Input.LastName" class="form-control" autocomplete="family-name" /><span asp-validation-for="Input.LastName" class="text-danger"></span></div>
-<div class="mb-3"><label asp-for="Input.Email" class="form-label"></label><input asp-for="Input.Email" class="form-control" autocomplete="email" /><span asp-validation-for="Input.Email" class="text-danger"></span></div>
-<div class="mb-3"><label asp-for="Input.Password" class="form-label"></label><input asp-for="Input.Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Input.Password" class="text-danger"></span></div>
-<div class="mb-3"><label asp-for="Input.ConfirmPassword" class="form-label"></label><input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span></div>
-<div class="mb-3"><label asp-for="Input.AccountType" class="form-label"></label><select asp-for="Input.AccountType" class="form-select"><option value="Customer">Parent</option><option value="Sitter">Babysitter</option></select><span asp-validation-for="Input.AccountType" class="text-danger"></span></div>
-<p class="small">Use at least 12 characters with uppercase, lowercase, a number, and a symbol.</p>
-<button type="submit" class="btn btn-primary">Create account</button>
-</form></div></div>
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["Title"] = "Create account";
+}
+<section class="auth-form auth-register" aria-labelledby="auth-heading">
+    <a class="auth-back" asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl"><svg class="line-icon back-arrow"><use href="#icon-arrow" /></svg>Back to log in</a>
+    <h1 id="auth-heading">Create your account</h1>
+    <p class="auth-subtitle">A little peace of mind, for you and your family.</p>
+    <form method="post" asp-route-returnUrl="@Model.ReturnUrl">
+        <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
+        <div class="name-fields">
+            <div class="auth-field"><label asp-for="Input.FirstName"></label><div class="input-wrap plain-input"><input asp-for="Input.FirstName" autocomplete="given-name" placeholder="First name" /></div><span asp-validation-for="Input.FirstName" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="Input.LastName"></label><div class="input-wrap plain-input"><input asp-for="Input.LastName" autocomplete="family-name" placeholder="Last name" /></div><span asp-validation-for="Input.LastName" class="field-error"></span></div>
+        </div>
+        <div class="auth-field"><label asp-for="Input.Email">Email address</label><div class="input-wrap"><svg class="line-icon"><use href="#icon-mail" /></svg><input asp-for="Input.Email" autocomplete="email" placeholder="you@example.com" /></div><span asp-validation-for="Input.Email" class="field-error"></span></div>
+        <fieldset class="role-field" id="account-type"><legend>I’m joining as a</legend><div class="role-options"><label><input asp-for="Input.AccountType" type="radio" value="Customer" /><span><svg class="line-icon"><use href="#icon-family" /></svg>Parent</span></label><label><input asp-for="Input.AccountType" type="radio" value="Sitter" /><span><svg class="line-icon"><use href="#icon-shield" /></svg>Babysitter</span></label></div><span asp-validation-for="Input.AccountType" class="field-error"></span></fieldset>
+        <div class="auth-field password-field"><label asp-for="Input.Password"></label><div class="input-wrap"><svg class="line-icon muted-icon"><use href="#icon-lock" /></svg><input asp-for="Input.Password" autocomplete="new-password" placeholder="Create a password" aria-describedby="password-guidance" data-password /></div><span asp-validation-for="Input.Password" class="field-error"></span><div class="password-meter" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p id="password-guidance" class="password-guidance" aria-live="polite">12+ characters with uppercase, lowercase, a number and a symbol.</p></div>
+        <div class="auth-field"><label asp-for="Input.ConfirmPassword"></label><div class="input-wrap" data-confirm-wrap><svg class="line-icon muted-icon"><use href="#icon-lock" /></svg><input asp-for="Input.ConfirmPassword" autocomplete="new-password" placeholder="Confirm your password" data-confirm /><svg class="line-icon match-icon" aria-hidden="true"><use href="#icon-check" /></svg></div><span asp-validation-for="Input.ConfirmPassword" class="field-error"></span></div>
+        <p class="role-note">Babysitter accounts require separate professional verification.</p>
+        <button type="submit" class="auth-submit"><svg class="line-icon"><use href="#icon-arrow" /></svg>Create account</button>
+    </form>
+    <p class="auth-switch">Already have an account? <a asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a></p>
+</section>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }
