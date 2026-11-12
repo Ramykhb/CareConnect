@@ -31,7 +31,11 @@ public sealed class RegisterModel(RegistrationService registration, UserManager<
         [Required, RegularExpression("^(Customer|Sitter)$"), Display(Name = "Account type")]
         public string AccountType { get; set; } = "Customer";
     }
-    public void OnGet(string? returnUrl = null) => ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+    public void OnGet(string? returnUrl = null, string? accountType = null)
+    {
+        ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        Input.AccountType = accountType == "Sitter" ? "Sitter" : "Customer";
+    }
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
