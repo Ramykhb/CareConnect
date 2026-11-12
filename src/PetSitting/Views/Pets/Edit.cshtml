@@ -1,0 +1,35 @@
+@using PetSitting.ViewModels
+@model PetFormViewModel
+@{
+    var petId = (Guid)ViewBag.PetId;
+    ViewData["Title"] = "Edit " + Model.Name;
+    ViewData["Breadcrumb"] = "My pets / Edit";
+}
+
+<div class="page-header">
+    <div class="page-title-row">
+        <a class="btn btn-circle" asp-action="Details" asp-route-id="@petId" aria-label="Back to profile"><svg class="line-icon"><use href="#icon-back" /></svg></a>
+        <div>
+            <h1>Edit @(string.IsNullOrWhiteSpace(Model.Name) ? "pet" : Model.Name + "’s profile")</h1>
+            <p>Sitters see this information before they accept a request.</p>
+        </div>
+    </div>
+</div>
+
+<div class="form-layout">
+    <form class="card form-card" asp-action="Edit" asp-route-id="@petId" method="post" novalidate>
+        <partial name="_PetForm" model="Model" />
+        <div class="form-actions">
+            <a class="btn btn-light" asp-action="Details" asp-route-id="@petId">Cancel</a>
+            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
+        </div>
+    </form>
+    <aside class="card side-card">
+        <h3>Keep it current</h3>
+        <p>Changed food, a new medication or a new habit? Update it here before your next booking.</p>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

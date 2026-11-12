@@ -1,0 +1,29 @@
+@model Pet
+@{
+    ViewData["Title"] = "Delete " + Model.Name;
+    ViewData["Breadcrumb"] = "My pets / Delete";
+    var isUsed = (bool)ViewBag.IsUsed;
+}
+
+<section class="card confirm-card" aria-labelledby="confirm-title">
+    <span class="confirm-icon"><svg class="line-icon"><use href="#icon-trash" /></svg></span>
+    <h2 id="confirm-title">Delete @Model.Name’s profile?</h2>
+    <div class="confirm-pet">
+        <span class="pet-initial species-@Model.Species.ToLowerInvariant()" aria-hidden="true">@Model.Name[..1].ToUpperInvariant()</span>
+        <div><strong>@Model.Name</strong><br /><span class="pet-meta">@Model.Species@(string.IsNullOrEmpty(Model.Breed) ? "" : " · " + Model.Breed)</span></div>
+    </div>
+    @if (isUsed)
+    {
+        <p>@Model.Name is part of a care request, so the profile has to stay for the booking history. You can still edit it.</p>
+        <form><a class="btn btn-dark" asp-action="Details" asp-route-id="@Model.Id">Back to profile</a></form>
+    }
+    else
+    {
+        <p>This removes @Model.Name’s profile, medical notes and care instructions. This can’t be undone.</p>
+        @* Deleting is a POST with an anti-forgery token, never a plain link (course: Delete safely). *@
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+            <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+            <button type="submit" class="btn btn-danger"><svg class="line-icon"><use href="#icon-trash" /></svg>Yes, delete</button>
+        </form>
+    }
+</section>

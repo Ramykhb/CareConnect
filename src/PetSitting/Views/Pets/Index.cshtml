@@ -1,0 +1,95 @@
+@using PetSitting.ViewModels
+@model IReadOnlyList<Pet>
+@{
+    ViewData["Title"] = "My pets";
+    var search = ViewBag.Search as string;
+    var species = ViewBag.Species as string;
+    var filtered = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(species);
+}
+
+<div class="page-header">
+    <div>
+        <h1>My pets</h1>
+        <p>Keep profiles up to date so sitters know exactly how to care for them.</p>
+    </div>
+    <a class="btn btn-dark" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>Add a pet</a>
+</div>
+
+<div class="toolbar">
+    <nav class="tabs" aria-label="Filter by species">
+        <a class="tab @(string.IsNullOrEmpty(species) ? "active" : "")" asp-action="Index" asp-route-search="@search">All pets</a>
+        @foreach (var option in PetFormViewModel.SpeciesOptions)
+        {
+            <a class="tab @(species == option ? "active" : "")" asp-action="Index" asp-route-species="@option" asp-route-search="@search">@option</a>
+        }
+    </nav>
+    @* GET form: search terms belong in the query string (course: GET forms for search and filters). *@
+    <form class="search-form" asp-action="Index" method="get" role="search">
+        <svg class="line-icon"><use href="#icon-search" /></svg>
+        <input type="search" name="search" value="@search" placeholder="Search by name or breed" aria-label="Search pets" />
+        @if (!string.IsNullOrEmpty(species))
+        {
+            <input type="hidden" name="species" value="@species" />
+        }
+        <button type="submit" class="btn btn-dark btn-sm">Search</button>
+    </form>
+</div>
+
+@if (Model.Count == 0 && !filtered)
+{
+    <section class="empty-state">
+        <span class="add-circle"><svg class="line-icon paw-icon" width="40" height="40"><use href="#icon-paw" /></svg></span>
+        <h2>No pets yet</h2>
+        <p>Add your first pet so sitters know who they’ll be caring for.</p>
+        <a class="btn btn-lime" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>Add a pet</a>
+    </section>
+}
+else if (Model.Count == 0)
+{
+    <section class="empty-state">
+        <h2>No pets match your search</h2>
+        <p>Try a different name or breed, or clear the filters.</p>
+        <a class="btn btn-light" asp-action="Index">Clear filters</a>
+    </section>
+}
+else
+{
+    <div class="pet-grid">
+        @foreach (var pet in Model)
+        {
+            <article class="pet-card">
+                <a class="pet-photo species-@pet.Species.ToLowerInvariant()" asp-action="Details" asp-route-id="@pet.Id" aria-label="View @pet.Name's profile">
+                    <span class="pet-initial" aria-hidden="true">@pet.Name[..1].ToUpperInvariant()</span>
+                </a>
+                <div class="pet-card-body">
+                    <div>
+                        <h2>@pet.Name</h2>
+                        <span class="pet-meta">@pet.Species@(string.IsNullOrEmpty(pet.Breed) ? "" : " · " + pet.Breed)</span>
+                    </div>
+                    <div class="chips">
+                        @if (pet.AgeYears is int age)
+                        {
+                            <span class="chip">@age @(age == 1 ? "yr" : "yrs")</span>
+                        }
+                        @if (!string.IsNullOrEmpty(pet.MedicalNotes))
+                        {
+                            <span class="chip lime">Medical notes</span>
+                        }
+                    </div>
+                    <div class="pet-card-actions">
+                        <a class="btn btn-dark btn-sm" asp-action="Details" asp-route-id="@pet.Id">View</a>
+                        <a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@pet.Id"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit</a>
+                    </div>
+                </div>
+            </article>
+        }
+        @if (!filtered)
+        {
+            <a class="add-tile" asp-action="Create">
+                <span class="add-circle"><svg class="line-icon"><use href="#icon-plus" /></svg></span>
+                <strong>Add a new pet</strong>
+                <small>Takes about 2 minutes</small>
+            </a>
+        }
+    </div>
+}

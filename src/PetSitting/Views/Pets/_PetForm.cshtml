@@ -1,0 +1,50 @@
+@* Shared by Create and Edit, like _CourseForm in the course tutorial. *@
+@using PetSitting.ViewModels
+@model PetFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+<h2>Basic information</h2>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="Name"></label>
+        <input asp-for="Name" placeholder="e.g. Max" autocomplete="off" />
+        <span asp-validation-for="Name" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Species"></label>
+        <select asp-for="Species" asp-items="@(new SelectList(PetFormViewModel.SpeciesOptions))">
+            <option value="">Choose a species</option>
+        </select>
+        <span asp-validation-for="Species" class="field-error"></span>
+    </div>
+</div>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="Breed"></label>
+        <input asp-for="Breed" placeholder="e.g. Golden Retriever" />
+        <span asp-validation-for="Breed" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="AgeYears"></label>
+        <input asp-for="AgeYears" type="number" min="0" max="100" placeholder="e.g. 3" />
+        <span asp-validation-for="AgeYears" class="field-error"></span>
+    </div>
+</div>
+
+<h2>Care details</h2>
+<div class="field">
+    <label asp-for="MedicalNotes"></label>
+    <textarea asp-for="MedicalNotes" placeholder="Allergies, medication and dosage, conditions, vet contact…"></textarea>
+    <span asp-validation-for="MedicalNotes" class="field-error"></span>
+</div>
+<div class="field">
+    <label asp-for="FeedingInstructions"></label>
+    <textarea asp-for="FeedingInstructions" placeholder="Food brand, amount and times, treats…"></textarea>
+    <span asp-validation-for="FeedingInstructions" class="field-error"></span>
+</div>
+<div class="field">
+    <label asp-for="CareInstructions"></label>
+    <textarea asp-for="CareInstructions" placeholder="Behaviour, routines, things to avoid…"></textarea>
+    <span asp-validation-for="CareInstructions" class="field-error"></span>
+</div>
