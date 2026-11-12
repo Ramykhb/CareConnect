@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,28 @@ public sealed class DatabaseTests
 {
     private static WebApplicationFactory<Program> CreateFactory() => new WebApplicationFactory<Program>()
         .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+
+    [SqlServerFact]
+    public async Task Database_rejects_a_second_role_for_the_same_account()
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
+        await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            var user = new ApplicationUser { Id = Guid.NewGuid(), FirstName = "Role", LastName = "Test" };
+            db.Users.Add(user);
+            var customerRole = await db.Roles.SingleAsync(x => x.Name == Roles.Customer);
+            var sitterRole = await db.Roles.SingleAsync(x => x.Name == Roles.Sitter);
+            db.UserRoles.Add(new IdentityUserRole<Guid> { UserId = user.Id, RoleId = customerRole.Id });
+            await db.SaveChangesAsync();
+            db.UserRoles.Add(new IdentityUserRole<Guid> { UserId = user.Id, RoleId = sitterRole.Id });
+            var error = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            Assert.Contains(((SqlException)error.InnerException!).Number, new[] { 2601, 2627 });
+            Assert.Contains("UX_AspNetUserRoles_UserId", error.InnerException.Message);
+        });
+    }
 
     [SqlServerFact]
     public async Task Database_has_all_migrations_and_no_pending_model_changes()

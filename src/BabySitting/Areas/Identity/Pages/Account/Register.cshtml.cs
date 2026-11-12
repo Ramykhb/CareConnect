@@ -28,7 +28,7 @@ public sealed class RegisterModel(RegistrationService registration, UserManager<
         [Required, StringLength(100, MinimumLength = 12), DataType(DataType.Password)] public string Password { get; set; } = string.Empty;
         [DataType(DataType.Password), Compare(nameof(Password)), Display(Name = "Confirm password")]
         public string ConfirmPassword { get; set; } = string.Empty;
-        [Required, RegularExpression("^(Customer|Sitter|Both)$"), Display(Name = "Account type")]
+        [Required, RegularExpression("^(Customer|Sitter)$"), Display(Name = "Account type")]
         public string AccountType { get; set; } = "Customer";
     }
     public void OnGet(string? returnUrl = null) => ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;

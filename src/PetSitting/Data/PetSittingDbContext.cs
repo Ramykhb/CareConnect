@@ -25,6 +25,10 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // An account has one platform role: customer, sitter, or manager.
+        // The unique index also prevents conflicting assignments under concurrent writes.
+        modelBuilder.Entity<IdentityUserRole<Guid>>().HasIndex(x => x.UserId)
+            .IsUnique().HasDatabaseName("UX_AspNetUserRoles_UserId");
         modelBuilder.Entity<PetSitterProfile>().HasOne(x => x.User).WithOne(x => x.SitterProfile).HasForeignKey<PetSitterProfile>(x => x.UserId);
         modelBuilder.Entity<SitterService>().HasOne(x => x.SitterProfile).WithMany(x => x.Services).HasForeignKey(x => x.SitterProfileId);
         modelBuilder.Entity<SitterAvailability>().HasOne(x => x.SitterProfile).WithMany(x => x.Availability).HasForeignKey(x => x.SitterProfileId);

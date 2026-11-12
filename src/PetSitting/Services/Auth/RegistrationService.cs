@@ -10,14 +10,13 @@ public sealed class RegistrationService(PetSittingDbContext db, UserManager<Appl
     public async Task<(IdentityResult Result, ApplicationUser? User)> RegisterAsync(
         string email, string password, string firstName, string lastName, string accountType)
     {
-        string[] roles = accountType switch
+        string? role = accountType switch
         {
-            "Customer" => [Roles.Customer],
-            "Sitter" => [Roles.Sitter],
-            "Both" => [Roles.Customer, Roles.Sitter],
-            _ => []
+            "Customer" => Roles.Customer,
+            "Sitter" => Roles.Sitter,
+            _ => null
         };
-        if (roles.Length == 0)
+        if (role is null)
             return (IdentityResult.Failed(new IdentityError { Description = "Select a valid account type." }), null);
 
         // A failed role assignment must not leave a roleless account behind.
@@ -29,7 +28,7 @@ public sealed class RegistrationService(PetSittingDbContext db, UserManager<Appl
                 FirstName = firstName.Trim(), LastName = lastName.Trim() };
             var result = await users.CreateAsync(user, password);
             if (!result.Succeeded) return (result, (ApplicationUser?)null);
-            result = await users.AddToRolesAsync(user, roles);
+            result = await users.AddToRoleAsync(user, role);
             if (!result.Succeeded) return (result, (ApplicationUser?)null);
             await transaction.CommitAsync();
             return (IdentityResult.Success, (ApplicationUser?)user);

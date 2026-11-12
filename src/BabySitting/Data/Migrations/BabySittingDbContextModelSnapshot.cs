@@ -886,6 +886,10 @@ namespace BabySitting.Data.Migrations
 
                     b.HasIndex("RoleId");
 
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AspNetUserRoles_UserId");
+
                     b.ToTable("AspNetUserRoles", (string)null);
                 });
 

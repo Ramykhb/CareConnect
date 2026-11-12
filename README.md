@@ -131,7 +131,7 @@ Planned topic exchange: `careconnect.events`, with durable `petsitting.events` a
 7. Advanced features: SignalR, dummy payments, AI matching, reporting.
 8. Quality assurance: business and integration tests, messaging reliability, deployment verification.
 
-Current verification: both MVC applications build without warnings; InitialCreate and ConfigureIdentity migrations have been applied independently on `localhost:1433`. All 28 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
+Current verification: both MVC applications build without warnings; InitialCreate, ConfigureIdentity, and EnforceSingleAccountRole migrations have been applied independently on `localhost:1433`. All 34 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
 
 Run route/configuration checks with `dotnet test`. To include the actual SQL Server checks using local user secrets:
 
@@ -162,7 +162,7 @@ dotnet run --project src/BabySitting -- --initialize-identity
 
 These commands exit after setup. Start both MVC apps normally with `dotnet run --project src/PetSitting` and `dotnet run --project src/BabySitting`. Register using the navigation links, open the confirmation email in [Mailpit](http://localhost:8025), confirm the account, and log in. Mailpit captures local email without delivering to external recipients. SMTP listens on localhost:1025.
 
-Registration allows customer, sitter, or both roles. PetSitting uses PetOwner/PetSitter; BabySitting uses Parent/Babysitter. Public registration cannot assign PlatformManager. A sitter role does not constitute professional verification; verification remains a separate profile field.
+Registration requires exactly one account type: customer or sitter. Accounts cannot hold multiple platform roles; a unique index on `AspNetUserRoles.UserId` enforces this in SQL Server, including concurrent assignments. Manager accounts have their own single role. PetSitting uses PetOwner/PetSitter; BabySitting uses Parent/Babysitter. Public registration cannot assign PlatformManager. A sitter role does not constitute professional verification; verification remains a separate profile field.
 
 ### Account features
 
@@ -197,4 +197,4 @@ Outside Development, configure `Auth:PublicOrigin` as the application's public H
 
 Set `DataProtection:KeysPath` to a protected persistent directory mounted into the container, retain those keys across deployments, and protect them at rest. Replicas of the same app need the same key ring; the two applications must keep their distinct application names. Production cookies require HTTPS. Configure trusted proxy handling for your actual hosting topology before deploying behind a reverse proxy. Local SMTP was tested; delivery through a production provider requires that provider's credentials and deployment verification.
 
-SQL authentication tests use unique temporary accounts and a test email sender. They exercise registration-role tampering, email confirmation, restricted dashboards, profile updates, password change/reset and token replay, inactive sessions, authenticator setup/login, recovery-code login, lockout, and logout CSRF protection. Run them with `CARECONNECT_SQL_TESTS=1 dotnet test` after applying migrations and initializing roles.
+SQL authentication tests use unique temporary accounts and a test email sender. They exercise forbidden account types and database role exclusivity, registration-role tampering, email confirmation, restricted dashboards, profile updates, password change/reset and token replay, inactive sessions, authenticator setup/login, recovery-code login, lockout, and logout CSRF protection. Run them with `CARECONNECT_SQL_TESTS=1 dotnet test` after applying migrations and initializing roles.

@@ -37,6 +37,19 @@ public sealed class AuthTests
         Assert.Contains("__RequestVerificationToken", await response.Content.ReadAsStringAsync());
     }
 
+    [Theory]
+    [InlineData("Both")]
+    [InlineData("PlatformManager")]
+    public async Task Registration_service_rejects_forbidden_account_types(string accountType)
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        using var scope = factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<RegistrationService>();
+        var (result, user) = await service.RegisterAsync("invalid@example.test", "Test!Password123", "Test", "User", accountType);
+        Assert.False(result.Succeeded);
+        Assert.Null(user);
+    }
+
     [SqlServerFact]
     public async Task Registration_confirmation_login_authorization_recovery_and_profile_work_end_to_end()
     {
@@ -60,6 +73,9 @@ public sealed class AuthTests
                 ["Input.FirstName"] = "Auth", ["Input.LastName"] = "Test", ["Input.Email"] = email,
                 ["Input.Password"] = password, ["Input.ConfirmPassword"] = password, ["Input.AccountType"] = "PlatformManager"
             };
+            Assert.Equal(HttpStatusCode.OK, (await Post(client, "/Identity/Account/Register", fields)).StatusCode);
+            Assert.Null(await users.FindByEmailAsync(email));
+            fields["Input.AccountType"] = "Both";
             Assert.Equal(HttpStatusCode.OK, (await Post(client, "/Identity/Account/Register", fields)).StatusCode);
             Assert.Null(await users.FindByEmailAsync(email));
             fields["Input.AccountType"] = "Customer";
@@ -139,7 +155,7 @@ public sealed class AuthTests
             using (var setup = factory.Services.CreateScope())
             {
                 var registration = setup.ServiceProvider.GetRequiredService<RegistrationService>();
-                var (result, user) = await registration.RegisterAsync(email, password, "Sitter", "Test", "Both");
+                var (result, user) = await registration.RegisterAsync(email, password, "Sitter", "Test", "Sitter");
                 Assert.True(result.Succeeded);
                 user!.EmailConfirmed = true;
                 var users = setup.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -147,7 +163,7 @@ public sealed class AuthTests
             }
             var login = new Dictionary<string, string> { ["Input.Email"] = email, ["Input.Password"] = password };
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/Login", login)).StatusCode);
-            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Dashboard/Customer")).StatusCode);
+            Assert.Contains("AccessDenied", (await client.GetAsync("/Dashboard/Customer")).Headers.Location!.ToString());
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Dashboard/Sitter")).StatusCode);
             // Initialize and enable the authenticator through the real UI handler.
             await client.GetAsync("/Identity/Account/Manage/EnableAuthenticator");
