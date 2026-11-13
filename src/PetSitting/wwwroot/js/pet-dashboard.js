@@ -20,6 +20,8 @@
     };
     function showSection() {
         if (!board) return;
+        if (isSitter && window.location.hash === '#bookings') { const id = new URLSearchParams(window.location.search).get('booking'); window.location.replace(id ? '/SitterBookings/Details/' + encodeURIComponent(id) : '/SitterBookings'); return; }
+        if (isSitter && window.location.hash === '#availability') { window.location.replace('/SitterAvailability'); return; }
         if (isSitter && window.location.hash === '#requests') { window.location.replace('/SitterRequests'); return; }
         const hash = window.location.hash.slice(1);
         const section = sectionNames.has(hash) ? hash : 'overview';

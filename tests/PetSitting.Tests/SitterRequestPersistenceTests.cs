@@ -13,7 +13,7 @@ namespace PetSitting.Tests;
 
 public sealed class SitterRequestPersistenceTests
 {
-    private sealed class Scenario : IAsyncDisposable
+    internal sealed class Scenario : IAsyncDisposable
     {
         public WebApplicationFactory<Program> Factory { get; } = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
         public ApplicationUser Owner { get; } = new() { FirstName = "Sarah", LastName = "RequestTest" };
@@ -87,11 +87,16 @@ public sealed class SitterRequestPersistenceTests
                 var users = new[] { Owner.Id, Sitter.Id, OtherSitter.Id };
                 var requestIds = Requests.Select(r => r.Id).ToArray();
                 await db.Notifications.Where(n => users.Contains(n.UserId)).ExecuteDeleteAsync();
+                await db.BookingUpdatePhotos.Where(p => requestIds.Contains(p.BookingUpdate.Booking.RequestId)).ExecuteDeleteAsync();
+                await db.BookingUpdates.Where(u => requestIds.Contains(u.Booking.RequestId)).ExecuteDeleteAsync();
+                await db.BookingCareTasks.Where(t => requestIds.Contains(t.Booking.RequestId)).ExecuteDeleteAsync();
+                await db.Payments.Where(p => requestIds.Contains(p.Booking.RequestId)).ExecuteDeleteAsync();
                 await db.PetBookings.Where(b => requestIds.Contains(b.RequestId)).ExecuteDeleteAsync();
                 await db.PetCareOffers.Where(o => requestIds.Contains(o.RequestId)).ExecuteDeleteAsync();
                 await db.PetCareRequestPets.Where(p => requestIds.Contains(p.PetCareRequestId)).ExecuteDeleteAsync();
                 await db.PetCareRequests.Where(r => requestIds.Contains(r.Id)).ExecuteDeleteAsync();
                 await db.Pets.Where(p => p.OwnerId == Owner.Id).ExecuteDeleteAsync();
+                await db.SitterScheduleExceptions.Where(e => users.Contains(e.SitterProfile.UserId)).ExecuteDeleteAsync();
                 await db.SitterAvailabilities.Where(a => users.Contains(a.SitterProfile.UserId)).ExecuteDeleteAsync();
                 await db.SitterServices.Where(s => users.Contains(s.SitterProfile.UserId)).ExecuteDeleteAsync();
                 await db.PetSitterProfiles.Where(p => users.Contains(p.UserId)).ExecuteDeleteAsync();

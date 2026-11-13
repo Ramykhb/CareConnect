@@ -8,6 +8,8 @@ using PetSitting.Services.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<PetSitting.Services.Bookings.ISitterBookingService, PetSitting.Services.Bookings.SitterBookingService>();
+builder.Services.AddScoped<PetSitting.Services.Scheduling.ISitterAvailabilityService, PetSitting.Services.Scheduling.SitterAvailabilityService>();
 builder.Services.AddScoped<PetSitting.Services.Requests.ISitterRequestService, PetSitting.Services.Requests.SitterRequestService>();
 builder.Services.AddScoped<PetSitting.Services.Dashboard.IDashboardService, PetSitting.Services.Dashboard.DashboardService>();
 builder.Services.AddDbContext<PetSittingDbContext>(options =>

@@ -494,3 +494,6 @@
 @media (prefers-reduced-motion:no-preference) { .dash-card { animation:card-arrive .35s ease both; } .quick-tile,.quick-action,.dashboard-pet-row { transition:transform .15s ease,box-shadow .15s ease; } .quick-tile:hover,.quick-action:hover,.dashboard-pet-row:hover { transform:translateY(-2px); box-shadow:0 5px 16px #191b1c08; } @keyframes card-arrive { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } } }
 @media print { .portal-sidebar,.portal-topbar,.heading-actions,.dashboard-tabs,.portal-footer,.sitter-quick-actions,.owner-actions,.matching-card { display:none !important; } .pet-portal .portal-shell { display:block; } .dash-card { break-inside:avoid; border:1px solid #ddd; } }
 .dashboard-board[data-view="overview"].is-searching .overview-extra:not([hidden]) { display:flex; }
+.dashboard-care-update { border-top:1px solid var(--border); margin:15px 0; padding-top:13px; }
+.dashboard-care-update strong { font-size:11px; font-weight:600; }
+.dashboard-care-update img { width:100%; max-height:220px; object-fit:contain; border-radius:14px; margin:10px 0; }

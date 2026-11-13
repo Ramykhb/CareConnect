@@ -23,7 +23,7 @@ public sealed class DashboardService(PetSittingDbContext db, TimeProvider clock)
         var bookings = await ownBookings.Where(b => b.EndsAtUtc >= yearStart || b.Payments.Any(p => p.PaidAtUtc >= yearStart || p.CreatedAtUtc >= yearStart))
             .Include(b => b.Request).ThenInclude(r => r.Pets).ThenInclude(p => p.Pet)
             .Include(b => b.Customer).Include(b => b.SitterProfile).ThenInclude(p => p.User)
-            .Include(b => b.Payments).AsSplitQuery().ToListAsync(ct);
+            .Include(b => b.Payments).Include(b => b.Updates).AsSplitQuery().ToListAsync(ct);
         var city = profile?.City ?? account.City;
         var services = profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
         var requests = db.PetCareRequests.AsNoTracking().Where(r => r.Status == RequestStatus.Open && r.StartsAtUtc > now);

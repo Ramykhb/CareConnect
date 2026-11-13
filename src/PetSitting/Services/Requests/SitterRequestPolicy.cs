@@ -1,4 +1,5 @@
 using PetSitting.Models;
+using PetSitting.Services.Scheduling;
 using PetSitting.ViewModels;
 
 namespace PetSitting.Services.Requests;
@@ -22,20 +23,8 @@ public static class SitterRequestPolicy
     public static bool Overlaps(PetCareRequest request, IEnumerable<PetBooking> bookings) => bookings.Any(b =>
         b.RequestId != request.Id && DashboardViewModel.IsActive(b.Status) && b.StartsAtUtc < request.EndsAtUtc && b.EndsAtUtc > request.StartsAtUtc);
 
-    public static bool Covered(PetCareRequest request, IEnumerable<SitterAvailability> availability)
-    {
-        var slots = availability.OrderBy(a => a.StartsAtUtc).ToArray();
-        if (slots.Length == 0) return true; // No date restrictions have been configured.
-        var through = request.StartsAtUtc;
-        foreach (var slot in slots)
-        {
-            if (slot.EndsAtUtc <= through) continue;
-            if (slot.StartsAtUtc > through) return false;
-            through = slot.EndsAtUtc;
-            if (through >= request.EndsAtUtc) return true;
-        }
-        return false;
-    }
+    public static bool Covered(PetCareRequest request, IEnumerable<SitterAvailability> availability, IEnumerable<SitterScheduleException>? exceptions = null) =>
+        ScheduleMath.Covered(availability, exceptions ?? [], request.StartsAtUtc, request.EndsAtUtc);
 
     public static string? AcceptanceBlock(PetCareRequest request, PetSitterProfile? profile, IEnumerable<PetBooking> bookings, DateTimeOffset now)
     {
@@ -44,7 +33,7 @@ public static class SitterRequestPolicy
         if (!profile.IsAvailable) return "Your sitter profile is not currently accepting requests.";
         if (!InServiceArea(request, profile.City, profile.Services.Select(s => s.ServiceType))) return "This request is outside your current service city or services.";
         if (Overlaps(request, bookings)) return "These dates overlap one of your active bookings.";
-        if (!Covered(request, profile.Availability)) return "These dates are outside your saved availability.";
+        if (!Covered(request, profile.Availability, profile.ScheduleExceptions)) return "These dates are outside your saved availability.";
         return null;
     }
 }

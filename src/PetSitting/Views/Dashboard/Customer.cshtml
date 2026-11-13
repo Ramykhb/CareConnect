@@ -1,6 +1,6 @@
 @using PetSitting.ViewModels
 @model DashboardViewModel
-@{ ViewData["Title"] = "Dashboard"; Layout = "_PortalLayout"; var pendingBooking = Model.Upcoming.FirstOrDefault(b => b.Status == BookingStatus.AwaitingPayment || b.Payments.Any(p => p.Status == PaymentStatus.Pending)); }
+@{ ViewData["Title"] = "Dashboard"; Layout = "_PortalLayout"; var pendingBooking = Model.Upcoming.FirstOrDefault(b => !PetSitting.Services.Bookings.BookingRules.FullyPaid(b) && (b.Status == BookingStatus.AwaitingPayment || b.Payments.Any(p => p.Status == PaymentStatus.Pending))); }
 <partial name="_DashboardHeader" model="Model" />
 <div class="dashboard-board owner-board" data-dashboard="owner" data-view="overview">
     <partial name="_Metric" model='@(new DashboardMetric("Active requests", "inbox", Model.Requests.Count, "awaiting a sitter", Filled: Math.Min(8, Model.Requests.Count), Section: "requests"))' />

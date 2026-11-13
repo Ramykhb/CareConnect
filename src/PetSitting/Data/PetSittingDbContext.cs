@@ -13,6 +13,10 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<PetCareOffer> PetCareOffers => Set<PetCareOffer>();
     public DbSet<PetBooking> PetBookings => Set<PetBooking>();
     public DbSet<SitterService> SitterServices => Set<SitterService>();
+    public DbSet<SitterScheduleException> SitterScheduleExceptions => Set<SitterScheduleException>();
+    public DbSet<BookingCareTask> BookingCareTasks => Set<BookingCareTask>();
+    public DbSet<BookingUpdate> BookingUpdates => Set<BookingUpdate>();
+    public DbSet<BookingUpdatePhoto> BookingUpdatePhotos => Set<BookingUpdatePhoto>();
     public DbSet<SitterAvailability> SitterAvailabilities => Set<SitterAvailability>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
@@ -32,6 +36,15 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
         modelBuilder.Entity<PetSitterProfile>().HasOne(x => x.User).WithOne(x => x.SitterProfile).HasForeignKey<PetSitterProfile>(x => x.UserId);
         modelBuilder.Entity<SitterService>().HasOne(x => x.SitterProfile).WithMany(x => x.Services).HasForeignKey(x => x.SitterProfileId);
         modelBuilder.Entity<SitterAvailability>().HasOne(x => x.SitterProfile).WithMany(x => x.Availability).HasForeignKey(x => x.SitterProfileId);
+        modelBuilder.Entity<SitterScheduleException>().HasOne(x => x.SitterProfile).WithMany(x => x.ScheduleExceptions).HasForeignKey(x => x.SitterProfileId);
+        modelBuilder.Entity<SitterScheduleException>().HasIndex(x => new { x.SitterProfileId, x.StartsOn, x.EndsOn });
+        modelBuilder.Entity<SitterScheduleException>().ToTable(t => t.HasCheckConstraint("CK_SitterScheduleException_Dates", "[EndsOn] >= [StartsOn] AND ([AllDay] = 1 OR [EndsOn] > [StartsOn] OR [EndTime] > [StartTime])"));
+        modelBuilder.Entity<BookingCareTask>().HasOne(x => x.Booking).WithMany(x => x.CareTasks).HasForeignKey(x => x.BookingId);
+        modelBuilder.Entity<BookingCareTask>().HasIndex(x => new { x.BookingId, x.Key }).IsUnique();
+        modelBuilder.Entity<BookingUpdate>().HasOne(x => x.Booking).WithMany(x => x.Updates).HasForeignKey(x => x.BookingId);
+        modelBuilder.Entity<BookingUpdate>().HasIndex(x => new { x.BookingId, x.CreatedAtUtc });
+        modelBuilder.Entity<BookingUpdate>().HasIndex(x => new { x.BookingId, x.ClientToken }).IsUnique();
+        modelBuilder.Entity<BookingUpdatePhoto>().HasOne(x => x.BookingUpdate).WithOne(x => x.Photo).HasForeignKey<BookingUpdatePhoto>(x => x.BookingUpdateId);
         modelBuilder.Entity<PetCareRequest>().HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId);
         modelBuilder.Entity<Pet>().HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId);
         modelBuilder.Entity<PetCareRequestPet>().HasKey(x => new { x.PetCareRequestId, x.PetId });

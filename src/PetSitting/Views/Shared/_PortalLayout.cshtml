@@ -37,8 +37,8 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests";
-                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability";
+                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
@@ -50,7 +50,7 @@
             <div class="sidebar-bottom">
                 @if (sitter)
                 {
-                    <a href="@(home)#availability" class="availability-promo"><span>Accepting requests <span class="mini-switch @(portal?.Profile?.IsAvailable == true ? "on" : "")" aria-hidden="true"></span></span><small>@(portal?.Profile is null ? "Set up your sitter profile to get started." : $"Your availability in {portal.Profile.City}.")</small></a>
+                    <a href="@Url.Action("Index", "SitterAvailability")" class="availability-promo"><span>Accepting requests <span class="mini-switch @(portal?.Profile?.IsAvailable == true ? "on" : "")" aria-hidden="true"></span></span><small>@(portal?.Profile is null ? "Set up your sitter profile to get started." : $"Your availability in {portal.Profile.City}.")</small></a>
                 }
                 else
                 {
@@ -72,7 +72,7 @@
                 <div class="topbar-tools">
                     @if (portal is not null)
                     {
-                        <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
+                        <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }
                     <a href="@(home)#notifications" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
                     <button type="button" class="round-icon topbar-message" data-feature="Messages" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></button>

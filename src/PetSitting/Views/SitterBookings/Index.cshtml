@@ -1,0 +1,36 @@
+@using PetSitting.ViewModels
+@using PetSitting.Services.Bookings
+@using PetSitting.Services.Scheduling
+@model SitterBookingsViewModel
+@{
+    Layout = "_PortalLayout"; ViewData["Title"] = "Bookings"; ViewData["PortalClass"] = "booking-portal";
+    ViewData["SearchForm"] = "booking-search-form"; ViewData["SearchTerm"] = Model.Search;
+}
+@section Styles { <link rel="stylesheet" href="~/css/pet-scheduling.css" asp-append-version="true" /> }
+<section class="schedule-heading"><div><h1>Bookings</h1><p>Manage upcoming stays and update care as you go — owners receive your updates.</p></div><div class="schedule-heading-actions"><a asp-controller="SitterAvailability" asp-action="Index" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-calendar" /></svg>Calendar view</a><a asp-action="Export" asp-route-status="@Model.Filter" asp-route-search="@Model.Search" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-download" /></svg>Export</a></div></section>
+<form asp-action="Index" method="get" id="booking-search-form"><input type="hidden" name="status" value="@Model.Filter" /><button type="submit" hidden>Search</button></form>
+<nav class="schedule-tabs" aria-label="Booking status">@foreach (var (key, title) in new[] { ("upcoming", "Upcoming"), ("in-progress", "In progress"), ("accepted", "Accepted"), ("completed", "Completed"), ("cancelled", "Cancelled") }) { <a asp-action="Index" asp-route-status="@key" asp-route-search="@Model.Search" class="@(Model.Filter == key ? "active" : "")" aria-current="@(Model.Filter == key ? "page" : null)">@title<span>@Model.Count(key)</span></a> }</nav>
+<div class="sitter-bookings-layout">
+    <section class="sitter-booking-list" aria-label="Bookings">
+        @if (!Model.Visible.Any()) { <div class="schedule-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><h2>@(string.IsNullOrEmpty(Model.Search) ? "No bookings in this view" : "No matching bookings")</h2><p>@(string.IsNullOrEmpty(Model.Search) ? "Your accepted stays, walks and visits will appear here." : "Try another pet or owner name, or choose another status tab.")</p><a asp-controller="SitterRequests" asp-action="Index" class="btn btn-dark btn-sm">Review requests ↗</a></div> }
+        @foreach (var group in Model.Visible.GroupBy(Model.Group))
+        {
+            <h2 class="booking-group-label">@group.Key</h2>
+            @foreach (var booking in group)
+            {
+                var date = DashboardViewModel.Local(booking.StartsAtUtc);
+                <div class="sitter-booking-item">
+                    <a asp-action="Details" asp-route-id="@booking.Id" class="sitter-booking-row"><span class="booking-date @(ScheduleMath.LocalDate(booking.StartsAtUtc) == Model.Today ? "lime" : "")"><strong>@date.ToString("dd")</strong><small>@date.ToString("MMM")</small></span><span class="sitter-booking-info"><strong>@DashboardViewModel.Service(booking.Request.ServiceType) <em>· @SitterBookingsViewModel.PetNames(booking)</em></strong><span><i class="person-dot">@booking.Customer.FirstName.FirstOrDefault()</i>@booking.Customer.FirstName @booking.Customer.LastName <span><svg class="line-icon"><use href="#icon-clock" /></svg>@date.ToString("ddd h:mm tt") → @DashboardViewModel.Local(booking.EndsAtUtc).ToString("ddd h:mm tt")</span></span></span><span class="status-chip @BookingRules.Css(booking)">@BookingRules.Label(booking)</span><strong class="booking-price">@DashboardViewModel.Money(booking.TotalAmount, booking.Currency)</strong><span class="round-icon"><svg class="line-icon"><use href="#icon-chevron" /></svg></span></a>
+                    <div class="booking-row-action">
+                    @if (booking.Status == BookingStatus.InProgress) { <form asp-action="Transition" method="post" data-status-confirm="Mark this booking completed? The owner will be notified."><input type="hidden" name="Id" value="@booking.Id" /><input type="hidden" name="Version" value="@Convert.ToBase64String(booking.RowVersion)" /><button type="submit" name="Action" value="complete" class="btn btn-dark btn-sm"><svg class="line-icon"><use href="#icon-check" /></svg>Mark complete</button></form> }
+                    else if (BookingRules.StartBlock(booking, Model.Now) is null) { <form asp-action="Transition" method="post"><input type="hidden" name="Id" value="@booking.Id" /><input type="hidden" name="Version" value="@Convert.ToBase64String(booking.RowVersion)" /><button type="submit" name="Action" value="start" class="btn btn-lime btn-sm"><svg class="line-icon"><use href="#icon-bolt" /></svg>Start</button></form> }
+                    else { <a asp-action="Details" asp-route-id="@booking.Id" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-arrow" /></svg>Details</a> }
+                    </div>
+                </div>
+            }
+        }
+    </section>
+    <aside class="dash-card booking-week-summary"><h2>This week</h2><dl><dt>Bookings</dt><dd>@Model.ThisWeek.Count()</dd><dt>Hours booked</dt><dd>@Model.WeekHours.ToString("0.#") h</dd><dt>Expected earnings</dt><dd>@(string.IsNullOrEmpty(Model.WeekEarnings) ? "—" : Model.WeekEarnings)</dd><dt>Pets cared for</dt><dd>@Model.ThisWeek.SelectMany(b => b.Request.Pets).Select(p => p.PetId).Distinct().Count()</dd></dl>@{ var unpaid = Model.ThisWeek.Count(b => DashboardViewModel.IsActive(b.Status) && !BookingRules.FullyPaid(b)); }@if (unpaid > 0) { <div class="schedule-warning"><strong>@unpaid @(unpaid == 1 ? "booking needs" : "bookings need") payment</strong><p>Care can start once the full payment succeeds.</p></div> }</aside>
+</div>
+<partial name="_StatusConfirmation" />
+@section Scripts { <script src="~/js/pet-scheduling.js" asp-append-version="true"></script> }

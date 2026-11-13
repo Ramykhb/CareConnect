@@ -18,7 +18,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
     public async Task<SitterRequestsViewModel> LoadAsync(ApplicationUser account, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
-        var profile = await db.PetSitterProfiles.AsNoTracking().Include(p => p.Services).Include(p => p.Availability).AsSplitQuery().SingleOrDefaultAsync(p => p.UserId == account.Id, ct);
+        var profile = await db.PetSitterProfiles.AsNoTracking().Include(p => p.Services).Include(p => p.Availability).Include(p => p.ScheduleExceptions).AsSplitQuery().SingleOrDefaultAsync(p => p.UserId == account.Id, ct);
         var city = profile?.City ?? account.City;
         var services = profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
         var requests = await db.PetCareRequests.AsNoTracking()
@@ -28,7 +28,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
             .Include(r => r.Customer).Include(r => r.Pets).ThenInclude(p => p.Pet)
             .Include(r => r.Offers.Where(o => o.SitterProfile.UserId == account.Id))
             .AsSplitQuery().OrderByDescending(r => r.CreatedAtUtc).ThenBy(r => r.Id).ToListAsync(ct);
-        var bookings = await db.PetBookings.AsNoTracking().Where(b => b.SitterProfile.UserId == account.Id).ToListAsync(ct);
+        var bookings = await db.PetBookings.AsNoTracking().Where(b => b.SitterProfile.UserId == account.Id).Include(b => b.Payments).ToListAsync(ct);
         var items = requests.Select(request =>
         {
             var offer = request.Offers.SingleOrDefault();
@@ -41,7 +41,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
             var checks = new List<RequestFitCheck>
             {
                 new(SitterRequestPolicy.Overlaps(request, bookings) ? "These dates overlap an active booking" : "No conflicting bookings for the requested dates", !SitterRequestPolicy.Overlaps(request, bookings)),
-                new(profile?.Availability.Count > 0 ? SitterRequestPolicy.Covered(request, profile.Availability) ? "The dates fit your saved availability" : "The dates are outside your saved availability" : "No date restrictions have been set", profile?.Availability.Count > 0 ? SitterRequestPolicy.Covered(request, profile.Availability) : null),
+                new((profile is not null && (profile.Availability.Count > 0 || profile.ScheduleExceptions.Count > 0)) ? SitterRequestPolicy.Covered(request, profile!.Availability, profile.ScheduleExceptions) ? "The dates fit your saved availability" : "The dates are outside your saved availability" : "No date restrictions have been set", (profile is not null && (profile.Availability.Count > 0 || profile.ScheduleExceptions.Count > 0)) ? SitterRequestPolicy.Covered(request, profile!.Availability, profile.ScheduleExceptions) : null),
                 new($"In your service city · {request.City}", SitterRequestPolicy.InServiceArea(request, city, services)),
                 new(profile is not null && profile.Currency == currency ? amount >= profile.HourlyRate * (decimal)(request.EndsAtUtc - request.StartsAtUtc).TotalHours ? "The offer covers your listed hourly rate" : "The offer is below your listed hourly rate" : "Review the offered amount before accepting", profile is not null && profile.Currency == currency ? amount >= profile.HourlyRate * (decimal)(request.EndsAtUtc - request.StartsAtUtc).TotalHours : null)
             };
@@ -53,7 +53,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
                 // Do not put an unaccepted request's exact address into HTML or refresh responses.
                 Address = state == IncomingRequestState.Accepted ? request.ServiceAddress : null,
                 Note = request.Description, Amount = amount, Currency = currency, StartsAtUtc = request.StartsAtUtc, EndsAtUtc = request.EndsAtUtc, CreatedAtUtc = request.CreatedAtUtc,
-                State = state, BookingId = booking?.Id, BookingStatus = booking?.Status, AcceptedAtUtc = state == IncomingRequestState.Accepted ? booking?.CreatedAtUtc : null,
+                State = state, BookingId = booking?.Id, BookingStatus = booking?.Status == BookingStatus.AwaitingPayment && PetSitting.Services.Bookings.BookingRules.FullyPaid(booking) ? BookingStatus.Confirmed : booking?.Status, AcceptedAtUtc = state == IncomingRequestState.Accepted ? booking?.CreatedAtUtc : null,
                 CanAccept = open && block is null, CanDecline = open && profile is not null, BlockReason = open ? block : null, FitChecks = checks,
                 Pets = request.Pets.Select(p => new IncomingPetViewModel(p.Pet.Name, p.Pet.Species, p.Pet.Breed, p.Pet.AgeYears, p.Pet.MedicalNotes, p.Pet.FeedingInstructions, p.Pet.CareInstructions)).ToArray()
             };
@@ -76,7 +76,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
                 // Serializable reads protect both request assignment and the sitter's booking date range.
                 await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
                 var now = clock.GetUtcNow();
-                var profile = await db.PetSitterProfiles.Include(p => p.Services).Include(p => p.Availability).AsSplitQuery().SingleOrDefaultAsync(p => p.UserId == account.Id, ct);
+                var profile = await db.PetSitterProfiles.Include(p => p.Services).Include(p => p.Availability).Include(p => p.ScheduleExceptions).AsSplitQuery().SingleOrDefaultAsync(p => p.UserId == account.Id, ct);
                 if (profile is null || !account.IsActive) return new RequestDecisionResult(false, "Set up an active sitter profile before responding to requests.");
                 var request = await db.PetCareRequests.Include(r => r.Customer).SingleOrDefaultAsync(r => r.Id == form.RequestId, ct);
                 if (request is null || request.CustomerId is null || request.CustomerId == account.Id) return new(false, "Request not found.", NotFound: true);
