@@ -1,0 +1,14 @@
+@using PetSitting.ViewModels
+@model DashboardViewModel
+<article class="dash-card requests-card" id="requests" data-sections="@(Model.IsSitter ? "overview requests" : "requests")">
+    <div class="card-heading"><h2>@(Model.IsSitter ? "New requests" : "Your active requests")</h2><span class="realtime-tag"><svg class="line-icon"><use href="#icon-bolt" /></svg>@(Model.IsSitter ? "In your area" : "Ready for a little care")</span></div>
+    @if (Model.Requests.Count == 0) { <div class="dashboard-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-inbox" /></svg></span><h3>@(Model.IsSitter ? "A fresh start for new friendships" : "Their next adventure starts here")</h3><p>@(Model.IsSitter ? "Open requests in your city will appear here. Add your city in account settings to find local pets." : "When you create a care request, you’ll be able to keep track of it here.")</p>@if (Model.IsSitter) { <a asp-area="Identity" asp-page="/Account/Manage/Index" class="text-action">Update your city ↗</a> }</div> }
+    @foreach (var request in Model.Requests)
+    {
+        <div class="request-card searchable" data-search="@request.Title @request.Customer?.FirstName @request.Customer?.LastName @request.City @string.Join(" ", request.Pets.Select(p => p.Pet.Name))">
+            <div class="request-person"><span class="portal-avatar">@(request.Customer?.FirstName.FirstOrDefault() ?? 'P')</span><div><strong>@request.Customer?.FirstName @request.Customer?.LastName</strong><small>@request.City · @DashboardViewModel.Local(request.CreatedAtUtc).ToString("d MMM")</small></div><span class="status-chip purple">↳ New</span></div>
+            <div class="request-pet"><span class="pet-emoji">@DashboardViewModel.PetEmoji(request.Pets.FirstOrDefault()?.Pet.Species ?? "Dog")</span><div><strong>@(request.Pets.Count == 0 ? request.Title : string.Join(", ", request.Pets.Select(p => p.Pet.Name)))</strong><small>@DashboardViewModel.Service(request.ServiceType) · @DashboardViewModel.Local(request.StartsAtUtc).ToString("d MMM")–@DashboardViewModel.Local(request.EndsAtUtc).ToString("d MMM")</small></div><span class="request-budget"><strong>@DashboardViewModel.Money(request.Budget, request.Currency)</strong><small>budget</small></span></div>
+            <p class="request-description">@request.Description</p><div class="request-actions"><span class="status-chip gray">@request.Status</span><button type="button" class="btn btn-dark btn-sm" data-feature="@(Model.IsSitter ? "Respond to a request" : "Manage request")">@(Model.IsSitter ? "Review request" : "Manage request") <svg class="line-icon"><use href="#icon-arrow" /></svg></button></div>
+        </div>
+    }
+</article>

@@ -1,11 +1,18 @@
 @using Microsoft.AspNetCore.Identity
+@using PetSitting.ViewModels
 @inject UserManager<ApplicationUser> UserManager
 @{
-    var user = await UserManager.GetUserAsync(User);
-    var displayName = user is null ? "Pet owner" : $"{user.FirstName} {user.LastName}";
-    var initial = string.IsNullOrEmpty(user?.FirstName) ? "?" : user!.FirstName[..1].ToUpperInvariant();
+    var dashboard = Model as DashboardViewModel;
+    var user = dashboard?.Account ?? await UserManager.GetUserAsync(User);
+    var sitter = User.IsInRole(Roles.Sitter);
+    var displayName = user is null ? "Your account" : $"{user.FirstName} {user.LastName}";
+    var initial = string.IsNullOrEmpty(user?.FirstName) ? "?" : user.FirstName[..1].ToUpperInvariant();
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
-    string Active(string c) => c == controller ? "active" : "";
+    var home = Url.Action(sitter ? "Sitter" : "Customer", "Dashboard");
+    var unread = dashboard?.Unread ?? 0;
+    var menu = sitter
+        ? new[] { ("overview", "Dashboard", "grid"), ("requests", "Requests", "inbox"), ("bookings", "Bookings", "calendar"), ("availability", "Availability", "clock"), ("earnings", "Earnings", "wallet"), ("reports", "Analytics", "chart"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") }
+        : new[] { ("overview", "Dashboard", "grid"), ("pets", "My Pets", "paw"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -16,56 +23,72 @@
     <title>@ViewData["Title"] · CareConnect</title>
     <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pet-portal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pet-dashboard.css" asp-append-version="true" />
 </head>
-<body class="pet-portal">
+<body class="pet-portal @(dashboard is null ? "" : "dashboard-page")">
     <a class="auth-skip" href="#main-content">Skip to content</a>
-    <partial name="_PetIcons" />
-    <svg class="auth-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></symbol>
-        <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-        <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
-        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
-        <symbol id="icon-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
-        <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
-        <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
-    </svg>
+    <partial name="_PortalIcons" />
     <div class="portal-shell">
-        <aside class="portal-sidebar" aria-label="Owner navigation">
+        <aside class="portal-sidebar" id="portal-navigation" aria-label="@(sitter ? "Sitter" : "Owner") navigation">
             <div>
-                <a class="portal-brand" asp-controller="Home" asp-action="Index"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>CareConnect</a>
-                <p class="portal-menu-label">Menu</p>
+                <a class="portal-brand" asp-controller="Home" asp-action="Index" aria-label="PawPal · CareConnect home"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>PawPal</a>
+                <p class="portal-menu-label">@(sitter ? "Workspace" : "Menu")</p>
                 <nav class="portal-nav">
-                    <a class="@Active("Dashboard")" asp-controller="Dashboard" asp-action="Customer"><svg class="line-icon"><use href="#icon-grid" /></svg>Dashboard</a>
-                    <a class="@Active("Pets")" asp-controller="Pets" asp-action="Index"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg>My pets</a>
-                    <a asp-area="Identity" asp-page="/Account/Manage/Index"><svg class="line-icon"><use href="#icon-user" /></svg>My account</a>
+                    @foreach (var (key, label, icon) in menu)
+                    {
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets";
+                        var href = key == "pets" ? Url.Action("Index", "Pets") : home + "#" + key;
+                        <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
+                            @if (key == "requests" && dashboard?.Requests.Count > 0) { <span class="nav-count">@dashboard.Requests.Count</span> }
+                            @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
+                        </a>
+                    }
+                    <a asp-area="Identity" asp-page="/Account/Manage/Index"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
                 </nav>
             </div>
-            <div class="portal-user">
-                <span class="portal-avatar" aria-hidden="true">@initial</span>
-                <span class="portal-user-text"><strong>@displayName</strong><small>Pet owner</small></span>
-                <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
-                    <button type="submit" class="portal-icon-button" aria-label="Log out"><svg class="line-icon"><use href="#icon-logout" /></svg></button>
-                </form>
+            <div class="sidebar-bottom">
+                @if (sitter)
+                {
+                    <a href="@(home)#availability" class="availability-promo"><span>Accepting requests <span class="mini-switch @(dashboard?.Profile?.IsAvailable == true ? "on" : "")" aria-hidden="true"></span></span><small>@(dashboard?.Profile is null ? "Set up your sitter profile to get started." : $"Your availability in {dashboard.Profile.City}.")</small></a>
+                }
+                else
+                {
+                    <a class="sidebar-promo" href="@(home)#sitters"><span class="round-icon"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span><strong>A little help. A lot of care.</strong><small>Find a friendly sitter for your pet’s next stay.</small><span>Explore sitters ↗</span></a>
+                }
+                <div class="portal-user">
+                    <a class="portal-avatar" asp-area="Identity" asp-page="/Account/Manage/Index" aria-label="Manage account">@initial</a>
+                    <span class="portal-user-text"><strong>@displayName</strong><small>@(sitter ? "Pet sitter" : "Pet owner")@(string.IsNullOrEmpty(user?.City) ? "" : " · " + user.City)</small></span>
+                    <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                        <button type="submit" class="portal-icon-button" aria-label="Log out"><svg class="line-icon"><use href="#icon-logout" /></svg></button>
+                    </form>
+                </div>
             </div>
         </aside>
         <div class="portal-main">
             <header class="portal-topbar">
-                <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>Owner portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
+                <button class="mobile-nav-toggle round-icon" type="button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded="false"><svg class="line-icon"><use href="#icon-menu" /></svg></button>
+                <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>@(sitter ? "Sitter" : "Owner") portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
+                <div class="topbar-tools">
+                    @if (dashboard is not null)
+                    {
+                        <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
+                    }
+                    <a href="@(home)#notifications" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
+                    <button type="button" class="round-icon topbar-message" data-feature="Messages" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></button>
+                    <details class="account-menu"><summary><span class="portal-avatar">@initial</span><span><strong>@displayName</strong><small>@(sitter ? "Pet sitter" : "Pet owner")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a asp-area="Identity" asp-page="/Account/Manage/Index">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
+                </div>
             </header>
             <main id="main-content">
-                @if (TempData["Success"] is string success)
-                {
-                    <div class="portal-notice success" role="status"><svg class="line-icon"><use href="#icon-check" /></svg>@success</div>
-                }
-                @if (TempData["Error"] is string error)
-                {
-                    <div class="portal-notice error" role="alert"><svg class="line-icon"><use href="#icon-alert" /></svg>@error</div>
-                }
+                @if (TempData["Success"] is string success) { <div class="portal-notice success" role="status">@success</div> }
+                @if (TempData["Error"] is string error) { <div class="portal-notice error" role="alert">@error</div> }
                 @RenderBody()
             </main>
+            <footer class="portal-footer"><span>A little care makes a big difference.</span><span>PawPal by CareConnect <svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span></footer>
         </div>
     </div>
+    <dialog id="feature-dialog" class="dashboard-dialog" aria-labelledby="feature-title"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-paw" /></svg></span><h2 id="feature-title">More care is on the way</h2><p id="feature-description">This feature is being prepared. You can manage your pets and account today.</p><button class="btn btn-dark" type="button" data-close>Got it</button></dialog>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/pet-dashboard.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

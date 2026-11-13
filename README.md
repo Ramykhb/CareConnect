@@ -171,7 +171,7 @@ Registration requires exactly one account type: customer or sitter. Accounts can
 - `/Identity/Account/Logout`: POST with antiforgery protection.
 - `/Identity/Account/ResendEmailConfirmation` and `/Identity/Account/ForgotPassword`: email confirmation and recovery.
 - `/Identity/Account/Manage`: edit name, city, and phone; change password/email; enable authenticator, manage recovery codes, export personal data, and delete an unused account after password verification.
-- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. These are access-controlled placeholders for future care features.
+- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. PetSitting routes display the owner or sitter dashboard; BabySitting and management care pages remain access-controlled placeholders.
 
 Use an authenticator app's manual time-based setup with the secret shown on the setup page. Save recovery codes privately. Accounts linked to care records cannot be hard-deleted through self-service; the form explains that a platform manager must handle account closure while retaining those records.
 
@@ -212,3 +212,13 @@ In Development, `Email:InboxUrl` points to Mailpit at `http://localhost:8025`. A
 BabySitting's login, registration, forgot-password, and inbox-confirmation screens match the CareConnect typography, lime accents, rounded controls, and full-height layout used by PetSitting. BabySitting has its own family illustration, caregiver/child and toy-rabbit artwork, family icon, and copy. Registration uses the existing Parent or Babysitter role choices; no child information or new profile fields are collected on these pages.
 
 Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains independently runnable. Its password-reset service, resend cooldown, SMTP sender, cookies, and Identity database are local to that application. Its babysitter registration link preselects the sitter role, and existing role validation still rejects multiple-role registration. No migrations are required for this UI update.
+
+### PetSitting dashboards
+
+`/Dashboard` redirects pet owners to `/Dashboard/Customer` and pet sitters to `/Dashboard/Sitter`. Both pages use the PawPal portal theme from the supplied dashboard designs, including responsive navigation, lime metric cards, charts, booking details, notifications, and empty states. Existing pet CRUD and account links remain available.
+
+Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
+
+Tabs and sidebar links switch dashboard sections. Search filters the current view, booking rows open a details dialog, and sitter reports download as CSV. Request creation/responses, availability editing, pricing, messaging, reviews, payments, payouts, and AI matching still require their planned backend workflows. Related buttons explicitly explain availability instead of simulating a successful operation. No database migration is needed.
+
+Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.

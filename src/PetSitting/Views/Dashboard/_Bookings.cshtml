@@ -1,0 +1,30 @@
+@using PetSitting.ViewModels
+@model DashboardViewModel
+@{
+    var bookings = Model.Upcoming.Concat(Model.Bookings.Where(b => !DashboardViewModel.IsActive(b.Status) || b.EndsAtUtc <= Model.Now).OrderByDescending(b => b.StartsAtUtc)).ToArray();
+}
+<article class="dash-card bookings-card" id="bookings" data-sections="overview bookings">
+    <div class="card-heading"><h2>@(Model.IsSitter ? "Your bookings" : "Upcoming bookings")</h2><a href="#bookings" class="subtle-link">View all ↗</a></div>
+    <div class="booking-list">
+    @if (bookings.Length == 0)
+    {
+        <div class="dashboard-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><h3>A little adventure is ahead</h3><p>@(Model.IsSitter ? "Your accepted bookings will appear here." : "Your pet’s next stay, stroll or check-in will appear here.")</p><a href="@(Model.IsSitter ? "#requests" : "#sitters")" class="text-action">@(Model.IsSitter ? "Browse requests" : "Explore sitters") ↗</a></div>
+    }
+    @for (var i = 0; i < bookings.Length; i++)
+    {
+        var booking = bookings[i];
+        var date = DashboardViewModel.Local(booking.StartsAtUtc);
+        var person = Model.IsSitter ? booking.Customer : booking.SitterProfile.User;
+        var pets = string.Join(", ", booking.Request.Pets.Select(p => p.Pet.Name));
+        <button type="button" class="booking-row searchable @(i > 2 || !Model.Upcoming.Contains(booking) ? "overview-extra" : "")" data-search="@booking.Request.Title @pets @person.FirstName @person.LastName @DashboardViewModel.Service(booking.Request.ServiceType)" data-dialog="booking-@booking.Id">
+            <span class="booking-date @(i == 0 ? "lime" : "")"><strong>@date.ToString("dd")</strong><small>@date.ToString("MMM")</small></span>
+            <span class="booking-info"><strong>@DashboardViewModel.Service(booking.Request.ServiceType) <em>· @pets</em></strong><span><i class="person-dot">@person.FirstName.FirstOrDefault()</i>@person.FirstName @person.LastName <span class="booking-time"><svg class="line-icon"><use href="#icon-clock" /></svg>@date.ToString("ddd h:mm tt")</span></span></span>
+            <span class="status-chip @DashboardViewModel.StatusClass(booking.Status)">@DashboardViewModel.Status(booking.Status)</span><strong class="booking-price">@DashboardViewModel.Money(booking.TotalAmount, booking.Currency)</strong><span class="round-icon booking-chevron"><svg class="line-icon"><use href="#icon-chevron" /></svg></span>
+        </button>
+    }
+    </div>
+</article>
+@foreach (var booking in bookings)
+{
+    <dialog class="dashboard-dialog" id="booking-@booking.Id" aria-labelledby="booking-title-@booking.Id"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="status-chip @DashboardViewModel.StatusClass(booking.Status)">@DashboardViewModel.Status(booking.Status)</span><h2 id="booking-title-@booking.Id">@booking.Request.Title</h2><p>@booking.Request.Description</p><dl class="dialog-facts"><dt>Service</dt><dd>@DashboardViewModel.Service(booking.Request.ServiceType)</dd><dt>Pets</dt><dd>@string.Join(", ", booking.Request.Pets.Select(p => p.Pet.Name))</dd><dt>From</dt><dd>@DashboardViewModel.Local(booking.StartsAtUtc).ToString("ddd, d MMM yyyy · h:mm tt")</dd><dt>Until</dt><dd>@DashboardViewModel.Local(booking.EndsAtUtc).ToString("ddd, d MMM yyyy · h:mm tt")</dd><dt>Total</dt><dd>@DashboardViewModel.Money(booking.TotalAmount, booking.Currency)</dd></dl><button type="button" class="btn btn-dark" data-close>Done</button></dialog>
+}

@@ -8,6 +8,7 @@ using PetSitting.Services.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<PetSitting.Services.Dashboard.IDashboardService, PetSitting.Services.Dashboard.DashboardService>();
 builder.Services.AddDbContext<PetSittingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.EnableRetryOnFailure()));

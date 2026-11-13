@@ -1,0 +1,7 @@
+@using PetSitting.ViewModels
+@model DashboardViewModel
+@{ var payments = Model.Bookings.SelectMany(b => b.Payments).OrderByDescending(p => p.CreatedAtUtc).ToArray(); }
+<article class="dash-card payments-card" data-sections="@(Model.IsSitter ? "earnings reports" : "payments")"><div class="card-heading"><h2>@(Model.IsSitter ? "Payment history" : "Your payments")</h2><span class="subtle-link">@Model.ReportYear</span></div>
+    @if (payments.Length == 0) { <div class="dashboard-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-wallet" /></svg></span><h3>All in one place</h3><p>Your payment history will appear here when a booking has a payment.</p></div> }
+    @foreach (var payment in payments) { <div class="payment-row searchable" data-search="@payment.Status @payment.Currency @payment.Amount"><span class="round-icon"><svg class="line-icon"><use href="#icon-card" /></svg></span><div><strong>@DashboardViewModel.Money(payment.Amount, payment.Currency)</strong><small>@DashboardViewModel.Local(payment.CreatedAtUtc).ToString("d MMM yyyy")</small></div><span class="status-chip @(payment.Status == PaymentStatus.Succeeded ? "green" : "yellow")">@payment.Status</span></div> }
+</article>
