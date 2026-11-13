@@ -30,5 +30,10 @@
     </section>
 </div>
 <dialog class="dashboard-dialog" id="report-booking-issue" aria-labelledby="report-issue-title"><button type="button" class="round-icon dialog-close" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-alert" /></svg></span><h2 id="report-issue-title">Report a booking issue</h2><p>Describe what happened. Your note is saved to the booking and the parent receives a notification.</p><form asp-action="ReportIssue" method="post" class="issue-form"><input type="hidden" name="Id" value="@booking.Id" /><input type="hidden" name="ClientToken" value="@Model.IssueToken" /><textarea name="Message" maxlength="2000" required rows="5" aria-label="Describe the issue"></textarea><button type="submit" class="btn btn-dark btn-sm">Send report</button></form></dialog>
+@if (BabySitting.Services.Bookings.BookingCancellationService.CanCancel(booking))
+{
+    <section class="dash-card cancel-booking-card"><h2>Cancel this booking</h2><p>You can cancel until care starts. The parent is notified and the request reopens for other sitters.</p>
+        <form asp-action="Cancel" asp-route-id="@booking.Id" method="post" class="cancel-booking-form"><input type="hidden" name="version" value="@Convert.ToBase64String(booking.RowVersion)" /><textarea name="reason" maxlength="900" required rows="3" aria-label="Reason for cancelling" placeholder="Tell the parent why…"></textarea><button type="submit" class="btn btn-danger btn-sm">Cancel booking</button></form></section>
+}
 <partial name="_StatusConfirmation" />
 @section Scripts { <script src="~/js/baby-scheduling.js" asp-append-version="true"></script> }

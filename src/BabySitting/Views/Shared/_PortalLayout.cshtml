@@ -14,7 +14,7 @@
     var unread = portal?.Unread ?? 0;
     var menu = sitter
         ? new[] { ("overview", "Dashboard", "grid"), ("requests", "Requests", "inbox"), ("bookings", "Bookings", "calendar"), ("availability", "Availability", "clock"), ("earnings", "Earnings", "wallet"), ("reports", "Analytics", "chart"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") }
-        : new[] { ("overview", "Dashboard", "grid"), ("family", "My Family", "family"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
+        : new[] { ("overview", "Dashboard", "grid"), ("family", "My Family", "family"), ("requests", "My Requests", "inbox"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -39,8 +39,8 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Family" && key == "family" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
-                        var href = key == "family" ? Url.Action("Index", "Family") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Family" && key == "family" || controller == "CareRequests" && key == "requests" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var href = key == "family" ? Url.Action("Index", "Family") : !sitter && key == "requests" ? Url.Action("Index", "CareRequests") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }

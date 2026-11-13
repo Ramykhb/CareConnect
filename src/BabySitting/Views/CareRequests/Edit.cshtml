@@ -1,0 +1,36 @@
+@using BabySitting.ViewModels
+@model CareRequestFormViewModel
+@{
+    ViewData["Title"] = "Edit care request";
+    ViewData["Breadcrumb"] = "My requests / Edit";
+}
+
+<div class="page-header">
+    <div class="page-title-row">
+        <a class="btn btn-circle" asp-action="Index" aria-label="Back to my requests"><svg class="line-icon"><use href="#icon-back" /></svg></a>
+        <div>
+            <h1>Edit care request</h1>
+            <p>Sitters will see the updated details.</p>
+        </div>
+    </div>
+</div>
+
+<div class="form-layout">
+    <form class="card form-card" asp-action="Edit" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" novalidate>
+        <partial name="_CareRequestForm" model="Model" />
+        <div class="form-actions">
+            <a class="btn btn-light" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
+        </div>
+    </form>
+    <aside class="card side-card">
+        <h3>How requests work</h3>
+        <p>Available sitters in your city who offer this service see your request and can accept it.</p>
+        <p>Your address is shared only with the sitter who accepts. Your family's health notes and routines help sitters prepare.</p>
+        <p>You can edit or delete the request until a sitter accepts it.</p>
+    </aside>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

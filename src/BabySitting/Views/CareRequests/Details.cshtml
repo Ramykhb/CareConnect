@@ -1,0 +1,76 @@
+@using BabySitting.Models
+@using BabySitting.ViewModels
+@using BabySitting.Services.Bookings
+@model MyRequestItem
+@{
+    var r = Model.Request;
+    var b = Model.Booking;
+    ViewData["Title"] = r.Title;
+    ViewData["Breadcrumb"] = "My requests / Details";
+    var canEdit = (bool)ViewBag.CanEdit;
+}
+
+<div class="page-header">
+    <div class="page-title-row">
+        <a class="btn btn-circle" asp-action="Index" aria-label="Back to my requests"><svg class="line-icon"><use href="#icon-back" /></svg></a>
+        <div>
+            <h1>@r.Title</h1>
+            <p><span class="status-chip @Model.StatusClass">@Model.StatusLabel</span></p>
+        </div>
+    </div>
+    @if (r.Status == RequestStatus.Open)
+    {
+        <div class="header-actions">
+            <a class="btn btn-ghost" asp-action="Delete" asp-route-id="@r.Id"><svg class="line-icon"><use href="#icon-trash" /></svg>@(r.Offers.Count == 0 ? "Delete" : "Cancel request")</a>
+            @if (canEdit) { <a class="btn btn-dark" asp-action="Edit" asp-route-id="@r.Id"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit</a> }
+        </div>
+    }
+</div>
+
+<div class="details-layout">
+    <section class="card profile-card" aria-label="Request summary">
+        <div class="facts">
+            <div class="fact"><small>Service</small><strong>@DashboardViewModel.Service(r.ServiceType)</strong></div>
+            <div class="fact"><small>Children</small><strong>@DashboardViewModel.Children(r)</strong></div>
+            <div class="fact"><small>When</small><strong>@Model.When</strong></div>
+            <div class="fact"><small>Budget</small><strong>@DashboardViewModel.Money(r.Budget, r.Currency)</strong></div>
+            <div class="fact"><small>City</small><strong>@r.City</strong></div>
+            <div class="fact"><small>Address</small><strong>@(r.ServiceAddress ?? "Not given")</strong></div>
+        </div>
+        <h3>What you asked for</h3>
+        <p>@r.Description</p>
+        @if (!string.IsNullOrWhiteSpace(r.CareInstructions)) { <h3>Care instructions</h3><p>@r.CareInstructions</p> }
+    </section>
+
+    <section class="card side-card">
+        @if (b is not null)
+        {
+            <h3>Your sitter</h3>
+            <p><strong>@Model.SitterName</strong><br /><span class="pet-meta">@b.SitterProfile.YearsOfExperience yrs experience · @DashboardViewModel.Money(b.SitterProfile.HourlyRate, b.SitterProfile.Currency)/hr</span></p>
+            <p>Booking: <span class="status-chip @DashboardViewModel.StatusClass(b.Status)">@DashboardViewModel.Status(b.Status)</span> · @DashboardViewModel.Money(b.TotalAmount, b.Currency)</p>
+            @if (b.Status == BookingStatus.Cancelled) { <p class="pet-meta">@b.CancellationReason</p> }
+            @if (BookingCancellationService.CanCancel(b))
+            {
+                <form asp-action="CancelBooking" method="post" class="cancel-booking-form">
+                    <input type="hidden" name="requestId" value="@r.Id" />
+                    <input type="hidden" name="bookingId" value="@b.Id" />
+                    <input type="hidden" name="version" value="@Convert.ToBase64String(b.RowVersion)" />
+                    <label for="cancel-reason">Need to cancel?</label>
+                    <textarea id="cancel-reason" name="reason" maxlength="900" required placeholder="Tell your sitter why…"></textarea>
+                    <button type="submit" class="btn btn-danger"><svg class="line-icon"><use href="#icon-close" /></svg>Cancel booking</button>
+                </form>
+            }
+        }
+        else if (r.Status == RequestStatus.Open && !Model.IsExpired)
+        {
+            <h3>Waiting for a sitter</h3>
+            <p>Sitters in @r.City who offer @DashboardViewModel.Service(r.ServiceType).ToLowerInvariant() can see your request.</p>
+            @if (Model.Declines > 0) { <p class="pet-meta">@Model.Declines @(Model.Declines == 1 ? "sitter" : "sitters") couldn't take it. It is still open to others.</p> }
+        }
+        else
+        {
+            <h3>@Model.StatusLabel</h3>
+            <p>This request is no longer open.</p>
+        }
+    </section>
+</div>

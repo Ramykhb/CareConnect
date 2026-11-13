@@ -1,0 +1,83 @@
+@* Shared by Create and Edit, like _FamilyForm. *@
+@using BabySitting.ViewModels
+@model CareRequestFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+<input type="hidden" asp-for="Version" />
+
+<h2>The care you need</h2>
+<div class="field">
+    <label asp-for="Title"></label>
+    <input asp-for="Title" placeholder="e.g. Friday evening babysitting" />
+    <span asp-validation-for="Title" class="field-error"></span>
+</div>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="ServiceType"></label>
+        <select asp-for="ServiceType">
+            @foreach (var s in CareRequestFormViewModel.ServiceOptions) { <option value="@s">@DashboardViewModel.Service(s)</option> }
+        </select>
+    </div>
+    <div class="field">
+        <label asp-for="Budget"></label>
+        <input asp-for="Budget" type="number" min="0" step="1" />
+        <span asp-validation-for="Budget" class="field-error"></span>
+    </div>
+</div>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="StartsAtLocal"></label>
+        <input asp-for="StartsAtLocal" type="datetime-local" />
+        <span asp-validation-for="StartsAtLocal" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="EndsAtLocal"></label>
+        <input asp-for="EndsAtLocal" type="datetime-local" />
+        <span asp-validation-for="EndsAtLocal" class="field-error"></span>
+    </div>
+</div>
+<p class="pet-meta">Times are Beirut time.</p>
+<div class="field">
+    <label asp-for="Description"></label>
+    <textarea asp-for="Description" placeholder="Pick-up times, activities, anything a sitter should know before accepting…"></textarea>
+    <span asp-validation-for="Description" class="field-error"></span>
+</div>
+
+<h2>Where</h2>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="City"></label>
+        <input asp-for="City" />
+        <span asp-validation-for="City" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="ServiceAddress"></label>
+        <input asp-for="ServiceAddress" placeholder="Street, building, floor" />
+        <span asp-validation-for="ServiceAddress" class="field-error"></span>
+    </div>
+</div>
+
+<h2>Children</h2>
+<p class="pet-meta">Pre-filled from your family profile. For privacy we never ask for names, birth dates or schools.</p>
+<div class="form-row">
+    <div class="field">
+        <label asp-for="NumberOfChildren"></label>
+        <input asp-for="NumberOfChildren" type="number" min="1" max="20" />
+        <span asp-validation-for="NumberOfChildren" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="YoungestChildAgeYears"></label>
+        <input asp-for="YoungestChildAgeYears" type="number" min="0" max="17" />
+        <span asp-validation-for="YoungestChildAgeYears" class="field-error"></span>
+    </div>
+    <div class="field">
+        <label asp-for="OldestChildAgeYears"></label>
+        <input asp-for="OldestChildAgeYears" type="number" min="0" max="17" />
+        <span asp-validation-for="OldestChildAgeYears" class="field-error"></span>
+    </div>
+</div>
+<div class="field">
+    <label asp-for="CareInstructions"></label>
+    <textarea asp-for="CareInstructions" placeholder="Dinner at 7, bath, story, lights out at 8…"></textarea>
+    <span asp-validation-for="CareInstructions" class="field-error"></span>
+</div>

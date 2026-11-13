@@ -37,6 +37,10 @@ public sealed class SitterBookingsController(ISitterBookingService bookings, Use
     public async Task<IActionResult> SendUpdate(BookingUpdateForm form, CancellationToken ct) => await Result(form.Id, () => bookings.UpdateAsync(Guid.Parse(users.GetUserId(User)!), form, false, ct));
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReportIssue(BookingUpdateForm form, CancellationToken ct) => await Result(form.Id, () => bookings.UpdateAsync(Guid.Parse(users.GetUserId(User)!), form, true, ct));
+    // Cancelling before care starts withdraws the sitter's offer and reopens the parent's request.
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(Guid id, string? reason, string? version, [FromServices] IBookingCancellationService cancellations, CancellationToken ct) =>
+        await Result(id, () => cancellations.CancelAsync(Guid.Parse(users.GetUserId(User)!), id, reason, version, ct));
     [HttpGet]
     public async Task<IActionResult> Export(string? status, string? search, CancellationToken ct)
     {

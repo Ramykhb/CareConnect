@@ -1,0 +1,53 @@
+@using BabySitting.ViewModels
+@model MyRequestsViewModel
+@{
+    ViewData["Title"] = "My requests";
+    var labels = new Dictionary<string, string> { ["all"] = "All", ["open"] = "Waiting", ["booked"] = "Booked", ["past"] = "Past", ["cancelled"] = "Cancelled" };
+}
+
+<div class="page-header">
+    <div>
+        <h1>My requests</h1>
+        <p>Every childcare request you sent, and the sitter who accepted it.</p>
+    </div>
+    <div class="header-actions">
+        <a class="btn btn-dark" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>New request</a>
+    </div>
+</div>
+
+<nav class="request-filters" aria-label="Filter requests">
+    @foreach (var f in MyRequestsViewModel.Filters)
+    {
+        var count = f == "all" ? Model.Items.Count : Model.Items.Count(i => i.Bucket == f);
+        <a class="filter-pill @(Model.Filter == f ? "active" : "")" asp-action="Index" asp-route-status="@f">@labels[f] <span>@count</span></a>
+    }
+</nav>
+
+@if (!Model.Visible.Any())
+{
+    <section class="empty-state">
+        <span class="add-circle"><svg class="line-icon" width="40" height="40"><use href="#icon-inbox" /></svg></span>
+        <h2>@(Model.Items.Count == 0 ? "No requests yet" : "Nothing here")</h2>
+        <p>@(Model.Items.Count == 0 ? "Send your first request and sitters in your city will see it." : "Try another filter.")</p>
+        @if (Model.Items.Count == 0) { <a class="btn btn-lime" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>New request</a> }
+    </section>
+}
+else
+{
+    <div class="request-list">
+        @foreach (var item in Model.Visible)
+        {
+            <a class="card request-row" asp-action="Details" asp-route-id="@item.Request.Id">
+                <div>
+                    <strong>@item.Request.Title</strong>
+                    <span class="pet-meta">@DashboardViewModel.Service(item.Request.ServiceType) · @DashboardViewModel.Children(item.Request) · @item.Request.City</span>
+                    <span class="pet-meta">@item.When</span>
+                </div>
+                <div class="request-row-side">
+                    <span class="status-chip @item.StatusClass">@item.StatusLabel</span>
+                    <small>@(item.SitterName is null ? DashboardViewModel.Money(item.Request.Budget, item.Request.Currency) + " budget" : "with " + item.SitterName)</small>
+                </div>
+            </a>
+        }
+    </div>
+}

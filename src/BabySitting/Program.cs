@@ -13,6 +13,8 @@ builder.Services.AddDbContext<BabySittingDbContext>(options =>
         sql => sql.EnableRetryOnFailure()));
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
+builder.Services.AddScoped<ICareRequestRepository, CareRequestRepository>();
+builder.Services.AddScoped<BabySitting.Services.Bookings.IBookingCancellationService, BabySitting.Services.Bookings.BookingCancellationService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterReportingService, BabySitting.Services.Portal.SitterReportingService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterAccountService, BabySitting.Services.Portal.SitterAccountService>();
 builder.Services.AddScoped<BabySitting.Services.Bookings.ISitterBookingService, BabySitting.Services.Bookings.SitterBookingService>();
