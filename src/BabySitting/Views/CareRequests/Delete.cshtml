@@ -1,0 +1,29 @@
+@using BabySitting.ViewModels
+@model MyRequestItem
+@{
+    var r = Model.Request;
+    var hasResponses = r.Offers.Count > 0;
+    ViewData["Title"] = hasResponses ? "Cancel request" : "Delete request";
+    ViewData["Breadcrumb"] = "My requests / " + ViewData["Title"];
+}
+
+<section class="card confirm-card" aria-labelledby="confirm-title">
+    <span class="confirm-icon"><svg class="line-icon"><use href="#icon-trash" /></svg></span>
+    <h2 id="confirm-title">@(hasResponses ? "Cancel this request?" : "Delete this request?")</h2>
+    <div class="confirm-pet">
+        <div><strong>@r.Title</strong><br /><span class="pet-meta">@Model.When · @DashboardViewModel.Children(r)</span></div>
+    </div>
+    @if (r.Status != BabySitting.Models.RequestStatus.Open)
+    {
+        <p>This request is @Model.StatusLabel.ToLowerInvariant(). A booked request is cancelled from its booking.</p>
+        <form><a class="btn btn-dark" asp-action="Details" asp-route-id="@r.Id">Back to request</a></form>
+    }
+    else
+    {
+        <p>@(hasResponses ? "Sitters already responded, so the request is kept in their history and marked cancelled." : "No sitter has responded yet, so the request is removed completely. This can't be undone.")</p>
+        <form asp-action="Delete" asp-route-id="@r.Id" method="post">
+            <a class="btn btn-light" asp-action="Details" asp-route-id="@r.Id">Keep it</a>
+            <button type="submit" class="btn btn-danger"><svg class="line-icon"><use href="#icon-trash" /></svg>@(hasResponses ? "Yes, cancel" : "Yes, delete")</button>
+        </form>
+    }
+</section>

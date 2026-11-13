@@ -138,3 +138,17 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
     .form-row { grid-template-columns:1fr; }
     .search-form input { width:140px; }
 }
+
+/* My requests */
+.request-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.filter-pill { display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 16px; border-radius:999px; background:white; font-weight:600; }
+.filter-pill span { min-width:22px; height:22px; display:grid; place-items:center; border-radius:999px; background:var(--card); font-size:12px; }
+.filter-pill.active { background:var(--charcoal); color:white !important; }
+.request-list { display:grid; gap:12px; }
+.request-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 22px; }
+.request-row > div:first-child { display:grid; gap:4px; }
+.request-row-side { display:grid; justify-items:end; gap:6px; text-align:right; }
+.cancel-booking-form { display:grid; gap:10px; margin-top:12px; }
+.cancel-booking-form textarea { min-height:80px; border-radius:14px; border:1px solid var(--card); padding:10px; }
+.cancel-booking-card { margin-top:18px; }
+@media (max-width:640px) { .request-row { flex-direction:column; align-items:flex-start; } .request-row-side { justify-items:start; text-align:left; } }
