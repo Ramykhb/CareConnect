@@ -20,7 +20,7 @@
         @if (Model.IsSitter)
         {
             <a href="#availability" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-calendar" /></svg>Set availability</a>
-            <a href="#requests" class="btn btn-dark btn-sm"><svg class="line-icon"><use href="#icon-inbox" /></svg>Review requests</a>
+            <a asp-controller="SitterRequests" asp-action="Index" class="btn btn-dark btn-sm"><svg class="line-icon"><use href="#icon-inbox" /></svg>Review requests</a>
         }
         else
         {
@@ -31,7 +31,7 @@
 <nav class="dashboard-tabs" aria-label="Dashboard views">
     @foreach (var (key, label) in tabs)
     {
-        <a href="#@key" class="@(key == "overview" ? "active" : "")" data-tab="@key" aria-current="@(key == "overview" ? "page" : null)">@label @if (key == "requests") { <span class="tab-count">@Model.Requests.Count</span> }</a>
+        <a href="@(Model.IsSitter && key == "requests" ? Url.Action("Index", "SitterRequests") : "#" + key)" class="@(key == "overview" ? "active" : "")" data-tab="@key" aria-current="@(key == "overview" ? "page" : null)">@label @if (key == "requests") { <span class="tab-count">@Model.Requests.Count</span> }</a>
     }
 </nav>
 <p class="search-feedback" id="search-feedback" role="status" hidden></p>

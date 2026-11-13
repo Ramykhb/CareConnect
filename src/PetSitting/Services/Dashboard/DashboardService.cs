@@ -28,7 +28,7 @@ public sealed class DashboardService(PetSittingDbContext db, TimeProvider clock)
         var services = profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
         var requests = db.PetCareRequests.AsNoTracking().Where(r => r.Status == RequestStatus.Open && r.StartsAtUtc > now);
         requests = sitter
-            ? requests.Where(r => r.CustomerId != null && r.CustomerId != account.Id && city != null && r.City == city &&
+            ? requests.Where(r => r.CustomerId != null && r.Customer!.IsActive && r.CustomerId != account.Id && city != null && r.City == city &&
                 (services.Length == 0 || services.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id))
             : requests.Where(r => r.CustomerId == account.Id);
         var offers = db.PetCareOffers.Where(o => o.SitterProfile.UserId == account.Id);

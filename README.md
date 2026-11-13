@@ -102,7 +102,7 @@ Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit
 
 Incoming linked requests can have no local customer initially, but must carry a valid source, external request ID, and correlation ID. Attaching them to a verified local account is a later application workflow. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
-Identity authentication and role authorization are implemented. Care workflow status transitions, matching request/offer/booking ownership, preventing overlapping sitter bookings, review eligibility, and payment processing remain future service work.
+Identity authentication and role authorization are implemented. PetSitting sitter request decisions now enforce request eligibility, booking ownership, and overlapping-booking prevention. Other care transitions, review eligibility, and payment processing remain future service work.
 
 ## RabbitMQ
 
@@ -139,7 +139,7 @@ Run route/configuration checks with `dotnet test`. To include the actual SQL Ser
 CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln
 ```
 
-RabbitMQ connectivity and care workflows remain future work.
+RabbitMQ connectivity and the remaining care workflows remain future work.
 
 ## Authentication
 
@@ -219,6 +219,16 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
-Tabs and sidebar links switch dashboard sections. Search filters the current view, booking rows open a details dialog, and sitter reports download as CSV. Request creation/responses, availability editing, pricing, messaging, reviews, payments, payouts, and AI matching still require their planned backend workflows. Related buttons explicitly explain availability instead of simulating a successful operation. No database migration is needed.
+Tabs and sidebar links switch dashboard sections. Search filters the current view, booking rows open a details dialog, and sitter reports download as CSV. Request creation, availability editing, pricing, messaging, reviews, payments, payouts, and AI matching still require their planned backend workflows. Sitter request responses are implemented on the Incoming requests page. Related buttons explicitly explain availability instead of simulating a successful operation. No database migration is needed.
 
 Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.
+
+### Sitter incoming requests
+
+Open **Requests** in the sitter sidebar or visit `/SitterRequests`. The page implements the incoming inbox, acceptance confirmation, and saved decision designs. Status tabs and owner/pet search work through normal GET links/forms and are enhanced with partial-page updates. The inbox polls every 15 seconds while visible, pauses during confirmation, and shows a toast when new eligible requests arrive. It reports connection failures instead of claiming a successful sync.
+
+Requests are discovered using the sitter’s profile/account city and configured services; this application currently has a city-based request marketplace rather than individually addressed invitations. An existing sitter profile is required to respond. New and pending requests can be accepted or declined, while previous decisions remain visible in their status tabs. Pending rows correspond to existing pending offer records. Exact service addresses are only included in the response after that sitter has accepted; medical, feeding, and special-care notes are available for review beforehand. Fit checks use actual bookings, saved availability intervals, city, and hourly rate; no distance, pet-type preference, owner rating, or response deadline is invented.
+
+`POST /SitterRequests/Decide` requires the sitter role, an antiforgery token, and the displayed request/offer version. Acceptance records an accepted offer, marks the request booked, creates an awaiting-payment booking (confirmed immediately for zero-cost care), and saves an owner notification in one serializable transaction. Notifications are persisted locally; this does not send email or publish RabbitMQ events. Decline records the sitter’s rejected offer and notifies the owner while leaving the request open for other sitters. Stale details, expired requests, unavailable sitters, dates outside saved availability, and overlapping bookings cannot be accepted. Retries return the existing decision without creating duplicate bookings or notifications. The saved state includes an Open booking link to the dashboard’s booking details.
+
+No new schema migration is required. Ensure the existing `AddPetCareDetails` migration is applied so medical and feeding notes can be read. SQL integration tests create uniquely identified temporary records and clean them up. Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/PetSitting.Tests` to verify persistence, stale confirmations, private address access, rollback after a write failure, simultaneous acceptance by different sitters, and simultaneous overlapping bookings for one sitter.

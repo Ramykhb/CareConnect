@@ -2,14 +2,14 @@
 @using PetSitting.ViewModels
 @inject UserManager<ApplicationUser> UserManager
 @{
-    var dashboard = Model as DashboardViewModel;
-    var user = dashboard?.Account ?? await UserManager.GetUserAsync(User);
+    var portal = Model as IPortalViewModel;
+    var user = portal?.Account ?? await UserManager.GetUserAsync(User);
     var sitter = User.IsInRole(Roles.Sitter);
     var displayName = user is null ? "Your account" : $"{user.FirstName} {user.LastName}";
     var initial = string.IsNullOrEmpty(user?.FirstName) ? "?" : user.FirstName[..1].ToUpperInvariant();
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var home = Url.Action(sitter ? "Sitter" : "Customer", "Dashboard");
-    var unread = dashboard?.Unread ?? 0;
+    var unread = portal?.Unread ?? 0;
     var menu = sitter
         ? new[] { ("overview", "Dashboard", "grid"), ("requests", "Requests", "inbox"), ("bookings", "Bookings", "calendar"), ("availability", "Availability", "clock"), ("earnings", "Earnings", "wallet"), ("reports", "Analytics", "chart"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") }
         : new[] { ("overview", "Dashboard", "grid"), ("pets", "My Pets", "paw"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
@@ -24,8 +24,9 @@
     <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pet-portal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pet-dashboard.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="pet-portal @(dashboard is null ? "" : "dashboard-page")">
+<body class="pet-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
     <a class="auth-skip" href="#main-content">Skip to content</a>
     <partial name="_PortalIcons" />
     <div class="portal-shell">
@@ -36,10 +37,10 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets";
-                        var href = key == "pets" ? Url.Action("Index", "Pets") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests";
+                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
-                            @if (key == "requests" && dashboard?.Requests.Count > 0) { <span class="nav-count">@dashboard.Requests.Count</span> }
+                            @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
                         </a>
                     }
@@ -49,7 +50,7 @@
             <div class="sidebar-bottom">
                 @if (sitter)
                 {
-                    <a href="@(home)#availability" class="availability-promo"><span>Accepting requests <span class="mini-switch @(dashboard?.Profile?.IsAvailable == true ? "on" : "")" aria-hidden="true"></span></span><small>@(dashboard?.Profile is null ? "Set up your sitter profile to get started." : $"Your availability in {dashboard.Profile.City}.")</small></a>
+                    <a href="@(home)#availability" class="availability-promo"><span>Accepting requests <span class="mini-switch @(portal?.Profile?.IsAvailable == true ? "on" : "")" aria-hidden="true"></span></span><small>@(portal?.Profile is null ? "Set up your sitter profile to get started." : $"Your availability in {portal.Profile.City}.")</small></a>
                 }
                 else
                 {
@@ -69,7 +70,7 @@
                 <button class="mobile-nav-toggle round-icon" type="button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded="false"><svg class="line-icon"><use href="#icon-menu" /></svg></button>
                 <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>@(sitter ? "Sitter" : "Owner") portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
                 <div class="topbar-tools">
-                    @if (dashboard is not null)
+                    @if (portal is not null)
                     {
                         <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }

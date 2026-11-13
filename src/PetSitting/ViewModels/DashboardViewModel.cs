@@ -3,7 +3,7 @@ using PetSitting.Models;
 
 namespace PetSitting.ViewModels;
 
-public sealed class DashboardViewModel
+public sealed class DashboardViewModel : IPortalViewModel
 {
     public ApplicationUser Account { get; init; } = new();
     public bool IsSitter { get; init; }
@@ -19,6 +19,7 @@ public sealed class DashboardViewModel
     public int Unread { get; init; }
     public int AcceptedOffers { get; init; }
     public int DeclinedOffers { get; init; }
+    public int IncomingRequestCount => Requests.Count;
     public string FirstName => Account.FirstName;
     public int ReportYear => Local(Now).Year;
     public int ReportMonth => Local(Now).Month;

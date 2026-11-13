@@ -20,6 +20,7 @@
     };
     function showSection() {
         if (!board) return;
+        if (isSitter && window.location.hash === '#requests') { window.location.replace('/SitterRequests'); return; }
         const hash = window.location.hash.slice(1);
         const section = sectionNames.has(hash) ? hash : 'overview';
         board.dataset.view = section;
@@ -98,4 +99,7 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }));
     showSection();
+    const bookingId = new URLSearchParams(window.location.search).get('booking');
+    const bookingDialog = bookingId && document.getElementById(`booking-${bookingId}`);
+    if (bookingDialog?.matches('dialog')) bookingDialog.showModal();
 })();

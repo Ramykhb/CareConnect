@@ -22,7 +22,7 @@ public sealed class DashboardTests
 {
     private static readonly Guid AccountId = Guid.Parse("e496c4c5-215c-4e95-a55c-2ce253ad966c");
 
-    private sealed class DashboardAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+    internal sealed class DashboardAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -34,7 +34,7 @@ public sealed class DashboardTests
         }
     }
 
-    private sealed class DashboardUsers : IUserStore<ApplicationUser>
+    internal sealed class DashboardUsers : IUserStore<ApplicationUser>
     {
         public Task<ApplicationUser?> FindByIdAsync(string id, CancellationToken ct) => Task.FromResult<ApplicationUser?>(new() { Id = AccountId, FirstName = "Sarah", LastName = "Haddad", City = "Beirut" });
         public Task<string> GetUserIdAsync(ApplicationUser user, CancellationToken ct) => Task.FromResult(user.Id.ToString());
