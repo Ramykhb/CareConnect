@@ -13,6 +13,12 @@ builder.Services.AddDbContext<BabySittingDbContext>(options =>
         sql => sql.EnableRetryOnFailure()));
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
+builder.Services.AddScoped<BabySitting.Services.Portal.ISitterReportingService, BabySitting.Services.Portal.SitterReportingService>();
+builder.Services.AddScoped<BabySitting.Services.Portal.ISitterAccountService, BabySitting.Services.Portal.SitterAccountService>();
+builder.Services.AddScoped<BabySitting.Services.Bookings.ISitterBookingService, BabySitting.Services.Bookings.SitterBookingService>();
+builder.Services.AddScoped<BabySitting.Services.Scheduling.ISitterAvailabilityService, BabySitting.Services.Scheduling.SitterAvailabilityService>();
+builder.Services.AddScoped<BabySitting.Services.Requests.ISitterRequestService, BabySitting.Services.Requests.SitterRequestService>();
+builder.Services.AddScoped<BabySitting.Services.Dashboard.IDashboardService, BabySitting.Services.Dashboard.DashboardService>();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>

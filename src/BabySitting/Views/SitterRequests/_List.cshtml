@@ -1,0 +1,16 @@
+@using BabySitting.ViewModels
+@model SitterRequestsViewModel
+<div class="incoming-list" data-request-list>
+    @if (!Model.VisibleItems.Any())
+    {
+        <div class="inbox-empty-list"><span class="round-icon"><svg class="line-icon"><use href="#icon-inbox" /></svg></span><h2>@(string.IsNullOrEmpty(Model.Search) ? "No requests here yet" : "No matching requests")</h2><p>@(string.IsNullOrEmpty(Model.Search) ? "New requests in your service city will appear here." : "Try another parent or child name.")</p></div>
+    }
+    @foreach (var item in Model.VisibleItems)
+    {
+        <a asp-action="Index" asp-route-status="@Model.Filter" asp-route-id="@item.Id" asp-route-search="@Model.Search" class="incoming-row @(Model.Selected?.Id == item.Id ? "selected" : "")" aria-current="@(Model.Selected?.Id == item.Id ? "true" : null)" data-inbox-link data-request-id="@item.Id" data-owner="@item.OwnerFirstName" data-pet-summary="@item.ChildrenSummary · @item.Service · @item.DateSummary">
+            <span class="portal-avatar incoming-owner" aria-hidden="true">@item.OwnerFirstName.FirstOrDefault()</span>
+            <span class="incoming-row-info"><span><strong>@item.OwnerName</strong><time datetime="@item.CreatedAtUtc.ToString("O")"> · @Model.RelativeTime(item.CreatedAtUtc)</time></span><small><span aria-hidden="true">🧸</span>@item.ChildrenSummary · @item.Service · @item.DateSummary</small></span>
+            <span class="incoming-row-end"><strong>@DashboardViewModel.Money(item.Amount, item.Currency)</strong><span class="status-chip @item.StateClass">@(item.State == IncomingRequestState.Accepted ? "✓ " : item.State == IncomingRequestState.New ? "↳ " : "")@item.StateLabel</span></span>
+        </a>
+    }
+</div>

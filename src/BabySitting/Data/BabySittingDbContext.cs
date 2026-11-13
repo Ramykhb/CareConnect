@@ -20,6 +20,13 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
     public DbSet<MessageOutbox> MessageOutboxEntries => Set<MessageOutbox>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
     public DbSet<FamilyProfile> FamilyProfiles => Set<FamilyProfile>();
+    public DbSet<SitterScheduleException> SitterScheduleExceptions => Set<SitterScheduleException>();
+    public DbSet<BookingCareTask> BookingCareTasks => Set<BookingCareTask>();
+    public DbSet<BookingUpdate> BookingUpdates => Set<BookingUpdate>();
+    public DbSet<BookingUpdatePhoto> BookingUpdatePhotos => Set<BookingUpdatePhoto>();
+    public DbSet<SitterPayout> SitterPayouts => Set<SitterPayout>();
+    public DbSet<PayoutAllocation> PayoutAllocations => Set<PayoutAllocation>();
+    public DbSet<AlertPreferences> AlertPreferences => Set<AlertPreferences>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -112,6 +119,28 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
             t.HasCheckConstraint("CK_FamilyProfile_Children", "[NumberOfChildren] BETWEEN 1 AND 20");
             t.HasCheckConstraint("CK_FamilyProfile_Ages", "[YoungestChildAgeYears] BETWEEN 0 AND 17 AND [OldestChildAgeYears] BETWEEN [YoungestChildAgeYears] AND 17");
         });
+
+        // Sitter portal: calendar rules, booking care records, alerts, and payout reservations.
+        modelBuilder.Entity<SitterScheduleException>().HasOne(x => x.SitterProfile).WithMany(x => x.ScheduleExceptions).HasForeignKey(x => x.SitterProfileId);
+        modelBuilder.Entity<SitterScheduleException>().HasIndex(x => new { x.SitterProfileId, x.StartsOn, x.EndsOn });
+        modelBuilder.Entity<SitterScheduleException>().ToTable(t => t.HasCheckConstraint("CK_SitterScheduleException_Dates", "[EndsOn] >= [StartsOn] AND ([AllDay] = 1 OR [EndsOn] > [StartsOn] OR [EndTime] > [StartTime])"));
+        modelBuilder.Entity<BookingCareTask>().HasOne(x => x.Booking).WithMany(x => x.CareTasks).HasForeignKey(x => x.BookingId);
+        modelBuilder.Entity<BookingCareTask>().HasIndex(x => new { x.BookingId, x.Key }).IsUnique();
+        modelBuilder.Entity<BookingUpdate>().HasOne(x => x.Booking).WithMany(x => x.Updates).HasForeignKey(x => x.BookingId);
+        modelBuilder.Entity<BookingUpdate>().HasIndex(x => new { x.BookingId, x.CreatedAtUtc });
+        modelBuilder.Entity<BookingUpdate>().HasIndex(x => new { x.BookingId, x.ClientToken }).IsUnique();
+        modelBuilder.Entity<BookingUpdatePhoto>().HasOne(x => x.BookingUpdate).WithOne(x => x.Photo).HasForeignKey<BookingUpdatePhoto>(x => x.BookingUpdateId);
+        modelBuilder.Entity<AlertPreferences>().HasOne(p => p.User).WithOne().HasForeignKey<AlertPreferences>(p => p.UserId);
+        modelBuilder.Entity<AlertPreferences>().HasIndex(p => p.UserId).IsUnique();
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.SourceKey }).IsUnique().HasFilter("[SourceKey] IS NOT NULL");
+        modelBuilder.Entity<Notification>().ToTable(t => t.HasCheckConstraint("CK_Notification_Category", "[Category] BETWEEN 0 AND 4"));
+        modelBuilder.Entity<SitterPayout>().HasOne(p => p.SitterProfile).WithMany().HasForeignKey(p => p.SitterProfileId);
+        modelBuilder.Entity<SitterPayout>().HasIndex(p => new { p.SitterProfileId, p.ClientToken }).IsUnique();
+        modelBuilder.Entity<SitterPayout>().ToTable(t => { t.HasCheckConstraint("CK_SitterPayout_Amount", "[Amount] > 0"); t.HasCheckConstraint("CK_SitterPayout_Status", "[Status] BETWEEN 0 AND 2"); });
+        modelBuilder.Entity<PayoutAllocation>().HasOne(a => a.Payout).WithMany(p => p.Allocations).HasForeignKey(a => a.PayoutId);
+        modelBuilder.Entity<PayoutAllocation>().HasOne(a => a.Payment).WithMany().HasForeignKey(a => a.PaymentId);
+        modelBuilder.Entity<PayoutAllocation>().HasIndex(a => new { a.PayoutId, a.PaymentId }).IsUnique();
+        modelBuilder.Entity<PayoutAllocation>().ToTable(t => t.HasCheckConstraint("CK_PayoutAllocation_Amount", "[Amount] > 0"));
 
         // Avoid SQL Server multiple cascade paths and accidental removal of booking history.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

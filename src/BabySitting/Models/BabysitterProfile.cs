@@ -13,6 +13,8 @@ public class BabysitterProfile : Entity
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.NotSubmitted;
     public DateTimeOffset? VerifiedAtUtc { get; set; }
+    public Guid ScheduleRevision { get; set; } = Guid.NewGuid();
+    public ICollection<SitterScheduleException> ScheduleExceptions { get; set; } = new List<SitterScheduleException>();
     public bool IsAvailable { get; set; } = true;
     [MaxLength(2000)] public string? Qualifications { get; set; }
     public bool HasFirstAidTraining { get; set; }

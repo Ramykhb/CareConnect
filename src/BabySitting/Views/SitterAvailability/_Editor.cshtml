@@ -1,0 +1,21 @@
+@using BabySitting.ViewModels
+@using BabySitting.Services.Scheduling
+@model SitterAvailabilityViewModel
+<aside class="dash-card availability-editor" data-schedule-editor>
+    <h2 id="availability-editor-title">@Model.SelectedDate.ToString("ddd d MMM")</h2><p class="calendar-selected-status">@Model.SelectedStatus</p>
+    <form asp-action="Save" method="post" data-schedule-form data-preview-url="@Url.Action("Preview")">
+        <div asp-validation-summary="All" class="schedule-validation" role="alert"></div>
+        <input asp-for="Editor.Version" type="hidden" /><input asp-for="Editor.View" type="hidden" />
+        <div class="availability-choice"><label><input asp-for="Editor.Available" id="availability-yes" type="radio" value="true" /><span><svg class="line-icon"><use href="#icon-heart" /></svg>Available</span></label><label><input asp-for="Editor.Available" id="availability-no" type="radio" value="false" /><span><svg class="line-icon"><use href="#icon-check" /></svg>Unavailable</span></label></div>
+        <label class="schedule-field">Reason (private)<input asp-for="Editor.Reason" maxlength="500" placeholder="e.g. Family trip" /></label>
+        <label class="schedule-field">Date<input asp-for="Editor.StartDate" type="date" min="1901-01-01" max="2099-12-31" required /></label>
+        <label class="schedule-switch"><span>Apply to a date range</span><input asp-for="Editor.ApplyRange" type="checkbox" /></label>
+        <label class="schedule-field" data-range-fields hidden="@(!Model.Editor.ApplyRange)">Until (inclusive)<input asp-for="Editor.EndDate" type="date" min="1901-01-01" max="2099-12-31" /></label>
+        <label class="schedule-switch"><span>All day</span><input asp-for="Editor.AllDay" type="checkbox" /></label>
+        <div class="schedule-time-fields" data-time-fields hidden="@Model.Editor.AllDay"><label class="schedule-field">From<input asp-for="Editor.StartTime" type="time" /></label><label class="schedule-field">Until<input asp-for="Editor.EndTime" type="time" /></label></div>
+        <label class="schedule-switch"><span>Repeat yearly</span><input asp-for="Editor.RepeatYearly" type="checkbox" /></label>
+        <div class="schedule-warning" data-affected-message role="status"><svg class="line-icon"><use href="#icon-alert" /></svg><span>Booking conflicts are checked before saving.</span></div>
+        <button type="submit" class="btn btn-dark btn-sm full-width" disabled="@(Model.Profile is null)" data-save-schedule><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
+    </form>
+    @if (Model.On(Model.SelectedDate).Any()) { <div class="selected-day-bookings"><h3>On this date</h3>@foreach (var entry in Model.On(Model.SelectedDate)) { <a href="@(entry.IsRequest ? Url.Action("Index", "SitterRequests", new { id = entry.Id }) : Url.Action("Details", "SitterBookings", new { id = entry.Id }))" class="calendar-event @entry.State">@entry.Title ↗</a> }</div> }
+</aside>

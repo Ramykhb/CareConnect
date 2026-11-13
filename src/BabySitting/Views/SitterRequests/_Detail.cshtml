@@ -1,0 +1,42 @@
+@using System.Globalization
+@using BabySitting.ViewModels
+@model SitterRequestsViewModel
+@{ var item = Model.Selected; }
+<section class="incoming-detail" data-request-detail data-selected-id="@item?.Id" aria-label="Selected request details">
+@if (item is null)
+{
+    <div class="inbox-empty-detail"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2>Ready for your next family to help</h2><p>@(Model.Items.Count == 0 ? "Add your city in Settings to find local requests. When a request arrives, its care details will appear here." : "Choose another status tab or adjust your search to find a request.")</p>@if (string.IsNullOrWhiteSpace(Model.Profile?.City ?? Model.Account.City)) { <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-dark btn-sm">Update your city ↗</a> }</div>
+}
+else
+{
+    <header class="incoming-detail-heading"><span class="portal-avatar" aria-hidden="true">@item.OwnerFirstName.FirstOrDefault()</span><div><div><h2>@item.OwnerName</h2><span class="status-chip @item.StateClass">@(item.State == IncomingRequestState.Accepted ? "✓ " : item.State == IncomingRequestState.New ? "↳ " : "")@item.StateLabel</span></div><p>Parent · member since @item.OwnerSince</p></div><div class="incoming-offer"><strong>@DashboardViewModel.Money(item.Amount, item.Currency)</strong><small>offered · @item.Duration</small></div></header>
+    <dl class="incoming-facts">
+        <div><span class="round-icon"><svg class="line-icon"><use href="#icon-moon" /></svg></span><div><dt>Service</dt><dd>@item.Service</dd></div></div>
+        <div><span class="round-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><div><dt>Dates</dt><dd>@DashboardViewModel.Local(item.StartsAtUtc).ToString("ddd d MMM h:mm tt", CultureInfo.InvariantCulture) <span aria-hidden="true">→</span> @DashboardViewModel.Local(item.EndsAtUtc).ToString("ddd d MMM h:mm tt", CultureInfo.InvariantCulture)</dd></div></div>
+        <div><span class="round-icon"><svg class="line-icon"><use href="#icon-pin" /></svg></span><div><dt>Location</dt><dd>@(string.IsNullOrWhiteSpace(item.Address) ? item.City : item.Address + " · " + item.City) @if (item.State != IncomingRequestState.Accepted) { <span class="location-hint">(exact address after acceptance)</span> }</dd></div></div>
+        <div><span class="round-icon"><svg class="line-icon"><use href="#icon-clock" /></svg></span><div><dt>Requested</dt><dd>@DashboardViewModel.Local(item.CreatedAtUtc).ToString("ddd d MMM · h:mm tt", CultureInfo.InvariantCulture)</dd></div></div>
+    </dl>
+    <div class="incoming-pets">
+    @{ var kids = item.Children; }
+        <article class="incoming-pet-detail"><span class="incoming-pet-avatar" aria-hidden="true">🧸</span><div><h3>@item.ChildrenSummary</h3><p><strong>Health:</strong> @(string.IsNullOrWhiteSpace(kids.HealthNotes) ? "No notes provided." : kids.HealthNotes)</p><p><strong>Routines:</strong> @(string.IsNullOrWhiteSpace(kids.Routines) ? "No routines provided." : kids.Routines)</p><p><strong>Care instructions:</strong> @(string.IsNullOrWhiteSpace(kids.CareInstructions) ? "No special instructions provided." : kids.CareInstructions)</p></div></article>
+    </div>
+    <section class="incoming-owner-note"><h3>Parent’s note</h3><p>@item.Note</p></section>
+    <section class="incoming-fit-check"><h3>Fit check</h3><ul>@foreach (var check in item.FitChecks) { <li><span class="fit-icon @(check.Fits == true ? "fit" : check.Fits == false ? "attention" : "neutral")" aria-hidden="true"><svg class="line-icon"><use href="#icon-@(check.Fits == true ? "check" : check.Fits == false ? "alert" : "help")" /></svg></span>@check.Text</li> }</ul></section>
+    @if (item.State == IncomingRequestState.Accepted)
+    {
+        <div class="request-decision-saved"><svg class="line-icon"><use href="#icon-check" /></svg><p>Accepted @(item.AcceptedAtUtc is null ? "" : "at " + DashboardViewModel.Local(item.AcceptedAtUtc.Value).ToString("h:mm tt")) · @item.OwnerFirstName was notified.<span>@(item.BookingStatus == BookingStatus.AwaitingPayment ? "Payment is pending." : item.BookingStatus == BookingStatus.Completed ? "This booking has been completed." : "Your booking is confirmed.")</span></p>@if (item.BookingId is not null) { <a asp-controller="SitterBookings" asp-action="Details" asp-route-id="@item.BookingId" class="btn btn-light btn-sm">Open booking</a> }</div>
+    }
+    else if (item.State is IncomingRequestState.Declined or IncomingRequestState.Expired)
+    {
+        <div class="request-decision-saved muted"><svg class="line-icon"><use href="#icon-@(item.State == IncomingRequestState.Declined ? "close" : "clock")" /></svg><p>@(item.State == IncomingRequestState.Declined ? "You declined this request. Your decision has been saved." : "This request is no longer available. No action is needed.")</p></div>
+    }
+    else
+    {
+        @if (item.BlockReason is not null) { <p class="request-decision-block" role="note"><svg class="line-icon"><use href="#icon-alert" /></svg>@item.BlockReason</p> }
+        <footer class="incoming-response"><div><strong>Ready to care for @item.ChildrenSummary?</strong><small>Your decision is shared with the parent.</small></div><div class="incoming-response-actions">
+        @if (item.CanDecline) { <a asp-action="Index" asp-route-id="@item.Id" asp-route-status="@Model.Filter" asp-route-search="@Model.Search" asp-route-confirm="decline" class="btn btn-light btn-sm" data-decision="decline" data-request="@item.Id" data-version="@item.Version" data-summary="@item.Service for @item.ChildrenSummary on @item.DateSummary" data-amount="@DashboardViewModel.Money(item.Amount, item.Currency)"><svg class="line-icon"><use href="#icon-close" /></svg>Decline</a> } else { <button type="button" class="btn btn-light btn-sm" disabled>Decline</button> }
+        @if (item.CanAccept) { <a asp-action="Index" asp-route-id="@item.Id" asp-route-status="@Model.Filter" asp-route-search="@Model.Search" asp-route-confirm="accept" class="btn btn-lime btn-sm" data-decision="accept" data-request="@item.Id" data-version="@item.Version" data-summary="@item.Service for @item.ChildrenSummary on @item.DateSummary" data-amount="@DashboardViewModel.Money(item.Amount, item.Currency)"><svg class="line-icon"><use href="#icon-check" /></svg>Accept request</a> } else { <button type="button" class="btn btn-lime btn-sm" disabled title="@item.BlockReason">Accept request</button> }
+        </div></footer>
+    }
+}
+</section>

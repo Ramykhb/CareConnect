@@ -1,0 +1,15 @@
+@using BabySitting.Services.Scheduling
+@using BabySitting.ViewModels
+@model SitterNotificationsViewModel
+<section class="notification-list-panel" aria-label="Notifications" data-notification-list>
+@foreach (var group in Model.Visible.GroupBy(n => ScheduleMath.LocalDate(n.CreatedAtUtc) == ScheduleMath.LocalDate(Model.Now) ? "Today" : "Earlier"))
+{
+    <h2>@group.Key</h2>
+    @foreach (var item in group)
+    {
+        var category = SitterNotificationsViewModel.Category(item); var icon = category switch { NotificationCategory.Request => "inbox", NotificationCategory.Payment => "card", NotificationCategory.Review => "star", NotificationCategory.Booking => "calendar", _ => "bell" };
+        <article class="notification-item @(item.ReadAtUtc is null ? "unread" : "")" data-notification-id="@item.Id"><span class="round-icon notification-kind-@category.ToString().ToLowerInvariant()"><svg class="line-icon"><use href="#icon-@icon" /></svg></span><div><h3>@item.Title</h3><p>@item.Body</p><time datetime="@item.CreatedAtUtc.ToString("O")">@DashboardViewModel.Local(item.CreatedAtUtc).ToString("ddd d MMM · h:mm tt")</time><div class="notification-item-actions">@if (!string.IsNullOrWhiteSpace(item.RelativeUrl) && Url.IsLocalUrl(item.RelativeUrl)) { <form asp-action="Read" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="returnUrl" value="@item.RelativeUrl" /><button type="submit">Open ↗</button></form> }@if (item.ReadAtUtc is null) { <form asp-action="Read" method="post"><input type="hidden" name="id" value="@item.Id" /><button type="submit">Mark as read</button></form> }</div></div>@if (item.ReadAtUtc is null) { <span class="unread-dot" aria-label="Unread"></span> }</article>
+    }
+}
+@if (!Model.Visible.Any()) { <div class="portal-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-bell" /></svg></span><h3>You’re all caught up</h3><p>New alerts matching this view will appear here automatically.</p></div> }
+</section>

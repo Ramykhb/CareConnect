@@ -1,0 +1,46 @@
+@using System.Globalization
+@using BabySitting.ViewModels
+@model DashboardViewModel
+@{
+    var months = Model.Months.ToArray();
+    var maxHours = Math.Max(1, months.Max(m => m.Hours));
+    var maxPaid = Math.Max(1, months.Max(m => m.Paid));
+    string Number(double n) => n.ToString("0.##", CultureInfo.InvariantCulture);
+    var points = months.Select((m, i) => new { X = 36 + i * 52.7, Y = 198 - (double)(m.Paid / maxPaid) * 158, Month = m }).ToArray();
+    var line = "M" + string.Join(" L", points.Select(p => $"{Number(p.X)},{Number(p.Y)}"));
+}
+<article class="dash-card analytics-card @(Model.IsSitter ? "revenue-card" : "statistics-card")" data-sections="overview reports earnings">
+    <div class="card-heading"><div><span class="round-icon"><svg class="line-icon"><use href="#icon-@(Model.IsSitter ? "trend" : "chart")" /></svg></span><h2>@(Model.IsSitter ? "Revenue" : "Statistics")</h2></div>
+        <div class="chart-legend"><span><i class="dot dark"></i>@(Model.IsSitter ? "Received · USD" : "Hours booked")</span>@if (!Model.IsSitter) { <span><i class="dot lime"></i>Spend · USD</span> }</div><span class="year-pill">@Model.ReportYear <svg class="line-icon"><use href="#icon-down" /></svg></span>
+    </div>
+    @if (Model.IsSitter)
+    {
+        <figure class="revenue-chart" aria-label="Monthly received payments in USD for @Model.ReportYear">
+            <svg viewBox="0 0 660 244" role="img" aria-labelledby="revenue-title"><title id="revenue-title">@string.Join("; ", months.Select(m => $"{m.Label}: {DashboardViewModel.Money(m.Paid)}"))</title>
+                <defs><linearGradient id="revenue-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#eaff87" stop-opacity=".85"/><stop offset="100%" stop-color="#eaff87" stop-opacity=".05"/></linearGradient></defs>
+                @for (var i = 0; i < 4; i++) { var y = 40 + i * 52.67; <g><line x1="36" y1="@Number(y)" x2="616" y2="@Number(y)" class="chart-gridline"/><text x="0" y="@Number(y + 4)" class="chart-axis">@DashboardViewModel.Money(maxPaid * (3-i)/3)</text></g> }
+                <path d="@line L616,198 L36,198 Z" fill="url(#revenue-fill)"/><path d="@line" fill="none" stroke="#191b1c" stroke-width="2.7" stroke-linejoin="round"/>
+                @foreach (var p in points) { <g><circle cx="@Number(p.X)" cy="@Number(p.Y)" r="3.5" fill="#191b1c"><title>@p.Month.Label: @DashboardViewModel.Money(p.Month.Paid)</title></circle><text x="@Number(p.X)" y="226" text-anchor="middle" class="chart-axis">@p.Month.Label</text></g> }
+            </svg>
+            @if (months.All(m => m.Paid == 0)) { <figcaption class="chart-empty">Your first payment will start the story.</figcaption> }
+        </figure>
+    }
+    else
+    {
+        <div class="statistics-chart" role="group" aria-label="Monthly hours and spend, each relative to its yearly peak">
+            <div class="chart-y-axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0</span></div>
+            <div class="statistics-columns">
+                @foreach (var month in months)
+                {
+                    var hoursHeight = Math.Max(month.Hours > 0 ? 8 : 0, month.Hours / maxHours * 100);
+                    var paidHeight = Math.Max(month.Paid > 0 ? 8 : 0, (double)(month.Paid / maxPaid) * 100);
+                    <div class="statistics-column @(month.Number == Model.ReportMonth ? "current" : "")" tabindex="0" aria-label="@month.Label: @month.Hours.ToString("0.#") hours, @DashboardViewModel.Money(month.Paid)">
+                        <div class="statistics-track"><div class="hours-bar" style="height:@Number(hoursHeight)%">@if (month.Hours > 0) { <i></i> }</div><div class="spend-bar" style="height:@Number(paidHeight)%">@if (month.Paid > 0) { <i></i> }</div></div>
+                        <span>@month.Label</span><div class="chart-tooltip">@month.Hours.ToString("0.#")h · @DashboardViewModel.Money(month.Paid)</div>
+                    </div>
+                }
+            </div>
+        </div>
+        <p class="chart-caption">Each series is relative to its yearly peak. Hover or focus for exact values.</p>
+    }
+</article>
