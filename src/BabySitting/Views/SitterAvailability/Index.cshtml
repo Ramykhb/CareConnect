@@ -1,0 +1,35 @@
+@using System.Globalization
+@using BabySitting.ViewModels
+@using BabySitting.Services.Scheduling
+@model SitterAvailabilityViewModel
+@{
+    Layout = "_PortalLayout"; ViewData["Title"] = "Availability"; ViewData["PortalClass"] = "availability-portal";
+    var previous = Model.View == "week" ? Model.SelectedDate.AddDays(-7) : Model.SelectedDate.AddMonths(-1);
+    var next = Model.View == "week" ? Model.SelectedDate.AddDays(7) : Model.SelectedDate.AddMonths(1);
+}
+@section Styles { <link rel="stylesheet" href="~/css/baby-scheduling.css" asp-append-version="true" /> }
+<div data-availability-page data-view="@Model.View">
+<section class="schedule-heading"><div><h1>Availability calendar</h1><p>@(Model.View == "week" ? "Drag to choose available hours · click a booking to open it." : "Set the dates you can care for children. Existing bookings keep their reserved hours.")</p></div><button type="button" class="btn btn-dark btn-sm" data-block-dates>Block dates</button></section>
+<div class="calendar-toolbar"><div class="calendar-date-nav"><a asp-action="Index" asp-route-date="@previous.ToString("yyyy-MM-dd")" asp-route-view="@Model.View" class="round-icon" aria-label="Previous @(Model.View == "week" ? "week" : "month")"><svg class="line-icon"><use href="#icon-back" /></svg></a><h2>@(Model.View == "week" ? Model.PeriodStart.ToString("%d", CultureInfo.InvariantCulture) + "–" + Model.PeriodStart.AddDays(6).ToString("d MMM yyyy", CultureInfo.InvariantCulture) : Model.SelectedDate.ToString("MMMM yyyy", CultureInfo.InvariantCulture))</h2><a asp-action="Index" asp-route-date="@next.ToString("yyyy-MM-dd")" asp-route-view="@Model.View" class="round-icon" aria-label="Next @(Model.View == "week" ? "week" : "month")"><svg class="line-icon"><use href="#icon-chevron" /></svg></a><a asp-action="Index" asp-route-date="@ScheduleMath.LocalDate(Model.Now).ToString("yyyy-MM-dd")" asp-route-view="@Model.View" class="btn btn-light btn-sm">Today</a></div><div class="calendar-legend"><span><i class="dot lime"></i>Booked</span><span><i class="dot dark"></i>In progress</span><span><i class="dot yellow"></i>Pending</span><span><i class="dot gray"></i>Unavailable</span></div><nav class="calendar-view-tabs" aria-label="Calendar view"><a asp-action="Index" asp-route-date="@Model.SelectedDate.ToString("yyyy-MM-dd")" asp-route-view="month" class="@(Model.View == "month" ? "active" : "")" aria-current="@(Model.View == "month" ? "page" : null)">Month</a><a asp-action="Index" asp-route-date="@Model.SelectedDate.ToString("yyyy-MM-dd")" asp-route-view="week" class="@(Model.View == "week" ? "active" : "")" aria-current="@(Model.View == "week" ? "page" : null)">Week</a></nav></div>
+@if (Model.Profile is null) { <div class="schedule-warning calendar-profile-note">A sitter profile is required to save your availability. You can still browse your calendar.</div> }
+else if (!Model.Profile.IsAvailable) { <div class="schedule-warning calendar-profile-note">New requests are paused. Your saved date rules and existing bookings are kept.</div> }
+@if (Model.View == "month")
+{
+    <div class="month-calendar-layout"><section class="month-calendar" aria-label="Month calendar"><div class="month-weekdays">@foreach (var label in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }) { <span>@label</span> }</div><div class="month-calendar-grid">
+        @foreach (var date in Model.MonthDays)
+        {
+            var slots = Model.Available(date); var hours = slots.Sum(i => i.Hours); var dayHours = (ScheduleMath.Utc(date.AddDays(1)) - ScheduleMath.Utc(date)).TotalHours;
+            var entries = Model.On(date).ToArray();
+            <div class="calendar-day @(date.Month != Model.SelectedDate.Month ? "outside" : "") @(hours == 0 ? "unavailable" : hours < dayHours ? "partial" : "") @(date == Model.SelectedDate ? "selected" : "") @(date == ScheduleMath.LocalDate(Model.Now) ? "today" : "")"><a class="calendar-day-select" asp-action="Index" asp-route-date="@date.ToString("yyyy-MM-dd")" asp-route-view="month" aria-label="Edit availability for @date.ToString("dddd d MMMM yyyy")"><span>@date.Day</span>@if (hours == 0) { <svg class="line-icon"><use href="#icon-lock" /></svg> }</a>@if (hours == 0) { <small class="calendar-unavailable-label">Unavailable</small> }@foreach (var entry in entries.Take(3)) { <a href="@(entry.IsRequest ? Url.Action("Index", "SitterRequests", new { id = entry.Id }) : Url.Action("Details", "SitterBookings", new { id = entry.Id }))" class="calendar-event @entry.State" title="@entry.Title · @entry.Owner">@entry.Title</a> }@if (entries.Length > 3) { <a asp-action="Index" asp-route-date="@date.ToString("yyyy-MM-dd")" class="calendar-more">+@(entries.Length - 3) more</a> }</div>
+        }
+    </div><p class="calendar-timezone">All dates and times are in Beirut.</p></section><partial name="_Editor" model="Model" /></div>
+}
+else
+{
+    <partial name="_Week" model="Model" />
+    <section class="dash-card calendar-week-summary"><h2>This week</h2><dl><dt>Available hours</dt><dd>@Model.AvailableHours.ToString("0.#") h</dd><dt>Booked hours</dt><dd>@Model.BookedHours.ToString("0.#") h</dd><dt>Utilisation</dt><dd>@(Model.AvailableHours > 0 ? Model.Utilisation.ToString("0") + "%" : "—")</dd><dt>Pending requests</dt><dd>@Model.Events.Count(e => e.IsRequest)</dd></dl><small>Totals cover the full week, including overnight care. Times are in Beirut.</small></section>
+    <dialog id="availability-editor-dialog" class="calendar-editor-dialog" aria-labelledby="availability-editor-title"><button type="button" class="round-icon dialog-close" data-close aria-label="Close editor"><svg class="line-icon"><use href="#icon-close" /></svg></button><partial name="_Editor" model="Model" /></dialog>
+}
+@if (Model.Profile is not null) { <form asp-action="Toggle" method="post" class="calendar-accepting-form"><input type="hidden" name="version" value="@Convert.ToBase64String(Model.Profile.RowVersion)" /><label><input type="checkbox" name="accepting" value="true" checked="@Model.Profile.IsAvailable" />Accepting new requests</label><input type="hidden" name="accepting" value="false" /><button type="submit" class="btn btn-light btn-sm">Save preference</button></form> }
+</div>
+@section Scripts { <script src="~/js/baby-scheduling.js" asp-append-version="true"></script> }

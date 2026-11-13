@@ -1,0 +1,16 @@
+@using System.Globalization
+@using BabySitting.ViewModels
+@model SitterReportViewModel
+@{
+    var analytics = ViewData["ReportChart"] as string == "analytics";
+    var months = Model.Months.ToArray();
+    var maximum = Math.Max(1m, analytics ? months.Select(m => (decimal)Math.Max(m.Requests, m.Completed)).DefaultIfEmpty(0).Max() : months.Select(m => Math.Max(m.Earnings, m.PaidOut)).DefaultIfEmpty(0).Max());
+    string P(decimal amount) => (amount / maximum * 100).ToString("0.##", CultureInfo.InvariantCulture);
+}
+<section class="dash-card portal-chart sage"><div class="card-heading"><div><span class="round-icon"><svg class="line-icon"><use href="#icon-chart" /></svg></span><h2>@(analytics ? "Booking trends" : "Monthly earnings")</h2></div><div class="portal-chart-legend"><span><i class="dot dark"></i>@(analytics ? "Responses" : "Gross")</span><span><i class="dot lime"></i>@(analytics ? "Completed" : "Paid out")</span></div></div><div class="portal-month-bars" role="group" aria-label="@(analytics ? "Monthly response and completed service counts" : "Monthly recorded earnings and paid payouts")">
+@foreach (var month in months)
+{
+    var dark = analytics ? month.Requests : month.Earnings; var lime = analytics ? month.Completed : month.PaidOut;
+    <div class="portal-month-column" tabindex="0" aria-label="@month.Month.ToString("MMM yyyy"): @(analytics ? $"{dark} responses; {lime} completed" : DashboardViewModel.Money(dark, Model.Currency) + " gross; " + DashboardViewModel.Money(lime, Model.Currency) + " paid out")"><div class="portal-bar-track"><i class="portal-bar dark" style="height:@P(dark)%">@if (dark > 0) { <b></b> }</i><i class="portal-bar lime" style="height:@P(lime)%">@if (lime > 0) { <b></b> }</i></div><span>@month.Month.ToString("MMM")</span><span class="portal-bar-tooltip">@(analytics ? $"{dark} responses · {lime} completed" : DashboardViewModel.Money(dark, Model.Currency) + " · " + DashboardViewModel.Money(lime, Model.Currency))</span></div>
+}
+</div>@if (months.All(m => analytics ? m.Requests == 0 && m.Completed == 0 : m.Earnings == 0 && m.PaidOut == 0)) { <p class="chart-caption">Your activity will fill this chart as care is completed and payments are recorded.</p> }</section>

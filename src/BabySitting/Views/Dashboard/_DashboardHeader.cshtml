@@ -1,0 +1,37 @@
+@model BabySitting.ViewModels.DashboardViewModel
+@{
+    var tabs = Model.IsSitter ? new[] { ("overview", "Overview"), ("requests", "Requests"), ("bookings", "Bookings"), ("earnings", "Earnings"), ("reports", "Reports") }
+        : new[] { ("overview", "Overview"), ("bookings", "Upcoming"), ("requests", "Requests"), ("family", "My Family"), ("payments", "Payments") };
+}
+<section class="dashboard-heading">
+    <h1>
+        @if (Model.IsSitter)
+        {
+            <span>Welcome back, <span class="heading-pill"><svg class="line-icon"><use href="#icon-user" /></svg></span> @Model.FirstName</span>
+            <span>@Model.Upcoming.Sum(b => b.Request.NumberOfChildren) children need <span class="heading-pill lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span> your care</span>
+        }
+        else
+        {
+            <span>Good @(BabySitting.ViewModels.DashboardViewModel.Local(Model.Now).Hour < 12 ? "morning" : "afternoon"), <span class="heading-pill"><svg class="line-icon"><use href="#icon-heart" /></svg></span> @Model.FirstName</span>
+            <span>Your children are <span class="heading-pill lime"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span> in good hands</span>
+        }
+    </h1>
+    <div class="heading-actions"><span class="sync-label"><i></i> Updated @BabySitting.ViewModels.DashboardViewModel.Local(Model.Now).ToString("h:mm tt")</span><div>
+        @if (Model.IsSitter)
+        {
+            <a href="#availability" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-calendar" /></svg>Set availability</a>
+            <a asp-controller="SitterRequests" asp-action="Index" class="btn btn-dark btn-sm"><svg class="line-icon"><use href="#icon-inbox" /></svg>Review requests</a>
+        }
+        else
+        {
+            <button class="btn btn-dark btn-sm" type="button" data-feature="Create a sitting request"><svg class="line-icon"><use href="#icon-plus" /></svg>Create a sitting request</button>
+        }
+    </div></div>
+</section>
+<nav class="dashboard-tabs" aria-label="Dashboard views">
+    @foreach (var (key, label) in tabs)
+    {
+        <a href="@(Model.IsSitter && key == "requests" ? Url.Action("Index", "SitterRequests") : "#" + key)" class="@(key == "overview" ? "active" : "")" data-tab="@key" aria-current="@(key == "overview" ? "page" : null)">@label @if (key == "requests") { <span class="tab-count">@Model.Requests.Count</span> }</a>
+    }
+</nav>
+<p class="search-feedback" id="search-feedback" role="status" hidden></p>

@@ -1,0 +1,26 @@
+@using System.Globalization
+@using BabySitting.ViewModels
+@using BabySitting.Services.Scheduling
+@model SitterAvailabilityViewModel
+@{ string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture); }
+<section class="week-calendar" aria-label="Week calendar"><div class="week-calendar-scroll"><div class="week-calendar-heading"><span></span>@foreach (var date in Model.WeekDays) { <a asp-action="Index" asp-route-date="@date.ToString("yyyy-MM-dd")" asp-route-view="week" class="@(date == Model.SelectedDate ? "selected" : "")" data-edit-day="@date.ToString("yyyy-MM-dd")">@date.ToString("ddd d")</a> }</div>
+<div class="week-calendar-body"><div class="week-time-labels">@for (var hour = 8; hour <= 22; hour++) { <span style="top:@N((hour - 8)/14d*100)%">@(hour is 8 or 12 or 22 ? new TimeOnly(hour, 0).ToString("h tt", CultureInfo.InvariantCulture) : new TimeOnly(hour, 0).ToString("%h", CultureInfo.InvariantCulture))</span> }</div>
+@foreach (var date in Model.WeekDays)
+{
+    var from = ScheduleMath.Utc(date, new(8, 0)); var to = ScheduleMath.Utc(date, new(22, 0));
+    var unavailable = ScheduleMath.Unavailable(Model.Available(date).Select(i => new ScheduleInterval(i.Start < from ? from : i.Start, i.End > to ? to : i.End)).Where(i => i.End > i.Start), from, to);
+    var entries = Model.On(date).Where(e => e.End > from && e.Start < to).ToArray();
+    var laneEnds = new List<DateTimeOffset>(); var lanes = new Dictionary<Guid, int>();
+    foreach (var e in entries) { var lane = laneEnds.FindIndex(end => end <= e.Start); if (lane < 0) { lane = laneEnds.Count; laneEnds.Add(e.End); } else laneEnds[lane] = e.End; lanes[e.Id] = lane; }
+    var laneCount = Math.Max(1, laneEnds.Count);
+    <div class="week-day-column" data-week-day="@date.ToString("yyyy-MM-dd")" tabindex="0" role="button" aria-label="Choose available hours for @date.ToString("dddd d MMM")">
+        @foreach (var block in unavailable) { <div class="week-unavailable" style="top:@N((block.Start-from).TotalHours/14*100)%;height:@N(block.Hours/14*100)%" aria-label="Unavailable"><span>Unavailable</span></div> }
+        @foreach (var entry in entries)
+        {
+            var start = entry.Start < from ? from : entry.Start; var end = entry.End > to ? to : entry.End;
+            <a href="@(entry.IsRequest ? Url.Action("Index", "SitterRequests", new { id = entry.Id }) : Url.Action("Details", "SitterBookings", new { id = entry.Id }))" class="week-event @entry.State" style="top:@N((start-from).TotalHours/14*100)%;height:@N(Math.Max(3,(end-start).TotalHours/14*100))%;left:calc(@N(lanes[entry.Id]*100d/laneCount)% + 3px);width:calc(@N(100d/laneCount)% - 6px)" title="@entry.Title · @entry.Owner · @DashboardViewModel.Local(entry.Start).ToString("ddd h:mm tt") → @DashboardViewModel.Local(entry.End).ToString("ddd h:mm tt")"><strong>@entry.Title</strong><small>@(entry.Start <= from && entry.End >= to ? "All day" : DashboardViewModel.Local(start).ToString("h:mm tt") + "–" + DashboardViewModel.Local(end).ToString("h:mm tt")) · @entry.Owner</small></a>
+        }
+        @if (date == ScheduleMath.LocalDate(Model.Now) && DashboardViewModel.Local(Model.Now).Hour is >= 8 and < 22) { <div class="calendar-now" style="top:@N((DashboardViewModel.Local(Model.Now).TimeOfDay.TotalHours-8)/14*100)%" aria-label="Current time"></div> }
+    </div>
+}
+</div></div></section>

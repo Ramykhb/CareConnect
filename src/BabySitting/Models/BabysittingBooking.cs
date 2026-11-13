@@ -17,6 +17,9 @@ public class BabysittingBooking : Entity
     [Range(typeof(decimal), "0", "99999999")] public decimal TotalAmount { get; set; }
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
+    public DateTimeOffset? StartedAtUtc { get; set; }
+    public ICollection<BookingCareTask> CareTasks { get; set; } = new List<BookingCareTask>();
+    public ICollection<BookingUpdate> Updates { get; set; } = new List<BookingUpdate>();
     public DateTimeOffset? CompletedAtUtc { get; set; }
     public DateTimeOffset? CancelledAtUtc { get; set; }
     [MaxLength(1000)] public string? CancellationReason { get; set; }

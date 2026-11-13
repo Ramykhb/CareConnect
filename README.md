@@ -258,3 +258,17 @@ The sitter portal now includes `/Sitter/Earnings`, `/Sitter/Analytics`, `/Sitter
 Payout requests reserve eligible, unallocated successful payments from completed bookings in a serializable transaction. Requests may be cancelled while pending. These are local records: no bank transfer is made. Bank details are not collected, and email/SMS alert switches remain disabled until those transports are connected. Existing prices are not converted between currencies. Analytics request counts refer to recorded sitter responses and their current outcomes; average reply time is available only for responses with a recorded decision timestamp.
 
 Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Verification for these account-page additions was skipped at the user’s request.
+
+### BabySitting sitter portal
+
+BabySitting now mirrors the PetSitting sitter portal for babysitters: `/Dashboard/Sitter`, `/SitterRequests`, `/SitterBookings`, `/SitterAvailability`, and `/Sitter/Earnings|Analytics|Reviews|Notifications|Settings`. Parents get the matching `/Dashboard/Customer` page with their family profile. The services, transaction rules, payment-gated care start, schedule rules, payout reservations, and exports work exactly as described for PetSitting above.
+
+Child data stays restricted: requests and bookings show a child count and age range (for example "2 children · ages 3–7") plus the family's health notes, routines, and care instructions. No child names, birth dates, or schools are stored or displayed. The care checklist is seeded from those parent notes.
+
+Apply the `AddBabysitterPortal` migration before running:
+
+```sh
+dotnet ef database update --project src/BabySitting -- --environment Development
+```
+
+Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/BabySitting.Tests` for the HTTP and SQL-backed checks.

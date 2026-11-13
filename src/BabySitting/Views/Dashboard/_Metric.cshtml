@@ -1,0 +1,6 @@
+@model BabySitting.ViewModels.DashboardMetric
+<article class="dash-card metric-card @Model.Theme" data-sections="overview">
+    <div class="metric-heading"><span class="round-icon"><svg class="line-icon"><use href="#icon-@Model.Icon" /></svg></span><h2>@Model.Title</h2><a href="#@Model.Section" class="metric-more" aria-label="View @Model.Title">⋮</a></div>
+    <div class="metric-value"><strong>@Model.Value.ToString("N0")</strong><span>@Model.Detail</span></div>
+    <div class="metric-segments" aria-hidden="true">@for (var i = 0; i < 8; i++) { <i class="@(i < Model.Filled ? "filled" : "")"></i> }</div>
+</article>

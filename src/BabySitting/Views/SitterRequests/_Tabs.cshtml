@@ -1,0 +1,8 @@
+@using BabySitting.ViewModels
+@model SitterRequestsViewModel
+<nav class="incoming-tabs" aria-label="Request status" data-request-tabs>
+    @foreach (var (bucket, label, state) in new[] { ("new", "New", IncomingRequestState.New), ("pending", "Pending decision", IncomingRequestState.Pending), ("accepted", "Accepted", IncomingRequestState.Accepted), ("declined", "Declined", IncomingRequestState.Declined), ("expired", "Expired", IncomingRequestState.Expired) })
+    {
+        <a asp-action="Index" asp-route-status="@bucket" asp-route-search="@Model.Search" class="@(Model.Filter == bucket ? "active" : "")" aria-current="@(Model.Filter == bucket ? "page" : null)" data-inbox-link>@label<span class="request-count">@Model.Count(state)</span></a>
+    }
+</nav>

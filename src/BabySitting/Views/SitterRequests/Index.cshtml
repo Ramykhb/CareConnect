@@ -1,0 +1,34 @@
+@using BabySitting.ViewModels
+@model SitterRequestsViewModel
+@{
+    Layout = "_PortalLayout";
+    ViewData["Title"] = "Incoming requests";
+    ViewData["PortalClass"] = "requests-portal";
+    var decision = TempData["RequestDecision"] as string;
+    var selected = Model.Selected;
+}
+@section Styles { <link rel="stylesheet" href="~/css/baby-requests.css" asp-append-version="true" /> }
+<div class="requests-page" data-requests-page data-updates-url="@Url.Action("Updates")" data-new-ids="@string.Join(",", Model.Items.Where(i => i.State == IncomingRequestState.New).Select(i => i.Id))" data-selected-id="@selected?.Id" data-filter="@Model.Filter" data-decision-message="@(!string.IsNullOrEmpty(decision))">
+    <section class="inbox-heading"><div><h1>Incoming requests</h1><p>Requests from parents arrive here — review the children’s needs, then accept or decline.</p></div><span class="sync-label" data-sync-status role="status"><i></i><span>Live · synced just now</span></span></section>
+    <div class="incoming-banner" role="status"><svg class="line-icon"><use href="#icon-bolt" /></svg><span data-inbox-banner>@(decision ?? (Model.IncomingRequestCount > 0 ? $"You have {Model.IncomingRequestCount} new {(Model.IncomingRequestCount == 1 ? "request" : "requests")} — this list updates automatically, no refresh needed." : "You’re all caught up — new requests will appear here automatically."))</span><time data-last-synced>Just now</time></div>
+    <partial name="_Tabs" model="Model" />
+    <div class="requests-workspace">
+        <aside class="incoming-list-panel" aria-label="Incoming requests">
+            <form asp-action="Index" method="get" class="inbox-search" id="request-search-form" role="search"><svg class="line-icon"><use href="#icon-search" /></svg><input type="hidden" name="status" value="@Model.Filter" /><input type="search" name="search" value="@Model.Search" maxlength="150" placeholder="Search parents or children…" aria-label="Search parents or children" autocomplete="off" /><button type="submit" class="inbox-search-submit" aria-label="Search"><svg class="line-icon"><use href="#icon-arrow" /></svg></button></form>
+            <partial name="_List" model="Model" />
+        </aside>
+        <partial name="_Detail" model="Model" />
+    </div>
+    <div class="incoming-toast" role="status" hidden><span class="round-icon lime"><svg class="line-icon"><use href="#icon-bolt" /></svg></span><div><strong data-toast-title></strong><small data-toast-body></small></div><button type="button" data-dismiss-toast aria-label="Dismiss notification"><svg class="line-icon"><use href="#icon-close" /></svg></button></div>
+</div>
+<dialog class="decision-dialog" id="request-decision-dialog" aria-labelledby="decision-title" aria-describedby="decision-description" open="@(!string.IsNullOrEmpty(Model.Confirmation))" data-auto-confirm="@Model.Confirmation">
+    <button type="button" class="round-icon dialog-close" data-close aria-label="Close confirmation"><svg class="line-icon"><use href="#icon-close" /></svg></button>
+    <span class="round-icon lime decision-icon"><svg class="line-icon"><use href="#icon-@(Model.Confirmation == "decline" ? "close" : "check")" /></svg></span>
+    <h2 id="decision-title">@(Model.Confirmation == "decline" ? "Decline this request?" : "Accept this request?")</h2>
+    <p id="decision-description">@(Model.Confirmation == "decline" ? "The parent will be notified. This request will stay available to other sitters." : $"You’re committing to {selected?.Service.ToLowerInvariant()} for {selected?.ChildrenSummary} on {selected?.DateSummary} for {(selected is null ? "" : DashboardViewModel.Money(selected.Amount, selected.Currency))}. The parent will be notified and a booking will be created.")</p>
+    <form asp-action="Decide" method="post" id="request-decision-form">
+        <input type="hidden" name="RequestId" value="@selected?.Id" /><input type="hidden" name="Version" value="@selected?.Version" /><input type="hidden" name="Decision" value="@(Model.Confirmation ?? "accept")" />
+        <div class="decision-dialog-actions"><a asp-action="Index" asp-route-status="@Model.Filter" asp-route-id="@selected?.Id" asp-route-search="@Model.Search" class="btn btn-light btn-sm" data-cancel-decision>Go back</a><button type="submit" class="btn btn-dark btn-sm" data-confirm-decision>@(Model.Confirmation == "decline" ? "Decline request" : "Accept request")</button></div>
+    </form>
+</dialog>
+@section Scripts { <script src="~/js/baby-requests.js" asp-append-version="true"></script> }

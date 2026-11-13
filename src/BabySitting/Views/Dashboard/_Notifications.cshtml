@@ -1,0 +1,12 @@
+@using BabySitting.ViewModels
+@model DashboardViewModel
+<article class="dash-card activity-card" id="notifications" data-sections="overview notifications">
+    <div class="card-heading"><h2>@(Model.IsSitter ? "Notifications" : "Recent activity")</h2><a href="#notifications" class="subtle-link">All <span class="owner-only">notifications</span> ↗</a></div>
+    @if (Model.Notifications.Count == 0) { <div class="small-empty"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-bell" /></svg></span><p>You’re all caught up.<small>We’ll keep your care updates here.</small></p></div> }
+    <div class="activity-list">
+    @foreach (var item in Model.Notifications)
+    {
+        <div class="activity-row searchable" data-search="@item.Title @item.Body"><span class="round-icon @(item.ReadAtUtc is null ? "lime" : "")"><svg class="line-icon"><use href="#icon-@(item.Title.Contains("Payment", StringComparison.OrdinalIgnoreCase) ? "card" : "bell")" /></svg></span><div><strong>@item.Title</strong><p>@item.Body</p></div><time datetime="@item.CreatedAtUtc.ToString("O")">@DashboardViewModel.Local(item.CreatedAtUtc).ToString("d MMM")</time></div>
+    }
+    </div>
+</article>

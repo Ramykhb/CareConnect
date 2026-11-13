@@ -22,6 +22,47 @@ namespace BabySitting.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BabySitting.Models.AlertPreferences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Bookings")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("Payments")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequestSound")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Requests")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Reviews")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("AlertPreferences");
+                });
+
             modelBuilder.Entity("BabySitting.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -152,6 +193,9 @@ namespace BabySitting.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<Guid>("ScheduleRevision")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -230,6 +274,9 @@ namespace BabySitting.Data.Migrations
                     b.Property<Guid>("SitterProfileId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("StartsAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -283,6 +330,9 @@ namespace BabySitting.Data.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Message")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -315,6 +365,126 @@ namespace BabySitting.Data.Migrations
 
                             t.HasCheckConstraint("CK_BabysittingOffer_Status", "[Status] BETWEEN 0 AND 4");
                         });
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingCareTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DueAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("BookingCareTasks");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingUpdate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("HasPhoto")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsIssue")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId", "ClientToken")
+                        .IsUnique();
+
+                    b.HasIndex("BookingId", "CreatedAtUtc");
+
+                    b.ToTable("BookingUpdates");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingUpdatePhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BookingUpdateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasMaxLength(5242880)
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingUpdateId")
+                        .IsUnique();
+
+                    b.ToTable("BookingUpdatePhotos");
                 });
 
             modelBuilder.Entity("BabySitting.Models.ChildcareRequest", b =>
@@ -563,6 +733,9 @@ namespace BabySitting.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -579,6 +752,10 @@ namespace BabySitting.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -589,9 +766,16 @@ namespace BabySitting.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId", "SourceKey")
+                        .IsUnique()
+                        .HasFilter("[SourceKey] IS NOT NULL");
+
                     b.HasIndex("UserId", "ReadAtUtc", "CreatedAtUtc");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", t =>
+                        {
+                            t.HasCheckConstraint("CK_Notification_Category", "[Category] BETWEEN 0 AND 4");
+                        });
                 });
 
             modelBuilder.Entity("BabySitting.Models.Payment", b =>
@@ -667,6 +851,44 @@ namespace BabySitting.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BabySitting.Models.PayoutAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PayoutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("PayoutId", "PaymentId")
+                        .IsUnique();
+
+                    b.ToTable("PayoutAllocations", t =>
+                        {
+                            t.HasCheckConstraint("CK_PayoutAllocation_Amount", "[Amount] > 0");
+                        });
+                });
+
             modelBuilder.Entity("BabySitting.Models.ProcessedMessage", b =>
                 {
                     b.Property<Guid>("EventId")
@@ -706,6 +928,9 @@ namespace BabySitting.Data.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("RepliedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("ReviewerId")
                         .HasColumnType("uniqueidentifier");
 
@@ -714,6 +939,10 @@ namespace BabySitting.Data.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("SitterReply")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.HasKey("Id");
 
@@ -759,6 +988,111 @@ namespace BabySitting.Data.Migrations
                     b.ToTable("SitterAvailabilities", t =>
                         {
                             t.HasCheckConstraint("CK_SitterAvailability_Dates", "[EndsAtUtc] > [StartsAtUtc]");
+                        });
+                });
+
+            modelBuilder.Entity("BabySitting.Models.SitterPayout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ClientToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTimeOffset?>("PaidAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SitterProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SitterProfileId", "ClientToken")
+                        .IsUnique();
+
+                    b.ToTable("SitterPayouts", t =>
+                        {
+                            t.HasCheckConstraint("CK_SitterPayout_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_SitterPayout_Status", "[Status] BETWEEN 0 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("BabySitting.Models.SitterScheduleException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AllDay")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateOnly>("EndsOn")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("RepeatYearly")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SitterProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SitterProfileId", "StartsOn", "EndsOn");
+
+                    b.ToTable("SitterScheduleExceptions", t =>
+                        {
+                            t.HasCheckConstraint("CK_SitterScheduleException_Dates", "[EndsOn] >= [StartsOn] AND ([AllDay] = 1 OR [EndsOn] > [StartsOn] OR [EndTime] > [StartTime])");
                         });
                 });
 
@@ -930,6 +1264,17 @@ namespace BabySitting.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BabySitting.Models.AlertPreferences", b =>
+                {
+                    b.HasOne("BabySitting.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BabySitting.Models.AlertPreferences", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BabySitting.Models.BabysitterProfile", b =>
                 {
                     b.HasOne("BabySitting.Models.ApplicationUser", "User")
@@ -995,6 +1340,39 @@ namespace BabySitting.Data.Migrations
                     b.Navigation("SitterProfile");
                 });
 
+            modelBuilder.Entity("BabySitting.Models.BookingCareTask", b =>
+                {
+                    b.HasOne("BabySitting.Models.BabysittingBooking", "Booking")
+                        .WithMany("CareTasks")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingUpdate", b =>
+                {
+                    b.HasOne("BabySitting.Models.BabysittingBooking", "Booking")
+                        .WithMany("Updates")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingUpdatePhoto", b =>
+                {
+                    b.HasOne("BabySitting.Models.BookingUpdate", "BookingUpdate")
+                        .WithOne("Photo")
+                        .HasForeignKey("BabySitting.Models.BookingUpdatePhoto", "BookingUpdateId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("BookingUpdate");
+                });
+
             modelBuilder.Entity("BabySitting.Models.ChildcareRequest", b =>
                 {
                     b.HasOne("BabySitting.Models.ApplicationUser", "Customer")
@@ -1053,6 +1431,25 @@ namespace BabySitting.Data.Migrations
                     b.Navigation("Payer");
                 });
 
+            modelBuilder.Entity("BabySitting.Models.PayoutAllocation", b =>
+                {
+                    b.HasOne("BabySitting.Models.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BabySitting.Models.SitterPayout", "Payout")
+                        .WithMany("Allocations")
+                        .HasForeignKey("PayoutId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("Payout");
+                });
+
             modelBuilder.Entity("BabySitting.Models.Review", b =>
                 {
                     b.HasOne("BabySitting.Models.BabysittingBooking", "Booking")
@@ -1076,6 +1473,28 @@ namespace BabySitting.Data.Migrations
                 {
                     b.HasOne("BabySitting.Models.BabysitterProfile", "SitterProfile")
                         .WithMany("Availability")
+                        .HasForeignKey("SitterProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SitterProfile");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.SitterPayout", b =>
+                {
+                    b.HasOne("BabySitting.Models.BabysitterProfile", "SitterProfile")
+                        .WithMany()
+                        .HasForeignKey("SitterProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SitterProfile");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.SitterScheduleException", b =>
+                {
+                    b.HasOne("BabySitting.Models.BabysitterProfile", "SitterProfile")
+                        .WithMany("ScheduleExceptions")
                         .HasForeignKey("SitterProfileId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
@@ -1154,19 +1573,35 @@ namespace BabySitting.Data.Migrations
                 {
                     b.Navigation("Availability");
 
+                    b.Navigation("ScheduleExceptions");
+
                     b.Navigation("Services");
                 });
 
             modelBuilder.Entity("BabySitting.Models.BabysittingBooking", b =>
                 {
+                    b.Navigation("CareTasks");
+
                     b.Navigation("Payments");
 
                     b.Navigation("Review");
+
+                    b.Navigation("Updates");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.BookingUpdate", b =>
+                {
+                    b.Navigation("Photo");
                 });
 
             modelBuilder.Entity("BabySitting.Models.ChildcareRequest", b =>
                 {
                     b.Navigation("Offers");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.SitterPayout", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 #pragma warning restore 612, 618
         }

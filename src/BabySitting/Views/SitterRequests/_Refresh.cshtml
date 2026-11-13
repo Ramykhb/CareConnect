@@ -1,0 +1,7 @@
+@using BabySitting.ViewModels
+@model SitterRequestsViewModel
+<div data-inbox-fragment data-new-ids="@string.Join(",", Model.Items.Where(i => i.State == IncomingRequestState.New).Select(i => i.Id))" data-selected-id="@Model.Selected?.Id" data-new-count="@Model.IncomingRequestCount" data-filter="@Model.Filter">
+    <partial name="_Tabs" model="Model" />
+    <partial name="_List" model="Model" />
+    <partial name="_Detail" model="Model" />
+</div>

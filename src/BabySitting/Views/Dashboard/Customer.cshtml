@@ -1,0 +1,35 @@
+@using BabySitting.ViewModels
+@model DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; Layout = "_PortalLayout"; var pendingBooking = Model.Upcoming.FirstOrDefault(b => !BabySitting.Services.Bookings.BookingRules.FullyPaid(b) && (b.Status == BookingStatus.AwaitingPayment || b.Payments.Any(p => p.Status == PaymentStatus.Pending))); }
+<partial name="_DashboardHeader" model="Model" />
+<div class="dashboard-board owner-board" data-dashboard="parent" data-view="overview">
+    <partial name="_Metric" model='@(new DashboardMetric("Active requests", "inbox", Model.Requests.Count, "awaiting a sitter", Filled: Math.Min(8, Model.Requests.Count), Section: "requests"))' />
+    <partial name="_Metric" model='@(new DashboardMetric("Bookings this month", "calendar", Model.ThisMonth, "a little care, all month", "lime", Math.Min(8, Model.ThisMonth), "bookings"))' />
+    <article class="dash-card matching-card" data-sections="overview sitters"><span class="matching-eyebrow"><svg class="line-icon"><use href="#icon-sparkles" /></svg>A perfect little friendship</span><h2>Find the<br />perfect sitter<br />for your family</h2><span class="matching-dog family-illustration" aria-hidden="true">👨‍👩‍👧</span><a href="#sitters" class="btn btn-light btn-sm">Meet the sitters <svg class="line-icon"><use href="#icon-arrow" /></svg></a></article>
+    <partial name="_Chart" model="Model" />
+    <aside class="owner-actions" data-sections="overview">
+        <div class="quick-tiles"><button type="button" class="quick-tile lime" data-feature="Create a sitting request"><span class="round-icon"><svg class="line-icon"><use href="#icon-plus" /></svg></span><span class="tile-arrow">↗</span><strong>New request</strong></button><a asp-controller="Family" asp-action="Index" class="quick-tile"><span class="round-icon"><svg class="line-icon"><use href="#icon-family" /></svg></span><span class="tile-arrow">↗</span><strong>My family</strong></a><a href="#sitters" class="quick-tile"><span class="round-icon"><svg class="line-icon"><use href="#icon-search" /></svg></span><span class="tile-arrow">↗</span><strong>Find sitters</strong></a><button type="button" class="quick-tile" data-feature="Help center"><span class="round-icon"><svg class="line-icon"><use href="#icon-help" /></svg></span><span class="tile-arrow">↗</span><strong>Help center</strong></button></div>
+        @if (pendingBooking is not null)
+        {
+            <div class="care-note"><div><svg class="line-icon"><use href="#icon-bell" /></svg><strong>Payment pending</strong></div><p>@pendingBooking.Request.Title is waiting for payment.</p><button type="button" class="btn btn-lime btn-sm" data-feature="Complete payment"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(pendingBooking.TotalAmount, pendingBooking.Currency) securely</button></div>
+        }
+        else
+        {
+            <div class="care-note"><div><svg class="line-icon"><use href="#icon-shield" /></svg><strong>Peace of mind, always</strong></div><p>Keep routines, health notes and care preferences in one place.</p><a asp-controller="Family" asp-action="Index" class="btn btn-lime btn-sm">Manage family profile ↗</a></div>
+        }
+    </aside>
+    <partial name="_Bookings" model="Model" />
+    <article class="dash-card recommendations-card" id="sitters" data-sections="overview sitters"><div class="card-heading"><div><span class="round-icon lime"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span><h2>Sitters near you</h2></div></div><p class="card-description">Trusted, experienced babysitters in your city.</p>
+        @if (Model.Sitters.Count == 0) { <div class="small-empty"><span class="round-icon"><svg class="line-icon"><use href="#icon-family" /></svg></span><p>New friendships take a moment.<small>@(string.IsNullOrEmpty(Model.Account.City) ? "Add your city in Settings to discover local sitters." : "Available sitters in your city will appear here.")</small></p></div><a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-light btn-sm full-width">Update your city ↗</a> }
+        @foreach (var sitter in Model.Sitters) { <div class="sitter-row searchable" data-search="@sitter.User.FirstName @sitter.User.LastName @sitter.City @sitter.Bio"><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><div><strong>@sitter.User.FirstName @sitter.User.LastName</strong><small>@sitter.YearsOfExperience yrs experience · @sitter.City</small></div><span class="status-chip lime">@DashboardViewModel.Money(sitter.HourlyRate, sitter.Currency)/hr</span></div> }
+    </article>
+    <partial name="_Notifications" model="Model" />
+    <article class="dash-card dashboard-pets" id="family" data-sections="overview family"><div class="card-heading"><h2>My family</h2><a asp-controller="Family" asp-action="Index" class="subtle-link">Manage ↗</a></div>
+        @if (Model.Family is null) { <div class="dashboard-empty"><span class="pet-emoji">🧸</span><h3>Every family has its rhythm</h3><p>Add your family details so sitters know what care you need.</p><a asp-controller="Family" asp-action="Create" class="btn btn-lime btn-sm">Add family details</a></div> }
+        else { var f = Model.Family; <a class="dashboard-pet-row searchable" asp-controller="Family" asp-action="Index" data-search="family children @f.City"><span class="pet-emoji">🧸</span><span><strong>@DashboardViewModel.Children(f.NumberOfChildren, f.YoungestChildAgeYears, f.OldestChildAgeYears)</strong><small>@f.City@(string.IsNullOrWhiteSpace(f.HealthNotes) ? "" : " · health notes on file")</small></span><svg class="line-icon"><use href="#icon-chevron" /></svg></a> }
+    </article>
+    <article class="dash-card summary-card" data-sections="overview payments"><h2>Booking summary</h2><dl><dt><i class="dot dark"></i>Completed</dt><dd>@Model.Completed</dd><dt><i class="dot lime"></i>Upcoming</dt><dd>@Model.Upcoming.Count()</dd><dt><i class="dot yellow"></i>Pending</dt><dd>@Model.Bookings.Count(b => b.Status is BookingStatus.Pending or BookingStatus.AwaitingPayment)</dd><dt><i class="dot gray"></i>Cancelled</dt><dd>@Model.Cancelled</dd></dl><div class="summary-total"><span>Paid in @Model.ReportYear · USD</span><strong>@DashboardViewModel.Money(Model.TotalPaid)</strong></div></article>
+    <partial name="_Requests" model="Model" />
+    <partial name="_Payments" model="Model" />
+    <article class="dash-card feature-section" data-sections="messages reviews"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2>More ways to connect</h2><p>Messaging and reviews are on the way. Your family profile and account details are ready to manage today.</p><a asp-controller="Family" asp-action="Index" class="btn btn-dark btn-sm">Visit my family ↗</a></article>
+</div>
