@@ -20,6 +20,8 @@
     };
     function showSection() {
         if (!board) return;
+        const portalRoutes = { '#earnings': '/Sitter/Earnings', '#reports': '/Sitter/Analytics', '#reviews': '/Sitter/Reviews', '#notifications': '/Sitter/Notifications' };
+        if (isSitter && portalRoutes[window.location.hash]) { window.location.replace(portalRoutes[window.location.hash]); return; }
         if (isSitter && window.location.hash === '#bookings') { const id = new URLSearchParams(window.location.search).get('booking'); window.location.replace(id ? '/SitterBookings/Details/' + encodeURIComponent(id) : '/SitterBookings'); return; }
         if (isSitter && window.location.hash === '#availability') { window.location.replace('/SitterAvailability'); return; }
         if (isSitter && window.location.hash === '#requests') { window.location.replace('/SitterRequests'); return; }
@@ -76,6 +78,8 @@
         const feature = event.target.closest('[data-feature]');
         if (feature && featureDialog) {
             const name = feature.dataset.feature;
+            if (name === 'Update pricing') { window.location.href = '/Sitter/Settings#services-settings'; return; }
+            if (name === 'Request payout') { window.location.href = '/Sitter/Earnings'; return; }
             document.getElementById('feature-title').textContent = name;
             document.getElementById('feature-description').textContent = featureCopy[name] || 'This feature is coming soon. Your existing data has not been changed.';
             featureDialog.showModal();

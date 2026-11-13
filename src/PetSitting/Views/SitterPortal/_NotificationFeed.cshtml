@@ -1,0 +1,3 @@
+@using PetSitting.ViewModels
+@model SitterNotificationsViewModel
+<div data-notification-feed data-unread="@Model.Unread" data-request-ids="@string.Join(",", Model.Items.Where(n => n.ReadAtUtc == null && SitterNotificationsViewModel.Category(n) == NotificationCategory.Request).Select(n => n.Id))" data-sound="@Model.Preferences.RequestSound.ToString().ToLowerInvariant()"><partial name="_NotificationTabs" model="Model" /><partial name="_NotificationList" model="Model" /></div>

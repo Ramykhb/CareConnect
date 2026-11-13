@@ -1,0 +1,10 @@
+@using PetSitting.ViewModels
+@model SitterNotificationsViewModel
+@{ ViewData["Title"] = "Notifications"; ViewData["PortalClass"] = "sitter-portal-page"; ViewData["SearchForm"] = "notification-search"; ViewData["SearchTerm"] = Model.Search; }
+@section Styles { <link rel="stylesheet" href="~/css/pet-account.css" asp-append-version="true" /> }
+<div data-notifications-page data-feed-url="@Url.Action("NotificationsFeed")" data-request-ids="@string.Join(",", Model.Items.Where(n => n.ReadAtUtc == null && SitterNotificationsViewModel.Category(n) == NotificationCategory.Request).Select(n => n.Id))" data-sound="@Model.Preferences.RequestSound.ToString().ToLowerInvariant()">
+<section class="account-page-heading"><div><h1>Notifications</h1><p>New requests, booking updates, payments and reviews — kept together.</p></div><div class="account-heading-actions"><span class="sync-label" data-alert-sync><i></i><span>Live · synced just now</span></span><form asp-action="ReadAll" method="post"><button type="submit" class="btn btn-light btn-sm"><svg class="line-icon"><use href="#icon-check" /></svg>Mark all as read</button></form></div></section>
+<form asp-action="Notifications" method="get" id="notification-search"><input type="hidden" name="category" value="@Model.Filter" /><button type="submit" hidden>Search notifications</button></form>
+<partial name="_NotificationTabs" model="Model" /><div class="notifications-layout"><partial name="_NotificationList" model="Model" /><partial name="_Alerts" model="@((Model.PreferencesForm, false))" /></div>
+</div>
+@section Scripts { <script src="~/js/pet-account.js" asp-append-version="true"></script> }

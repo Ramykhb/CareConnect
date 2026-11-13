@@ -18,6 +18,9 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<BookingUpdate> BookingUpdates => Set<BookingUpdate>();
     public DbSet<BookingUpdatePhoto> BookingUpdatePhotos => Set<BookingUpdatePhoto>();
     public DbSet<SitterAvailability> SitterAvailabilities => Set<SitterAvailability>();
+    public DbSet<SitterPayout> SitterPayouts => Set<SitterPayout>();
+    public DbSet<PayoutAllocation> PayoutAllocations => Set<PayoutAllocation>();
+    public DbSet<AlertPreferences> AlertPreferences => Set<AlertPreferences>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -121,6 +124,18 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
             t.HasCheckConstraint("CK_MessageOutbox_Version", "[Version] >= 1");
             t.HasCheckConstraint("CK_MessageOutbox_Payload", "ISJSON([PayloadJson]) = 1");
         });
+
+        modelBuilder.Entity<AlertPreferences>().HasOne(p => p.User).WithOne().HasForeignKey<AlertPreferences>(p => p.UserId);
+        modelBuilder.Entity<AlertPreferences>().HasIndex(p => p.UserId).IsUnique();
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.SourceKey }).IsUnique().HasFilter("[SourceKey] IS NOT NULL");
+        modelBuilder.Entity<Notification>().ToTable(t => t.HasCheckConstraint("CK_Notification_Category", "[Category] BETWEEN 0 AND 4"));
+        modelBuilder.Entity<SitterPayout>().HasOne(p => p.SitterProfile).WithMany().HasForeignKey(p => p.SitterProfileId);
+        modelBuilder.Entity<SitterPayout>().HasIndex(p => new { p.SitterProfileId, p.ClientToken }).IsUnique();
+        modelBuilder.Entity<SitterPayout>().ToTable(t => { t.HasCheckConstraint("CK_SitterPayout_Amount", "[Amount] > 0"); t.HasCheckConstraint("CK_SitterPayout_Status", "[Status] BETWEEN 0 AND 2"); });
+        modelBuilder.Entity<PayoutAllocation>().HasOne(a => a.Payout).WithMany(p => p.Allocations).HasForeignKey(a => a.PayoutId);
+        modelBuilder.Entity<PayoutAllocation>().HasOne(a => a.Payment).WithMany().HasForeignKey(a => a.PaymentId);
+        modelBuilder.Entity<PayoutAllocation>().HasIndex(a => new { a.PayoutId, a.PaymentId }).IsUnique();
+        modelBuilder.Entity<PayoutAllocation>().ToTable(t => t.HasCheckConstraint("CK_PayoutAllocation_Amount", "[Amount] > 0"));
 
         // Avoid SQL Server multiple cascade paths and accidental removal of booking history.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

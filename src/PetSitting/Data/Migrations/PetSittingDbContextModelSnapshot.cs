@@ -161,6 +161,47 @@ namespace PetSitting.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PetSitting.Models.AlertPreferences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Bookings")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("Payments")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequestSound")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Requests")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Reviews")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("AlertPreferences");
+                });
+
             modelBuilder.Entity("PetSitting.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -440,6 +481,9 @@ namespace PetSitting.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -456,6 +500,10 @@ namespace PetSitting.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -466,9 +514,16 @@ namespace PetSitting.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId", "SourceKey")
+                        .IsUnique()
+                        .HasFilter("[SourceKey] IS NOT NULL");
+
                     b.HasIndex("UserId", "ReadAtUtc", "CreatedAtUtc");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", t =>
+                        {
+                            t.HasCheckConstraint("CK_Notification_Category", "[Category] BETWEEN 0 AND 4");
+                        });
                 });
 
             modelBuilder.Entity("PetSitting.Models.Payment", b =>
@@ -541,6 +596,44 @@ namespace PetSitting.Data.Migrations
                             t.HasCheckConstraint("CK_Payment_Amount", "[Amount] > 0");
 
                             t.HasCheckConstraint("CK_Payment_Status", "[Status] BETWEEN 0 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("PetSitting.Models.PayoutAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PayoutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("PayoutId", "PaymentId")
+                        .IsUnique();
+
+                    b.ToTable("PayoutAllocations", t =>
+                        {
+                            t.HasCheckConstraint("CK_PayoutAllocation_Amount", "[Amount] > 0");
                         });
                 });
 
@@ -704,6 +797,9 @@ namespace PetSitting.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Message")
                         .HasMaxLength(2000)
@@ -954,6 +1050,9 @@ namespace PetSitting.Data.Migrations
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("RepliedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("ReviewerId")
                         .HasColumnType("uniqueidentifier");
 
@@ -962,6 +1061,10 @@ namespace PetSitting.Data.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("SitterReply")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.HasKey("Id");
 
@@ -1007,6 +1110,58 @@ namespace PetSitting.Data.Migrations
                     b.ToTable("SitterAvailabilities", t =>
                         {
                             t.HasCheckConstraint("CK_SitterAvailability_Dates", "[EndsAtUtc] > [StartsAtUtc]");
+                        });
+                });
+
+            modelBuilder.Entity("PetSitting.Models.SitterPayout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ClientToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTimeOffset?>("PaidAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SitterProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SitterProfileId", "ClientToken")
+                        .IsUnique();
+
+                    b.ToTable("SitterPayouts", t =>
+                        {
+                            t.HasCheckConstraint("CK_SitterPayout_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_SitterPayout_Status", "[Status] BETWEEN 0 AND 2");
                         });
                 });
 
@@ -1143,6 +1298,17 @@ namespace PetSitting.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PetSitting.Models.AlertPreferences", b =>
+                {
+                    b.HasOne("PetSitting.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("PetSitting.Models.AlertPreferences", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PetSitting.Models.BookingCareTask", b =>
                 {
                     b.HasOne("PetSitting.Models.PetBooking", "Booking")
@@ -1204,6 +1370,25 @@ namespace PetSitting.Data.Migrations
                     b.Navigation("Booking");
 
                     b.Navigation("Payer");
+                });
+
+            modelBuilder.Entity("PetSitting.Models.PayoutAllocation", b =>
+                {
+                    b.HasOne("PetSitting.Models.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("PetSitting.Models.SitterPayout", "Payout")
+                        .WithMany("Allocations")
+                        .HasForeignKey("PayoutId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("Payout");
                 });
 
             modelBuilder.Entity("PetSitting.Models.Pet", b =>
@@ -1341,6 +1526,17 @@ namespace PetSitting.Data.Migrations
                     b.Navigation("SitterProfile");
                 });
 
+            modelBuilder.Entity("PetSitting.Models.SitterPayout", b =>
+                {
+                    b.HasOne("PetSitting.Models.PetSitterProfile", "SitterProfile")
+                        .WithMany()
+                        .HasForeignKey("SitterProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SitterProfile");
+                });
+
             modelBuilder.Entity("PetSitting.Models.SitterScheduleException", b =>
                 {
                     b.HasOne("PetSitting.Models.PetSitterProfile", "SitterProfile")
@@ -1403,6 +1599,11 @@ namespace PetSitting.Data.Migrations
                     b.Navigation("ScheduleExceptions");
 
                     b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("PetSitting.Models.SitterPayout", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 #pragma warning restore 612, 618
         }

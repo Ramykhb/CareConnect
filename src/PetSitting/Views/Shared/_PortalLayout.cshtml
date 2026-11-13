@@ -8,6 +8,8 @@
     var displayName = user is null ? "Your account" : $"{user.FirstName} {user.LastName}";
     var initial = string.IsNullOrEmpty(user?.FirstName) ? "?" : user.FirstName[..1].ToUpperInvariant();
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var portalRoutes = new Dictionary<string, string> { ["earnings"] = "Earnings", ["reports"] = "Analytics", ["reviews"] = "Reviews", ["notifications"] = "Notifications" };
     var home = Url.Action(sitter ? "Sitter" : "Customer", "Dashboard");
     var unread = portal?.Unread ?? 0;
     var menu = sitter
@@ -37,14 +39,14 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability";
-                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
                         </a>
                     }
-                    <a asp-area="Identity" asp-page="/Account/Manage/Index"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
+                    <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Page("/Account/Manage/Index", new { area = "Identity" }))" class="@(controller == "SitterPortal" && action == "Settings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
                 </nav>
             </div>
             <div class="sidebar-bottom">
@@ -74,9 +76,9 @@
                     {
                         <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }
-                    <a href="@(home)#notifications" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
+                    <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : home + "#notifications")" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
                     <button type="button" class="round-icon topbar-message" data-feature="Messages" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></button>
-                    <details class="account-menu"><summary><span class="portal-avatar">@initial</span><span><strong>@displayName</strong><small>@(sitter ? "Pet sitter" : "Pet owner")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a asp-area="Identity" asp-page="/Account/Manage/Index">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
+                    <details class="account-menu"><summary><span class="portal-avatar">@initial</span><span><strong>@displayName</strong><small>@(sitter ? "Pet sitter" : "Pet owner")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Page("/Account/Manage/Index", new { area = "Identity" }))">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
                 </div>
             </header>
             <main id="main-content">

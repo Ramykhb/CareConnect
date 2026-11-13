@@ -250,3 +250,11 @@ dotnet ef database update --project src/PetSitting -- --environment Development
 ```
 
 `AddSitterBookingCareAndCalendar` adds start timestamps, checklist tasks, care updates/private photos, schedule exceptions, and a schedule revision. It was applied to the local development database. Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/PetSitting.Tests` for the HTTP role/CSRF/rendering checks and SQL tests for payment-gated status changes, private photo access, checklist persistence, annual rules, schedule conflicts, and concurrent blocking/acceptance. The week-page rendering check covers the custom `TimeOnly` hour format as well as the week date heading.
+
+### Sitter account pages
+
+The sitter portal now includes `/Sitter/Earnings`, `/Sitter/Analytics`, `/Sitter/Reviews`, `/Sitter/Notifications`, and `/Sitter/Settings`. Earnings and analytics use the signed-in sitter’s actual records, keep currencies separate, and provide CSV, PDF, and XLSX snapshot exports. Reviews show eligible completed-booking ratings and allow the assigned sitter to save a reply. Notifications support category filters, read controls, 15-second refresh, saved in-app alert preferences, and an optional browser sound test. Settings edit account details, create or update the sitter profile, choose services and pricing, and link to existing Identity security controls.
+
+Payout requests reserve eligible, unallocated successful payments from completed bookings in a serializable transaction. Requests may be cancelled while pending. These are local records: no bank transfer is made. Bank details are not collected, and email/SMS alert switches remain disabled until those transports are connected. Existing prices are not converted between currencies. Analytics request counts refer to recorded sitter responses and their current outcomes; average reply time is available only for responses with a recorded decision timestamp.
+
+Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Verification for these account-page additions was skipped at the user’s request.

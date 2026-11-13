@@ -11,5 +11,6 @@ public class PetCareOffer : Entity
     [Range(typeof(decimal), "0", "99999999")] public decimal Amount { get; set; }
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     [MaxLength(2000)] public string? Message { get; set; }
+    public DateTimeOffset? DecidedAtUtc { get; set; }
     public OfferStatus Status { get; set; } = OfferStatus.Pending;
 }

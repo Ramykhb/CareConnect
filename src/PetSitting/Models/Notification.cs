@@ -4,6 +4,8 @@ namespace PetSitting.Models;
 
 public class Notification : Entity
 {
+    public NotificationCategory Category { get; set; }
+    [MaxLength(120)] public string? SourceKey { get; set; }
     public Guid UserId { get; set; }
     public ApplicationUser User { get; set; } = null!;
     [Required, MaxLength(150)] public string Title { get; set; } = string.Empty;

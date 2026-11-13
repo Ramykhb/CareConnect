@@ -104,6 +104,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
                 }
                 var accept = form.Decision == "accept";
                 offer.Status = accept ? OfferStatus.Accepted : OfferStatus.Rejected;
+                offer.DecidedAtUtc = now;
                 if (accept)
                 {
                     request.Status = RequestStatus.Booked;
@@ -112,7 +113,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
                         Status = offer.Amount > 0 ? BookingStatus.AwaitingPayment : BookingStatus.Confirmed, CreatedAtUtc = now, CorrelationId = request.CorrelationId };
                     db.PetBookings.Add(booking);
                 }
-                db.Notifications.Add(new Notification { UserId = request.CustomerId.Value,
+                db.Notifications.Add(new Notification { Category = NotificationCategory.Request, UserId = request.CustomerId.Value,
                     Title = $"{account.FirstName} {(accept ? "accepted" : "declined")} your request",
                     Body = $"{request.Title} · {DashboardViewModel.Service(request.ServiceType)} · {(accept ? "Your booking is accepted." : "Your request is still open to other sitters.")}",
                     RelativeUrl = accept ? "/Dashboard/Customer#bookings" : "/Dashboard/Customer#requests", CreatedAtUtc = now });
