@@ -20,6 +20,7 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
     public DbSet<MessageOutbox> MessageOutboxEntries => Set<MessageOutbox>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
     public DbSet<FamilyProfile> FamilyProfiles => Set<FamilyProfile>();
+    public DbSet<AccountPhoto> AccountPhotos => Set<AccountPhoto>();
     public DbSet<ParentRequestDraft> ParentRequestDrafts => Set<ParentRequestDraft>();
     public DbSet<SitterScheduleException> SitterScheduleExceptions => Set<SitterScheduleException>();
     public DbSet<BookingCareTask> BookingCareTasks => Set<BookingCareTask>();
@@ -121,6 +122,8 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
             t.HasCheckConstraint("CK_FamilyProfile_Ages", "[YoungestChildAgeYears] BETWEEN 0 AND 17 AND [OldestChildAgeYears] BETWEEN [YoungestChildAgeYears] AND 17");
         });
 
+        modelBuilder.Entity<ApplicationUser>().Property(u => u.PreferredLanguage).HasDefaultValue("en");
+        modelBuilder.Entity<AccountPhoto>().HasIndex(p => p.UserId).IsUnique();
         modelBuilder.Entity<ParentRequestDraft>().HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId);
         modelBuilder.Entity<ParentRequestDraft>().HasOne(x => x.SubmittedRequest).WithMany().HasForeignKey(x => x.SubmittedRequestId);
         modelBuilder.Entity<ParentRequestDraft>().HasIndex(x => new { x.CustomerId, x.UpdatedAtUtc });
@@ -163,5 +166,7 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
                 }
             }
         }
+        // After the NoAction loop above: a profile photo is removed together with its account.
+        modelBuilder.Entity<AccountPhoto>().HasOne(p => p.User).WithOne().HasForeignKey<AccountPhoto>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

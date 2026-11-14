@@ -32,13 +32,22 @@ public sealed class DashboardService(BabySittingDbContext db, TimeProvider clock
                 (services.Length == 0 || services.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id))
             : requests.Where(r => r.CustomerId == account.Id);
         var offers = db.BabysittingOffers.Where(o => o.SitterProfile.UserId == account.Id);
+        var notifications = db.Notifications.AsNoTracking().Where(n => n.UserId == account.Id);
+        if (!sitter)
+        {
+            var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == account.Id, ct) ?? new();
+            notifications = notifications.Where(n => (n.Category != NotificationCategory.Request || preferences.Requests)
+                && (n.Category != NotificationCategory.Booking || preferences.Bookings)
+                && (n.Category != NotificationCategory.Payment || preferences.Payments)
+                && (n.Category != NotificationCategory.Review || preferences.Reviews));
+        }
         return new DashboardViewModel
         {
             Account = account, IsSitter = sitter, Profile = profile, Now = now, Bookings = bookings,
             Family = sitter ? null : await db.FamilyProfiles.AsNoTracking().SingleOrDefaultAsync(f => f.UserId == account.Id, ct),
             Requests = await requests.Include(r => r.Customer).Include(r => r.FamilyProfile).OrderBy(r => r.StartsAtUtc).ToListAsync(ct),
-            Notifications = await db.Notifications.AsNoTracking().Where(n => n.UserId == account.Id).OrderByDescending(n => n.CreatedAtUtc).Take(10).ToListAsync(ct),
-            Unread = await db.Notifications.CountAsync(n => n.UserId == account.Id && n.ReadAtUtc == null, ct),
+            Notifications = await notifications.OrderByDescending(n => n.CreatedAtUtc).Take(10).ToListAsync(ct),
+            Unread = await notifications.CountAsync(n => n.ReadAtUtc == null, ct),
             Completed = await ownBookings.CountAsync(b => b.Status == BookingStatus.Completed, ct),
             Cancelled = await ownBookings.CountAsync(b => b.Status == BookingStatus.Cancelled, ct),
             AcceptedOffers = sitter ? await offers.CountAsync(o => o.Status == OfferStatus.Accepted, ct) : 0,

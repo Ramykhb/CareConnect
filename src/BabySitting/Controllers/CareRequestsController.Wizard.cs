@@ -223,7 +223,8 @@ public sealed partial class CareRequestsController
     {
         var family = await Db.FamilyProfiles.AsNoTracking().SingleOrDefaultAsync(f => f.UserId == UserId);
         var city = family?.City ?? (await Users.GetUserAsync(User))?.City ?? "";
-        return new ParentRequestWizard { Form = new() { City = city, NumberOfChildren = family?.NumberOfChildren ?? 1,
+        var account = await Users.GetUserAsync(User);
+        return new ParentRequestWizard { Form = new() { City = city, StreetAddress = account?.HomeAddress is { Length: <= 140 } home ? home : null, NumberOfChildren = family?.NumberOfChildren ?? 1,
             YoungestChildAgeYears = family?.YoungestChildAgeYears ?? 0, OldestChildAgeYears = family?.OldestChildAgeYears ?? 0 } };
     }
 }
