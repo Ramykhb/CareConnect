@@ -35,14 +35,24 @@ else
         </div>
     </div>
 
+    var missing = new[] { (Model.HealthNotes, "health notes"), (Model.Routines, "daily routines"), (Model.CarePreferences, "care preferences") }
+        .Where(x => string.IsNullOrWhiteSpace(x.Item1)).Select(x => x.Item2).ToList();
+    <nav class="tabs family-profile-tabs" aria-label="Family profile sections">
+        <a class="tab" href="#overview">Overview</a><a class="tab" href="#health">Health</a><a class="tab" href="#routines">Routines</a><a class="tab" href="#preferences">Preferences</a>
+    </nav>
+    @if (missing.Count > 0)
+    {
+        <div class="care-prompt"><svg class="line-icon"><use href="#icon-edit" /></svg><p>Add your @string.Join(" and ", missing) so sitters can prepare before they arrive.</p><a class="btn btn-dark btn-sm" asp-action="Edit">Complete profile</a></div>
+    }
     <div class="details-layout">
-        <section class="card profile-card" aria-label="Family summary">
+        <section class="card profile-card" id="overview" aria-label="Family summary">
             <div class="pet-photo species-rabbit">
                 <span class="pet-initial" aria-hidden="true"><svg class="line-icon" width="56" height="56"><use href="#icon-family" /></svg></span>
             </div>
             <div>
                 <h2>@Model.NumberOfChildren @(Model.NumberOfChildren == 1 ? "child" : "children")</h2>
                 <span class="pet-meta">@Model.City</span>
+                <div class="chips"><span class="chip @(missing.Count == 0 ? "care-complete" : "care-incomplete")"><svg class="line-icon"><use href="@(missing.Count == 0 ? "#icon-shield" : "#icon-edit")" /></svg>@(missing.Count == 0 ? "Care details ready" : "Add care details")</span></div>
             </div>
             <div class="facts">
                 <div class="fact"><small>Children</small><strong>@Model.NumberOfChildren</strong></div>
@@ -53,18 +63,20 @@ else
         </section>
 
         <section class="card" aria-label="Care details">
-            <div class="info-section">
+            <div class="info-section" id="health">
                 <h3>Health notes</h3>
                 @if (string.IsNullOrWhiteSpace(Model.HealthNotes)) { <p class="muted">No health notes yet.</p> } else { <p>@Model.HealthNotes</p> }
             </div>
-            <div class="info-section">
+            <div class="info-section" id="routines">
                 <h3>Daily routines</h3>
                 @if (string.IsNullOrWhiteSpace(Model.Routines)) { <p class="muted">No routines yet.</p> } else { <p>@Model.Routines</p> }
             </div>
-            <div class="info-section">
+            <div class="info-section" id="preferences">
                 <h3>Care preferences</h3>
                 @if (string.IsNullOrWhiteSpace(Model.CarePreferences)) { <p class="muted">No care preferences yet.</p> } else { <p>@Model.CarePreferences</p> }
             </div>
         </section>
     </div>
 }
+
+@section Scripts { <script src="~/js/baby-profiles.js" asp-append-version="true"></script> }

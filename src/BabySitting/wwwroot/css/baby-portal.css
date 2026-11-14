@@ -163,3 +163,12 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 .star-picker input:focus-visible + label { outline:3px solid #778d2d; border-radius:6px; }
 .review-box { margin:14px 0; padding:14px; border-radius:16px; background:var(--card-2); display:grid; gap:6px; }
 .notification-row.unread { border-left:4px solid var(--lime); }
+
+/* Family profile redesign (mirrors the My Pets profile update) */
+.family-profile-tabs { display:flex; gap:8px; overflow-x:auto; margin-bottom:16px; }
+.family-profile-tabs .tab { flex-shrink:0; }
+.care-prompt { display:flex; align-items:center; gap:12px; padding:14px 18px; margin-bottom:16px; border-radius:20px; background:#fff7d6; }
+.care-prompt p { margin:0; flex:1; }
+.chip.care-complete { background:var(--success-bg); color:#2c6b41; }
+.chip.care-incomplete { background:#fff1c9; color:#7a5b00; }
+.family-page .info-section { scroll-margin-top:24px; }
