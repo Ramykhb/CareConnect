@@ -54,7 +54,7 @@
             <p><strong>@Model.SitterName</strong><br /><span class="pet-meta">@b.SitterProfile.YearsOfExperience yrs experience · @DashboardViewModel.Money(b.SitterProfile.HourlyRate, b.SitterProfile.Currency)/hr</span></p>
             <p>Booking: <span class="status-chip @DashboardViewModel.StatusClass(b.Status)">@DashboardViewModel.Status(b.Status)</span> · @DashboardViewModel.Money(b.TotalAmount, b.Currency)</p>
             @if (b.Status == BookingStatus.Cancelled) { <p class="pet-meta">@b.CancellationReason</p> }
-            @if (ParentBookingService.CanPay(b))
+            @if (ParentPaymentService.CanPay(b))
             {
                 <form asp-action="Pay" method="post" class="pay-form">
                     <input type="hidden" name="requestId" value="@r.Id" />
@@ -70,7 +70,7 @@
             {
                 <div class="review-box"><strong>Your review · @(new string('★', b.Review.Rating))@(new string('☆', 5 - b.Review.Rating))</strong>@if (b.Review.Comment is not null) { <p>@b.Review.Comment</p> }@if (b.Review.SitterReply is not null) { <p class="pet-meta">Sitter replied: @b.Review.SitterReply</p> }</div>
             }
-            else if (ParentBookingService.CanReview(b))
+            else if (ParentPaymentService.CanReview(b))
             {
                 <form asp-action="Review" method="post" class="review-form">
                     <input type="hidden" name="requestId" value="@r.Id" />

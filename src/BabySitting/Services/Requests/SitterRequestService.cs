@@ -116,7 +116,7 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                 db.Notifications.Add(new Notification { Category = NotificationCategory.Request, UserId = request.CustomerId.Value,
                     Title = $"{account.FirstName} {(accept ? "accepted" : "declined")} your request",
                     Body = $"{request.Title} · {DashboardViewModel.Service(request.ServiceType)} · {(accept ? "Your booking is accepted." : "Your request is still open to other sitters.")}",
-                    RelativeUrl = accept ? "/Dashboard/Customer#bookings" : "/Dashboard/Customer#requests", CreatedAtUtc = now });
+                    RelativeUrl = "/ParentBookings/Details/" + request.Id, CreatedAtUtc = now });
                 await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
                 return new(true, accept ? $"Decision sent — {request.Customer.FirstName} was notified and the booking moved to Accepted." : $"Decision sent — {request.Customer.FirstName} was notified that you declined this request.", accept ? "accepted" : "declined", booking?.Id);

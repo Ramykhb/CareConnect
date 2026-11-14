@@ -1,0 +1,68 @@
+@using BabySitting.ViewModels
+@using BabySitting.Services.Bookings
+@model ParentBookingDetails
+@{
+    var item = Model.Item;
+    var b = Model.Booking;
+    var sitterFirst = Model.Sitter?.User.FirstName ?? "your sitter";
+    var paid = b is not null && BookingRules.FullyPaid(b);
+    var completed = item.Bucket == "completed";
+}
+<header class="ob-heading ob-detail-heading"><div class="ob-title-with-back"><a class="round-icon" asp-action="Index" aria-label="Back to requests and bookings"><svg class="line-icon"><use href="#icon-back" /></svg></a><div><div class="ob-title-line"><h1>@Model.Request.Title</h1><span class="ob-status @item.Css">@item.Status</span>@if (paid && b!.TotalAmount > 0) { <span class="ob-status paid"><svg class="line-icon"><use href="#icon-check" /></svg>Payment successful</span> }</div><p>@(b is null ? "Request" : "Booking") #@item.Reference · @(b?.CompletedAtUtc is { } finished ? "completed " + DashboardViewModel.Local(finished).ToString("ddd d MMM, h:mm tt") : "sent " + DashboardViewModel.Local(Model.Request.CreatedAtUtc).ToString("ddd d MMM, h:mm tt"))</p></div></div><div class="ob-heading-actions">
+    @if (Model.HasReceipt) { <a class="btn btn-light" asp-action="Receipt" asp-route-id="@Model.Request.Id"><svg class="line-icon"><use href="#icon-download" /></svg>Download receipt</a> }
+    @if (completed) { <form asp-action="Again" method="post"><input type="hidden" name="id" value="@Model.Request.Id" /><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-calendar" /></svg>Book @sitterFirst again</button></form> }
+    @if (Model.CanCancel) { <a class="btn btn-danger" href="#cancel-booking"><svg class="line-icon"><use href="#icon-close" /></svg>Cancel @(b is null ? "request" : "booking")</a> }
+</div></header>
+<div class="ob-detail-columns"><div class="ob-detail-main">
+    @if (completed)
+    {
+        <div class="ob-review-banner"><svg class="line-icon"><use href="#icon-star" /></svg><span>@(b?.Review is null ? $"How was your children’s time with {sitterFirst}? Your review helps other owners." : "Thanks for sharing a little love. Your review is published.")</span>@if (Model.CanReview) { <a class="btn btn-lime" href="#leave-review"><svg class="line-icon"><use href="#icon-star" /></svg>Leave a review</a> }</div>
+    }
+    else if (item.Bucket == "pending")
+    {
+        <div class="ob-alert pending"><svg class="line-icon"><use href="#icon-clock" /></svg><span>Waiting for @(Model.Sitter is null ? "a sitter" : sitterFirst) to respond. The status below updates automatically.</span></div>
+    }
+    else if (item.Status == "Payment pending")
+    {
+        <div class="ob-alert pending"><svg class="line-icon"><use href="#icon-lock" /></svg><span>@sitterFirst accepted your request. Complete the demo payment to confirm care.</span></div>
+    }
+    else if (item.Bucket is "cancelled" or "rejected" or "expired")
+    {
+        <div class="ob-alert muted"><svg class="line-icon"><use href="#icon-alert" /></svg><span>@(item.Bucket == "rejected" && Model.Request.Status == RequestStatus.Open ? "This sitter declined. Your request remains open to other eligible sitters." : b?.CancellationReason ?? "This request is " + item.Status.ToLowerInvariant() + ".")</span></div>
+    }
+    <section class="ob-card ob-timeline-card" aria-labelledby="timeline-heading"><div class="ob-card-heading"><h2 id="timeline-heading">Status timeline</h2><span class="ob-sync" data-ob-sync role="status"><i></i><span>Updates automatically</span></span></div><partial name="_Timeline" model="Model" /></section>
+    <section class="ob-card ob-care-details" aria-labelledby="care-detail-heading"><h2 id="care-detail-heading">Details</h2><dl class="ob-detail-facts"><div><span class="round-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><div><dt>Check-in</dt><dd>@DashboardViewModel.Local(Model.Request.StartsAtUtc).ToString("ddd d MMM · h:mm tt")</dd></div></div><div><span class="round-icon"><svg class="line-icon"><use href="#icon-clock" /></svg></span><div><dt>Check-out</dt><dd>@DashboardViewModel.Local(Model.Request.EndsAtUtc).ToString("ddd d MMM · h:mm tt")</dd></div></div><div><span class="round-icon"><svg class="line-icon"><use href="#icon-moon" /></svg></span><div><dt>Service</dt><dd>@ParentRequestForm.ServiceName(Model.Request.ServiceType)</dd></div></div><div><span class="round-icon"><svg class="line-icon"><use href="#icon-pin" /></svg></span><div><dt>Location</dt><dd>@Model.Request.City · your home</dd></div></div></dl><div class="ob-instructions"><small>Special instructions</small><p>@Model.Request.Description</p></div>@if (!string.IsNullOrWhiteSpace(Model.Request.ServiceAddress)) { <details class="ob-private-address"><summary><svg class="line-icon"><use href="#icon-lock" /></svg>Your private address &amp; access notes</summary><p>@Model.Request.ServiceAddress</p><small>Only you and the sitter who accepts can view these details.</small></details> }</section>
+    @if (b?.Updates.Count > 0)
+    {
+        <section class="ob-card ob-care-updates"><h2>Updates from your sitter</h2>@foreach (var update in b.Updates.OrderByDescending(u => u.CreatedAtUtc)) { <article><div><span class="ob-status @(update.IsIssue ? "rejected" : "accepted")">@(update.IsIssue ? "Issue reported" : "Care update")</span><time>@DashboardViewModel.Local(update.CreatedAtUtc).ToString("d MMM · h:mm tt")</time></div><p>@update.Message</p>@if (update.HasPhoto) { <a asp-controller="BookingPhotos" asp-action="Image" asp-route-id="@update.Id" target="_blank" rel="noopener"><img src="@Url.Action("Image", "BookingPhotos", new { id = update.Id })" alt="Care photo shared by your sitter" loading="lazy" /></a> }</article> }</section>
+    }
+    @if (b?.Review is { } review)
+    {
+        <section class="ob-card ob-published-review"><h2>Your review <span aria-label="@review.Rating out of 5 stars">@(new string('★', review.Rating))@(new string('☆', 5 - review.Rating))</span></h2><p>@review.Comment</p><small>@DashboardViewModel.Local(review.CreatedAtUtc).ToString("d MMM yyyy")</small>@if (!string.IsNullOrWhiteSpace(review.SitterReply)) { <blockquote><strong>@sitterFirst replied</strong><p>@review.SitterReply</p></blockquote> }</section>
+    }
+    else if (Model.CanReview)
+    {
+        <section class="ob-card ob-review-form" id="leave-review"><h2>A little review goes a long way</h2><p>Tell other families about your experience with @sitterFirst.</p><form asp-action="Review" method="post"><input type="hidden" name="id" value="@b!.Id" /><fieldset class="ob-star-picker"><legend>Your rating</legend>@for (var star = 5; star >= 1; star--) { <input type="radio" name="rating" value="@star" id="review-star-@star" required /><label for="review-star-@star" aria-label="@star stars">★</label> }</fieldset><label for="review-comment">Your review <small>optional</small></label><textarea name="comment" id="review-comment" maxlength="2000" rows="4" placeholder="What made the care special?"></textarea><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-star" /></svg>Publish review</button></form></section>
+    }
+    @if (Model.CanCancel)
+    {
+        <details class="ob-card ob-cancel-form" id="cancel-booking"><summary><svg class="line-icon"><use href="#icon-close" /></svg>Need to cancel this @(b is null ? "request" : "booking")?</summary><p>Your sitter will be notified. Care that has already started cannot be cancelled here.</p><form asp-action="Cancel" method="post"><input type="hidden" name="id" value="@Model.Request.Id" /><input type="hidden" name="version" value="@Model.Version" /><label for="cancel-reason">Cancellation reason</label><textarea name="reason" id="cancel-reason" maxlength="900" rows="3" required placeholder="Let your sitter know why you’re cancelling…"></textarea><button type="submit" class="btn btn-danger">Confirm cancellation</button></form></details>
+    }
+</div><aside class="ob-detail-aside">
+    @if (Model.Sitter is { } sitter)
+    {
+        <section class="ob-card ob-sitter-card"><div class="ob-sitter-heading"><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><div><h2>@sitter.User.FirstName @sitter.User.LastName @if (sitter.VerificationStatus == VerificationStatus.Verified) { <svg class="line-icon" aria-label="Verified sitter"><use href="#icon-shield" /></svg> }</h2><p><svg class="line-icon"><use href="#icon-pin" /></svg>@sitter.City</p></div></div><p class="ob-sitter-rating"><svg class="line-icon"><use href="#icon-star" /></svg>@(Model.AverageRating is { } rating ? $"{rating:0.0} ({Model.ReviewCount} reviews)" : "New sitter") <span>· @sitter.YearsOfExperience yrs experience</span></p><div class="ob-sitter-services">@foreach (var service in sitter.Services) { <span>@ParentRequestForm.ServiceName(service.ServiceType)</span> }</div><div class="ob-sitter-rate"><div><strong>@DashboardViewModel.Money(sitter.HourlyRate, sitter.Currency)</strong><small>/hr listed rate</small><p><i class="@(sitter.IsAvailable ? "available" : "")"></i>@(sitter.IsAvailable ? "Accepting requests" : "Not accepting new requests")</p></div><form asp-action="Again" method="post"><input type="hidden" name="id" value="@Model.Request.Id" /><button type="submit" class="btn btn-dark">New request</button></form></div></section>
+    }
+    else
+    {
+        <section class="ob-card ob-sitter-card"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-user" /></svg></span><h2>A friendly face is on the way</h2><p>Eligible sitters in @Model.Request.City can respond to your open request.</p></section>
+    }
+    <section class="ob-card ob-payment-card @(paid ? "settled" : "")"><div class="ob-card-heading"><h2>Payment</h2><span class="ob-status @(Model.Refunded > 0 ? "muted" : paid ? "paid" : "pending")">@(Model.Refunded > 0 ? "Refunded" : b is null ? "Not due yet" : item.Bucket == "cancelled" ? "Closed" : paid ? b.TotalAmount == 0 ? "No payment due" : "Successful" : "Pending")</span></div><dl><div><dt>@(b is null ? "Initial offer" : "Care total")</dt><dd>@DashboardViewModel.Money(item.Amount, item.Currency)</dd></div><div><dt>Paid</dt><dd>@DashboardViewModel.Money(Model.Paid, item.Currency)</dd></div>@if (Model.Refunded > 0) { <div><dt>Refunded (demo)</dt><dd>@DashboardViewModel.Money(Model.Refunded, item.Currency)</dd></div> }<div class="ob-payment-total"><dt>@(paid ? "Total" : "Remaining")</dt><dd>@DashboardViewModel.Money(item.Bucket == "cancelled" ? 0 : paid ? item.Amount : Math.Max(0, item.Amount - Model.Paid - Model.Refunded), item.Currency)</dd></div></dl>
+        @if (Model.CanPay)
+        {
+            <form asp-action="Pay" method="post"><input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" /><p>This is a demo payment. No card details are collected and no money moves.</p><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Record demo payment</button></form>
+        }
+        @if (b?.Payments.Any(p => p.Provider == "Dummy") == true) { <p class="ob-payment-footnote">Demo payment record · no card was charged.</p> }
+    </section>
+    <a class="ob-pet-summary" asp-controller="Family" asp-action="Index"><span class="ob-pet-art"><svg class="line-icon"><use href="#icon-family" /></svg></span><span><strong>@DashboardViewModel.Children(Model.Request)</strong><small>@(Model.Request.FamilyProfile?.HealthNotes is { Length: > 0 } ? "Health notes on file" : "View family profile")</small></span><svg class="line-icon"><use href="#icon-chevron" /></svg></a>
+</aside></div>
