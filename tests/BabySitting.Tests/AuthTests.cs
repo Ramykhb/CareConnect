@@ -71,7 +71,7 @@ public sealed class AuthTests
         var html = await client.GetStringAsync(path);
         Assert.Contains(heading, html);
         Assert.Contains("auth-recovery-page", html);
-        Assert.Contains("/images/auth-pets.svg", html);
+        Assert.Contains("/images/auth-family.svg", html);
         Assert.Contains("http://localhost:8025/", html);
         Assert.DoesNotContain("EmailConfirmationUrl", html);
     }
