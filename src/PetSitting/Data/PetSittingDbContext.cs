@@ -29,10 +29,12 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<Pet> Pets => Set<Pet>();
     public DbSet<PetCareRequestPet> PetCareRequestPets => Set<PetCareRequestPet>();
     public DbSet<OwnerRequestDraft> OwnerRequestDrafts => Set<OwnerRequestDraft>();
+    public DbSet<AccountPhoto> AccountPhotos => Set<AccountPhoto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ApplicationUser>().Property(u => u.PreferredLanguage).HasDefaultValue("en");
         // An account has one platform role: customer, sitter, or manager.
         // The unique index also prevents conflicting assignments under concurrent writes.
         modelBuilder.Entity<IdentityUserRole<Guid>>().HasIndex(x => x.UserId)
@@ -157,5 +159,7 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
                 }
             }
         }
+        modelBuilder.Entity<AccountPhoto>().HasIndex(p => p.UserId).IsUnique();
+        modelBuilder.Entity<AccountPhoto>().HasOne(p => p.User).WithOne().HasForeignKey<AccountPhoto>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

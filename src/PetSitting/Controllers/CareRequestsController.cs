@@ -25,7 +25,8 @@ public sealed class CareRequestsController(PetSittingDbContext db, UserManager<A
             : fresh ? null : await db.OwnerRequestDrafts.AsNoTracking().Where(d => d.CustomerId == OwnerId && d.SubmittedRequestId == null).OrderByDescending(d => d.UpdatedAtUtc).FirstOrDefaultAsync();
         if (draftId is not null && draft is null) return NotFound();
         if (draft?.SubmittedRequestId is { } submitted) return RedirectToAction(nameof(Submitted), new { id = submitted });
-        var model = draft is null ? new OwnerRequestWizard { Form = new() { City = (await users.GetUserAsync(User))?.City ?? "" } } : FromDraft(draft);
+        var account = await users.GetUserAsync(User);
+        var model = draft is null ? new OwnerRequestWizard { Form = new() { City = account?.City ?? "", StreetAddress = account?.HomeAddress is { Length: <= 140 } home ? home : null } } : FromDraft(draft);
         await Populate(model);
         return View(model);
     }
