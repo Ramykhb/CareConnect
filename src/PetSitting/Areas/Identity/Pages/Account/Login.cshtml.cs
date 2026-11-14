@@ -27,6 +27,29 @@ public sealed class LoginModel(SignInManager<ApplicationUser> signIn) : PageMode
         if (result.Succeeded) return LocalRedirect(ReturnUrl);
         if (result.RequiresTwoFactor) return RedirectToPage("LoginWith2fa", new { returnUrl = ReturnUrl, rememberMe = Input.RememberMe });
         if (result.IsLockedOut) return RedirectToPage("Lockout");
+        if (result.IsNotAllowed)
+        {
+            var users = signIn.UserManager;
+            var user = await users.FindByEmailAsync(Input.Email.Trim());
+            if (user is { IsActive: true } && !await users.IsEmailConfirmedAsync(user))
+            {
+                // Identity checks confirmation before the password. Verify credentials here
+                // before showing the account's verification screen, without issuing a cookie.
+                if (await users.IsLockedOutAsync(user)) return RedirectToPage("Lockout");
+                if (await users.CheckPasswordAsync(user, Input.Password))
+                {
+                    if (!string.Equals(TempData.Peek(RegisterConfirmationModel.EmailKey) as string, user.Email, StringComparison.OrdinalIgnoreCase))
+                        TempData.Remove(RegisterConfirmationModel.RetryKey);
+                    TempData[RegisterConfirmationModel.EmailKey] = user.Email;
+                    return RedirectToPage("RegisterConfirmation", new { returnUrl = ReturnUrl });
+                }
+                if (users.SupportsUserLockout)
+                {
+                    await users.AccessFailedAsync(user);
+                    if (await users.IsLockedOutAsync(user)) return RedirectToPage("Lockout");
+                }
+            }
+        }
         ModelState.AddModelError(string.Empty, "Unable to sign in. Check your credentials and confirm your email before signing in.");
         return Page();
     }

@@ -1,0 +1,40 @@
+@page
+@model PetSitting.Areas.Identity.Pages.Account.RegisterConfirmationModel
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["AuthVariant"] = "auth-recovery-page";
+    ViewData["Title"] = "Verify your email";
+}
+<section class="auth-form auth-recovery" aria-labelledby="auth-heading">
+    <a class="auth-back" asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl"><svg class="line-icon back-arrow"><use href="#icon-arrow" /></svg>Back to log in</a>
+    <span class="recovery-icon" aria-hidden="true"><svg class="line-icon"><use href="#icon-mail" /></svg></span>
+    <h1 id="auth-heading">Verify your email</h1>
+    <p class="auth-subtitle">Check @(Model.Email ?? "your inbox") for a verification link. Follow the link to confirm your email and start using CareConnect.</p>
+    @if (TempData["StatusMessage"] is string status)
+    {
+        <p class="auth-errors" role="alert">@status</p>
+    }
+    else
+    {
+        <div class="recovery-success" role="status"><svg class="line-icon" aria-hidden="true"><use href="#icon-check" /></svg>Verification email requested</div>
+    }
+    @if (Model.InboxUrl is not null)
+    {
+        <a class="auth-submit" href="@Model.InboxUrl" target="_blank" rel="noopener noreferrer"><svg class="line-icon diagonal-arrow"><use href="#icon-arrow" /></svg>Open email app<span class="sr-only"> (opens in a new tab)</span></a>
+    }
+    else
+    {
+        <a class="auth-submit" asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl"><svg class="line-icon"><use href="#icon-arrow" /></svg>Log in after verifying</a>
+    }
+    @if (Model.Email is not null)
+    {
+        <form method="post" asp-page-handler="Resend" asp-route-returnUrl="@Model.ReturnUrl" class="recovery-resend" data-resend-form data-resend-at="@Model.RetryAt">
+            <span>Didn’t get it?</span> <button type="submit" class="resend-button" data-resend-button>Resend email</button>
+        </form>
+    }
+    else
+    {
+        <p class="recovery-resend">Didn’t get it? <a asp-page="ResendEmailConfirmation">Resend email</a></p>
+    }
+    <a class="recovery-another" asp-page="Register" asp-route-returnUrl="@Model.ReturnUrl">Try another email address</a>
+</section>
