@@ -17,12 +17,28 @@ public sealed class PetsController(IPetRepository repository, UserManager<Applic
 
     // GET /Pets?search=max&species=Dog
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? species)
+    public async Task<IActionResult> Index(string? search, string? species, string? sort)
     {
         ViewBag.Search = search;
         ViewBag.Species = species;
-        var pets = await repository.GetAllForOwnerAsync(OwnerId, search, species);
-        return View(pets);
+        ViewBag.Sort = sort is "age" or "recent" ? sort : "name";
+        var allPets = await repository.GetAllForOwnerAsync(OwnerId, null, null);
+        ViewBag.TotalCount = allPets.Count;
+        ViewBag.SpeciesCounts = allPets.GroupBy(p => p.Species).ToDictionary(g => g.Key, g => g.Count());
+        ViewBag.IncompletePet = allPets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.MedicalNotes)
+            || string.IsNullOrWhiteSpace(p.FeedingInstructions) || string.IsNullOrWhiteSpace(p.CareInstructions));
+        IEnumerable<Pet> pets = allPets;
+        if (!string.IsNullOrWhiteSpace(search))
+            pets = pets.Where(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || p.Breed?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        if (!string.IsNullOrWhiteSpace(species)) pets = pets.Where(p => p.Species == species);
+        pets = sort switch
+        {
+            "age" => pets.OrderBy(p => p.AgeYears is null).ThenBy(p => p.AgeYears).ThenBy(p => p.Name),
+            "recent" => pets.OrderByDescending(p => p.CreatedAtUtc).ThenBy(p => p.Name),
+            _ => pets.OrderBy(p => p.Name)
+        };
+        return View(pets.ToList());
     }
 
     // GET /Pets/Details/{id}

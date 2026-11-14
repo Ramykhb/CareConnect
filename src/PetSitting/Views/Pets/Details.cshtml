@@ -2,48 +2,35 @@
 @{
     ViewData["Title"] = Model.Name;
     ViewData["Breadcrumb"] = "My pets / " + Model.Name;
+    var complete = !string.IsNullOrWhiteSpace(Model.MedicalNotes) && !string.IsNullOrWhiteSpace(Model.FeedingInstructions) && !string.IsNullOrWhiteSpace(Model.CareInstructions);
 }
-
-<div class="page-header">
-    <div class="page-title-row">
-        <a class="btn btn-circle" asp-action="Index" aria-label="Back to my pets"><svg class="line-icon"><use href="#icon-back" /></svg></a>
-        <h1>@Model.Name’s profile</h1>
-    </div>
-    <div class="header-actions">
-        <a class="btn btn-ghost" asp-action="Delete" asp-route-id="@Model.Id"><svg class="line-icon"><use href="#icon-trash" /></svg>Delete</a>
-        <a class="btn btn-dark" asp-action="Edit" asp-route-id="@Model.Id"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit profile</a>
-    </div>
+<div class="page-header pets-heading">
+    <div class="page-title-row"><a class="btn btn-circle" asp-action="Index" aria-label="Back to my pets"><svg class="line-icon"><use href="#icon-back" /></svg></a><h1>@Model.Name’s profile</h1></div>
+    <div class="header-actions"><a class="btn btn-ghost" asp-action="Delete" asp-route-id="@Model.Id"><svg class="line-icon"><use href="#icon-trash" /></svg>Delete</a><a class="btn btn-light" asp-action="Edit" asp-route-id="@Model.Id"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit profile</a></div>
 </div>
-
-<div class="details-layout">
+@section Scripts { <script src="~/js/pet-profiles.js" asp-append-version="true"></script> }
+<div class="pet-profile-layout" id="overview">
     <section class="card profile-card" aria-label="Pet summary">
-        <div class="pet-photo species-@Model.Species.ToLowerInvariant()">
-            <span class="pet-initial" aria-hidden="true">@Model.Name[..1].ToUpperInvariant()</span>
-        </div>
-        <div>
-            <h2>@Model.Name</h2>
-            <span class="pet-meta">@Model.Species@(string.IsNullOrEmpty(Model.Breed) ? "" : " · " + Model.Breed)</span>
-        </div>
+        <div class="pet-photo species-@Model.Species.ToLowerInvariant()"><partial name="_PetPortrait" model="Model.Species" /></div>
+        <div class="pet-profile-name"><div><h2>@Model.Name</h2><span class="pet-meta">@Model.Species@(string.IsNullOrEmpty(Model.Breed) ? "" : " · " + Model.Breed)</span></div></div>
         <div class="facts">
+            <div class="fact"><small>Age</small><strong>@(Model.AgeYears is int age ? $"{age} {(age == 1 ? "year" : "years")}" : "Not added")</strong></div>
             <div class="fact"><small>Species</small><strong>@Model.Species</strong></div>
-            <div class="fact"><small>Breed</small><strong>@(Model.Breed ?? "—")</strong></div>
-            <div class="fact"><small>Age</small><strong>@(Model.AgeYears is int age ? $"{age} {(age == 1 ? "year" : "years")}" : "—")</strong></div>
-            <div class="fact"><small>Added</small><strong>@Model.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy")</strong></div>
+            <div class="fact"><small>Breed</small><strong>@(Model.Breed ?? "Not added")</strong></div>
+            <div class="fact"><small>Part of your pack since</small><strong>@Model.CreatedAtUtc.ToString("MMM yyyy")</strong></div>
         </div>
+        <div class="pet-profile-note"><span class="round-icon"><svg class="line-icon"><use href="#icon-shield" /></svg></span><div><strong>@(complete ? "Ready for a little extra care" : "Help your sitter get to know them")</strong><p>@(complete ? "Your pet’s care details are all in one place." : "Complete the care notes before your next request.")</p></div></div>
     </section>
-
-    <section class="card" aria-label="Care details">
-        <div class="info-section">
-            <h3>Medical notes</h3>
-            @if (string.IsNullOrWhiteSpace(Model.MedicalNotes)) { <p class="muted">No medical notes yet.</p> } else { <p>@Model.MedicalNotes</p> }
-        </div>
-        <div class="info-section">
-            <h3>Feeding instructions</h3>
-            @if (string.IsNullOrWhiteSpace(Model.FeedingInstructions)) { <p class="muted">No feeding instructions yet.</p> } else { <p>@Model.FeedingInstructions</p> }
-        </div>
-        <div class="info-section">
-            <h3>Special requirements</h3>
-            @if (string.IsNullOrWhiteSpace(Model.CareInstructions)) { <p class="muted">No special requirements yet.</p> } else { <p>@Model.CareInstructions</p> }
-        </div>
-    </section>
+    <div class="pet-care-column">
+        <nav class="tabs pet-profile-tabs" aria-label="Profile sections"><a class="tab active" href="#overview">Overview</a><a class="tab" href="#medical">Medical</a><a class="tab" href="#feeding">Feeding</a><a class="tab" href="#requirements">Special care</a></nav>
+        <section class="card pet-care-card" id="medical" aria-labelledby="medical-heading"><div class="pet-section-heading"><span class="round-icon medical"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2 id="medical-heading">Medical notes</h2><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="medical-notes" aria-label="Edit medical notes"><svg class="line-icon"><use href="#icon-edit" /></svg></a></div>
+            @if (string.IsNullOrWhiteSpace(Model.MedicalNotes)) { <div class="pet-care-empty"><p>Anything your sitter should know?</p><span>Add allergies, medication, conditions or vet contact details.</span><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="medical-notes">Add medical notes ↗</a></div> } else { <p class="pet-care-text">@Model.MedicalNotes</p> }
+        </section>
+        <section class="card pet-care-card" id="feeding" aria-labelledby="feeding-heading"><div class="pet-section-heading"><span class="round-icon feeding"><svg class="line-icon"><use href="#icon-paw" /></svg></span><h2 id="feeding-heading">Feeding instructions</h2><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="feeding-notes" aria-label="Edit feeding instructions"><svg class="line-icon"><use href="#icon-edit" /></svg></a></div>
+            @if (string.IsNullOrWhiteSpace(Model.FeedingInstructions)) { <div class="pet-care-empty"><p>Keep their favourite routine.</p><span>Add food, portions, mealtimes, treats and fresh-water instructions.</span><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="feeding-notes">Add feeding instructions ↗</a></div> } else { <p class="pet-care-text">@Model.FeedingInstructions</p> }
+        </section>
+        <section class="card pet-care-card" id="requirements" aria-labelledby="requirements-heading"><div class="pet-section-heading"><span class="round-icon requirements"><svg class="line-icon"><use href="#icon-alert" /></svg></span><h2 id="requirements-heading">Special requirements</h2><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="care-notes" aria-label="Edit special requirements"><svg class="line-icon"><use href="#icon-edit" /></svg></a></div>
+            @if (string.IsNullOrWhiteSpace(Model.CareInstructions)) { <div class="pet-care-empty"><p>It’s the little things that matter.</p><span>Add behaviour, walk routines, sleeping preferences and things to avoid.</span><a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="care-notes">Add special requirements ↗</a></div> } else { <p class="pet-care-text">@Model.CareInstructions</p> }
+        </section>
+    </div>
 </div>

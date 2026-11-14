@@ -1,0 +1,35 @@
+@model string
+<svg class="pet-portrait" viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    @if (Model == "Dog")
+    {
+        <path d="M88 61C63 36 36 86 41 123c3 27 25 24 41 3m70-65c25-25 52 25 47 62-3 27-25 24-41 3" fill="#B8752B"/>
+        <ellipse cx="120" cy="105" rx="51" ry="59" fill="#DA9B49"/>
+        <circle cx="101" cy="96" r="8" fill="#191B1C"/><circle cx="141" cy="96" r="8" fill="#191B1C"/>
+        <ellipse cx="120" cy="136" rx="32" ry="24" fill="#F9EAC7"/><ellipse cx="120" cy="125" rx="12" ry="9" fill="#191B1C"/>
+        <path d="M109 143q11 9 22 0" stroke="#191B1C" stroke-width="5" stroke-linecap="round"/>
+    }
+    else if (Model == "Cat")
+    {
+        <path d="m68 99 7-61 45 34 44-34 8 61" fill="#9DA7B4"/><path d="m79 79 3-26 23 21m29 0 23-21 3 26" fill="#EDBFBE"/>
+        <ellipse cx="120" cy="117" rx="54" ry="43" fill="#9DA7B4"/><ellipse cx="101" cy="109" rx="6" ry="8" fill="#22282D"/><ellipse cx="140" cy="109" rx="6" ry="8" fill="#22282D"/>
+        <ellipse cx="120" cy="136" rx="24" ry="17" fill="#EEF1F5"/><path d="m114 129 6 7 6-7" fill="#D77E89"/>
+        <path d="m82 129-25-5m25 14-25 5m101-14 25-5m-25 14 25 5" stroke="#75828F" stroke-width="2" stroke-linecap="round"/>
+    }
+    else if (Model == "Rabbit")
+    {
+        <ellipse cx="96" cy="68" rx="18" ry="49" transform="rotate(-12 96 68)" fill="#C2A7AA"/><ellipse cx="145" cy="68" rx="18" ry="49" transform="rotate(12 145 68)" fill="#C2A7AA"/>
+        <ellipse cx="96" cy="65" rx="8" ry="34" transform="rotate(-12 96 65)" fill="#F0CFD2"/><ellipse cx="145" cy="65" rx="8" ry="34" transform="rotate(12 145 65)" fill="#F0CFD2"/>
+        <ellipse cx="120" cy="123" rx="51" ry="44" fill="#C2A7AA"/><circle cx="101" cy="115" r="6" fill="#242329"/><circle cx="140" cy="115" r="6" fill="#242329"/>
+        <ellipse cx="120" cy="139" rx="22" ry="15" fill="#FFF1EF"/><path d="m114 132 6 7 6-7" fill="#C47B88"/>
+    }
+    else if (Model == "Bird")
+    {
+        <ellipse cx="119" cy="114" rx="49" ry="55" fill="#9FB89A"/><path d="M102 65q6-31 25-32l-3 29" fill="#718F6A"/>
+        <path d="M89 103q-32 21-13 47 24 11 36-25" fill="#7B9B76"/><circle cx="136" cy="92" r="7" fill="#252D27"/><path d="m159 104 24 12-27 10" fill="#DDA354"/>
+        <path d="M105 166v12m26-12v12m-33 0h15m11 0h15" stroke="#7C7056" stroke-width="4" stroke-linecap="round"/>
+    }
+    else
+    {
+        <circle cx="120" cy="100" r="65" fill="#DDE6D8"/><g transform="translate(68 49) scale(4.3)" fill="#69805D"><use href="#icon-paw" width="24" height="24" /></g>
+    }
+</svg>

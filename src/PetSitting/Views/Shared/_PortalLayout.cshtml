@@ -26,6 +26,10 @@
     <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pet-portal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pet-dashboard.css" asp-append-version="true" />
+    @if (controller == "Pets")
+    {
+        <link rel="stylesheet" href="~/css/pet-profiles.css" asp-append-version="true" />
+    }
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="pet-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
@@ -72,7 +76,13 @@
                 <button class="mobile-nav-toggle round-icon" type="button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded="false"><svg class="line-icon"><use href="#icon-menu" /></svg></button>
                 <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>@(sitter ? "Sitter" : "Owner") portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
                 <div class="topbar-tools">
-                    @if (portal is not null)
+                    @if (controller == "Pets")
+                    {
+                        <form class="dashboard-search pets-top-search" asp-controller="Pets" asp-action="Index" method="get" role="search">
+                            <svg class="line-icon"><use href="#icon-search" /></svg><input type="search" name="search" value="@ViewBag.Search" placeholder="Search your pets…" aria-label="Search pets by name or breed" /><button type="submit" aria-label="Search pets"><svg class="line-icon"><use href="#icon-arrow" /></svg></button>
+                        </form>
+                    }
+                    else if (portal is not null)
                     {
                         <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }

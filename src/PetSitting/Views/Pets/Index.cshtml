@@ -4,52 +4,42 @@
     ViewData["Title"] = "My pets";
     var search = ViewBag.Search as string;
     var species = ViewBag.Species as string;
+    var sort = ViewBag.Sort as string ?? "name";
     var filtered = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(species);
+    var counts = (Dictionary<string, int>)ViewBag.SpeciesCounts;
+    var total = (int)ViewBag.TotalCount;
+    var incomplete = ViewBag.IncompletePet as Pet;
 }
-
-<div class="page-header">
-    <div>
-        <h1>My pets</h1>
-        <p>Keep profiles up to date so sitters know exactly how to care for them.</p>
-    </div>
+<div class="page-header pets-heading">
+    <div><h1>My pets</h1><p>@total @(total == 1 ? "pet" : "pets") · Keep profiles up to date so sitters know exactly how to care for them.</p></div>
     <a class="btn btn-dark" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>Add a pet</a>
 </div>
-
-<div class="toolbar">
+<div class="toolbar pets-toolbar">
     <nav class="tabs" aria-label="Filter by species">
-        <a class="tab @(string.IsNullOrEmpty(species) ? "active" : "")" asp-action="Index" asp-route-search="@search">All pets</a>
-        @foreach (var option in PetFormViewModel.SpeciesOptions)
+        <a class="tab @(string.IsNullOrEmpty(species) ? "active" : "")" aria-current="@(string.IsNullOrEmpty(species) ? "page" : null)" asp-action="Index" asp-route-search="@search" asp-route-sort="@sort">All pets <span>@total</span></a>
+        @foreach (var option in PetFormViewModel.SpeciesOptions.Where(o => counts.ContainsKey(o) || species == o))
         {
-            <a class="tab @(species == option ? "active" : "")" asp-action="Index" asp-route-species="@option" asp-route-search="@search">@option</a>
+            <a class="tab @(species == option ? "active" : "")" aria-current="@(species == option ? "page" : null)" asp-action="Index" asp-route-species="@option" asp-route-search="@search" asp-route-sort="@sort">@(option == "Other" ? "Other" : option + "s") <span>@counts.GetValueOrDefault(option)</span></a>
         }
     </nav>
-    @* GET form: search terms belong in the query string (course: GET forms for search and filters). *@
-    <form class="search-form" asp-action="Index" method="get" role="search">
-        <svg class="line-icon"><use href="#icon-search" /></svg>
-        <input type="search" name="search" value="@search" placeholder="Search by name or breed" aria-label="Search pets" />
-        @if (!string.IsNullOrEmpty(species))
-        {
-            <input type="hidden" name="species" value="@species" />
-        }
-        <button type="submit" class="btn btn-dark btn-sm">Search</button>
+    <form asp-action="Index" method="get" class="pets-sort">
+        @if (!string.IsNullOrEmpty(search)) { <input type="hidden" name="search" value="@search" /> }
+        @if (!string.IsNullOrEmpty(species)) { <input type="hidden" name="species" value="@species" /> }
+        <label for="pet-sort">Sort:</label><select id="pet-sort" name="sort" aria-label="Sort pets"><option value="name" selected="@(sort == "name")">Name</option><option value="age" selected="@(sort == "age")">Age</option><option value="recent" selected="@(sort == "recent")">Newest</option></select><button type="submit" aria-label="Apply sort"><svg class="line-icon"><use href="#icon-arrow" /></svg></button>
     </form>
 </div>
-
-@if (Model.Count == 0 && !filtered)
+@if (!string.IsNullOrWhiteSpace(search))
 {
-    <section class="empty-state">
-        <span class="add-circle"><svg class="line-icon paw-icon" width="40" height="40"><use href="#icon-paw" /></svg></span>
-        <h2>No pets yet</h2>
-        <p>Add your first pet so sitters know who they’ll be caring for.</p>
-        <a class="btn btn-lime" asp-action="Create"><svg class="line-icon"><use href="#icon-plus" /></svg>Add a pet</a>
-    </section>
+    <p class="pets-search-result">@Model.Count results for “@search” <a asp-action="Index" asp-route-species="@species" asp-route-sort="@sort">Clear search ×</a></p>
 }
-else if (Model.Count == 0)
+@if (Model.Count == 0)
 {
     <section class="empty-state">
-        <h2>No pets match your search</h2>
-        <p>Try a different name or breed, or clear the filters.</p>
-        <a class="btn btn-light" asp-action="Index">Clear filters</a>
+        <span class="add-circle"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span>
+        <h2>@(filtered ? "No pets match your search" : "Your pack starts here")</h2>
+        <p>@(filtered ? "Try another name or breed, or clear your filters." : "A few little details help a sitter give your pet a whole lot of care.")</p>
+        @if (filtered) { <a class="btn btn-light" asp-action="Index">Clear filters</a> }
+        else { <a class="btn btn-dark" asp-action="Create">Add your first pet<svg class="line-icon"><use href="#icon-plus" /></svg></a> }
     </section>
 }
 else
@@ -57,39 +47,26 @@ else
     <div class="pet-grid">
         @foreach (var pet in Model)
         {
+            var complete = !string.IsNullOrWhiteSpace(pet.MedicalNotes) && !string.IsNullOrWhiteSpace(pet.FeedingInstructions) && !string.IsNullOrWhiteSpace(pet.CareInstructions);
             <article class="pet-card">
-                <a class="pet-photo species-@pet.Species.ToLowerInvariant()" asp-action="Details" asp-route-id="@pet.Id" aria-label="View @pet.Name's profile">
-                    <span class="pet-initial" aria-hidden="true">@pet.Name[..1].ToUpperInvariant()</span>
-                </a>
+                <a class="pet-photo species-@pet.Species.ToLowerInvariant()" asp-action="Details" asp-route-id="@pet.Id" aria-label="View @pet.Name's profile"><partial name="_PetPortrait" model="pet.Species" /></a>
                 <div class="pet-card-body">
-                    <div>
-                        <h2>@pet.Name</h2>
-                        <span class="pet-meta">@pet.Species@(string.IsNullOrEmpty(pet.Breed) ? "" : " · " + pet.Breed)</span>
-                    </div>
+                    <div class="pet-card-title"><div><h2><a asp-action="Details" asp-route-id="@pet.Id">@pet.Name</a></h2><span class="pet-meta">@pet.Species@(string.IsNullOrEmpty(pet.Breed) ? "" : " · " + pet.Breed)</span></div><a class="pet-edit-button" asp-action="Edit" asp-route-id="@pet.Id" aria-label="Edit @pet.Name's profile"><svg class="line-icon"><use href="#icon-edit" /></svg></a></div>
                     <div class="chips">
-                        @if (pet.AgeYears is int age)
-                        {
-                            <span class="chip">@age @(age == 1 ? "yr" : "yrs")</span>
-                        }
-                        @if (!string.IsNullOrEmpty(pet.MedicalNotes))
-                        {
-                            <span class="chip lime">Medical notes</span>
-                        }
+                        @if (pet.AgeYears is int age) { <span class="chip"><svg class="line-icon"><use href="#icon-clock" /></svg>@age @(age == 1 ? "yr" : "yrs")</span> }
+                        <span class="chip @(complete ? "care-complete" : "care-incomplete")"><svg class="line-icon"><use href="@(complete ? "#icon-shield" : "#icon-edit")" /></svg>@(complete ? "Care details ready" : "Add care details")</span>
                     </div>
-                    <div class="pet-card-actions">
-                        <a class="btn btn-dark btn-sm" asp-action="Details" asp-route-id="@pet.Id">View</a>
-                        <a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@pet.Id"><svg class="line-icon"><use href="#icon-edit" /></svg>Edit</a>
-                    </div>
+                    <a class="pet-card-footer" asp-action="Details" asp-route-id="@pet.Id"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg>View @pet.Name’s profile<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
                 </div>
             </article>
         }
         @if (!filtered)
         {
-            <a class="add-tile" asp-action="Create">
-                <span class="add-circle"><svg class="line-icon"><use href="#icon-plus" /></svg></span>
-                <strong>Add a new pet</strong>
-                <small>Takes about 2 minutes</small>
-            </a>
+            <a class="add-tile" asp-action="Create"><span class="add-circle"><svg class="line-icon"><use href="#icon-plus" /></svg></span><strong>Add a new pet</strong><small>Takes about 2 minutes</small></a>
         }
     </div>
+}
+@if (incomplete is not null)
+{
+    <aside class="pets-completion-banner"><span class="round-icon"><svg class="line-icon"><use href="#icon-shield" /></svg></span><div><strong>A little detail makes a big difference</strong><p>Add medical notes, feeding instructions and special requirements so sitters can prepare.</p></div><a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@incomplete.Id">Complete @incomplete.Name’s profile<svg class="line-icon"><use href="#icon-arrow" /></svg></a></aside>
 }

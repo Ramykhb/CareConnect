@@ -1,50 +1,26 @@
-@* Shared by Create and Edit, like _CourseForm in the course tutorial. *@
 @using PetSitting.ViewModels
 @model PetFormViewModel
-
-<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-
-<h2>Basic information</h2>
-<div class="form-row">
-    <div class="field">
-        <label asp-for="Name"></label>
-        <input asp-for="Name" placeholder="e.g. Max" autocomplete="off" />
-        <span asp-validation-for="Name" class="field-error"></span>
+<div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+<section class="pet-form-section" id="basic-info" aria-labelledby="basic-heading">
+    <div class="pet-section-heading"><span class="round-icon feeding"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span><div><h2 id="basic-heading">The basics</h2><p>A proper introduction to your favourite companion.</p></div><span class="pet-section-number">01</span></div>
+    <div class="form-row">
+        <div class="field"><label asp-for="Name"></label><input asp-for="Name" placeholder="e.g. Max" autocomplete="off" maxlength="100" /><span asp-validation-for="Name" class="field-error"></span></div>
+        <div class="field"><label asp-for="Species"></label><select asp-for="Species" asp-items="@(new SelectList(PetFormViewModel.SpeciesOptions))"><option value="">Choose a species</option></select><span asp-validation-for="Species" class="field-error"></span></div>
     </div>
-    <div class="field">
-        <label asp-for="Species"></label>
-        <select asp-for="Species" asp-items="@(new SelectList(PetFormViewModel.SpeciesOptions))">
-            <option value="">Choose a species</option>
-        </select>
-        <span asp-validation-for="Species" class="field-error"></span>
+    <div class="form-row">
+        <div class="field"><label asp-for="Breed">Breed <span class="field-optional">optional</span></label><input asp-for="Breed" placeholder="e.g. Golden Retriever" maxlength="100" /><span asp-validation-for="Breed" class="field-error"></span></div>
+        <div class="field"><label asp-for="AgeYears">Age in years <span class="field-optional">optional</span></label><input asp-for="AgeYears" type="number" min="0" max="100" placeholder="e.g. 3" /><span asp-validation-for="AgeYears" class="field-error"></span></div>
     </div>
-</div>
-<div class="form-row">
-    <div class="field">
-        <label asp-for="Breed"></label>
-        <input asp-for="Breed" placeholder="e.g. Golden Retriever" />
-        <span asp-validation-for="Breed" class="field-error"></span>
-    </div>
-    <div class="field">
-        <label asp-for="AgeYears"></label>
-        <input asp-for="AgeYears" type="number" min="0" max="100" placeholder="e.g. 3" />
-        <span asp-validation-for="AgeYears" class="field-error"></span>
-    </div>
-</div>
-
-<h2>Care details</h2>
-<div class="field">
-    <label asp-for="MedicalNotes"></label>
-    <textarea asp-for="MedicalNotes" placeholder="Allergies, medication and dosage, conditions, vet contact…"></textarea>
-    <span asp-validation-for="MedicalNotes" class="field-error"></span>
-</div>
-<div class="field">
-    <label asp-for="FeedingInstructions"></label>
-    <textarea asp-for="FeedingInstructions" placeholder="Food brand, amount and times, treats…"></textarea>
-    <span asp-validation-for="FeedingInstructions" class="field-error"></span>
-</div>
-<div class="field">
-    <label asp-for="CareInstructions"></label>
-    <textarea asp-for="CareInstructions" placeholder="Behaviour, routines, things to avoid…"></textarea>
-    <span asp-validation-for="CareInstructions" class="field-error"></span>
-</div>
+</section>
+<section class="pet-form-section" id="medical-notes" aria-labelledby="medical-heading">
+    <div class="pet-section-heading"><span class="round-icon medical"><svg class="line-icon"><use href="#icon-heart" /></svg></span><div><h2 id="medical-heading">Medical notes</h2><p>Help your sitter keep them safe and comfortable.</p></div><span class="pet-section-number">02</span></div>
+    <div class="field"><label asp-for="MedicalNotes">Medical notes <span class="field-optional">optional</span></label><textarea asp-for="MedicalNotes" maxlength="2000" rows="4" aria-describedby="medical-help" placeholder="Allergies, medication and dosage, conditions, vet contact…"></textarea><small id="medical-help">Include medication times and doses. If there’s nothing to note, say so.</small><span asp-validation-for="MedicalNotes" class="field-error"></span></div>
+</section>
+<section class="pet-form-section" id="feeding-notes" aria-labelledby="feeding-heading">
+    <div class="pet-section-heading"><span class="round-icon feeding"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span><div><h2 id="feeding-heading">Feeding instructions</h2><p>Happy mealtimes, just like at home.</p></div><span class="pet-section-number">03</span></div>
+    <div class="field"><label asp-for="FeedingInstructions">Feeding instructions <span class="field-optional">optional</span></label><textarea asp-for="FeedingInstructions" maxlength="2000" rows="4" aria-describedby="feeding-help" placeholder="Food brand, portions, mealtimes, treats and water…"></textarea><small id="feeding-help">Share what, how much and when your pet eats.</small><span asp-validation-for="FeedingInstructions" class="field-error"></span></div>
+</section>
+<section class="pet-form-section" id="care-notes" aria-labelledby="care-heading">
+    <div class="pet-section-heading"><span class="round-icon requirements"><svg class="line-icon"><use href="#icon-alert" /></svg></span><div><h2 id="care-heading">Special requirements</h2><p>The little details that make them feel at home.</p></div><span class="pet-section-number">04</span></div>
+    <div class="field"><label asp-for="CareInstructions">Special requirements <span class="field-optional">optional</span></label><textarea asp-for="CareInstructions" maxlength="2000" rows="4" aria-describedby="care-help" placeholder="Behaviour, walks, sleep routines, favourite toys and things to avoid…"></textarea><small id="care-help">Mention anything that helps your sitter understand your pet.</small><span asp-validation-for="CareInstructions" class="field-error"></span></div>
+</section>

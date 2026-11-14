@@ -3,33 +3,21 @@
 @{
     var petId = (Guid)ViewBag.PetId;
     ViewData["Title"] = "Edit " + Model.Name;
-    ViewData["Breadcrumb"] = "My pets / Edit";
+    ViewData["Breadcrumb"] = "My pets / " + Model.Name + " / Edit";
 }
-
-<div class="page-header">
-    <div class="page-title-row">
-        <a class="btn btn-circle" asp-action="Details" asp-route-id="@petId" aria-label="Back to profile"><svg class="line-icon"><use href="#icon-back" /></svg></a>
-        <div>
-            <h1>Edit @(string.IsNullOrWhiteSpace(Model.Name) ? "pet" : Model.Name + "’s profile")</h1>
-            <p>Sitters see this information before they accept a request.</p>
-        </div>
-    </div>
+<div class="page-header pets-heading">
+    <div class="page-title-row"><a class="btn btn-circle" asp-action="Details" asp-route-id="@petId" aria-label="Back to profile"><svg class="line-icon"><use href="#icon-back" /></svg></a><div><h1>Edit @(string.IsNullOrWhiteSpace(Model.Name) ? "pet profile" : Model.Name + "’s profile")</h1><p>A little update. The same great care.</p></div></div>
+    <a class="btn btn-light" asp-action="Details" asp-route-id="@petId">Cancel</a>
 </div>
-
-<div class="form-layout">
-    <form class="card form-card" asp-action="Edit" asp-route-id="@petId" method="post" novalidate>
-        <partial name="_PetForm" model="Model" />
-        <div class="form-actions">
-            <a class="btn btn-light" asp-action="Details" asp-route-id="@petId">Cancel</a>
-            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
-        </div>
-    </form>
-    <aside class="card side-card">
-        <h3>Keep it current</h3>
-        <p>Changed food, a new medication or a new habit? Update it here before your next booking.</p>
+<div class="pet-editor-layout">
+    <aside class="pet-editor-aside">
+        <section class="card profile-card"><div class="pet-photo species-@Model.Species.ToLowerInvariant()"><partial name="_PetPortrait" model="Model.Species" /></div><div><h2>@(string.IsNullOrWhiteSpace(Model.Name) ? "Your pet" : Model.Name)</h2><span class="pet-meta">@Model.Species@(string.IsNullOrWhiteSpace(Model.Breed) ? "" : " · " + Model.Breed)</span></div><p class="pet-editor-intro">Their personality. Their routine.<br />Their care, all in one place.</p></section>
+        <nav class="pet-editor-nav" aria-label="Edit profile sections"><a href="#basic-info"><span>01</span>The basics<svg class="line-icon"><use href="#icon-chevron" /></svg></a><a href="#medical-notes"><span>02</span>Medical notes<svg class="line-icon"><use href="#icon-chevron" /></svg></a><a href="#feeding-notes"><span>03</span>Feeding instructions<svg class="line-icon"><use href="#icon-chevron" /></svg></a><a href="#care-notes"><span>04</span>Special requirements<svg class="line-icon"><use href="#icon-chevron" /></svg></a></nav>
+        <div class="pet-editor-tip"><svg class="line-icon"><use href="#icon-shield" /></svg><p>Changed food, a new medication or a new habit? Let your sitter know before the next stay.</p></div>
     </aside>
+    <form class="pet-editor-form" asp-action="Edit" asp-route-id="@petId" method="post" novalidate>
+        <partial name="_PetForm" model="Model" />
+        <div class="pet-save-bar"><span><svg class="line-icon"><use href="#icon-shield" /></svg>Ready for your next sitter.</span><div><a class="btn btn-light" asp-action="Details" asp-route-id="@petId">Cancel</a><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button></div></div>
+    </form>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
