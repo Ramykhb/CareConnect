@@ -806,7 +806,7 @@ body.baby-auth {
 .recovery-icon { display:grid; place-items:center; width:64px; height:64px; border-radius:50%; background:var(--lime); margin-bottom:20px; }
 .recovery-icon .line-icon { width:24px; height:24px; stroke-width:1.4; }
 .auth-recovery h1 { font-size:34px; letter-spacing:-1.4px; margin-bottom:9px; }
-.auth-recovery .auth-subtitle { margin-bottom:20px; }
+.auth-recovery .auth-subtitle { margin-bottom:20px; overflow-wrap:anywhere; }
 .auth-recovery .auth-submit:hover { text-decoration:none; }
 .recovery-success { display:flex; align-items:center; gap:10px; background:#e3f4e9; color:#269252; border-radius:14px; padding:14px; font-size:12px; margin-bottom:18px; }
 .recovery-success .line-icon { width:16px; height:16px; }

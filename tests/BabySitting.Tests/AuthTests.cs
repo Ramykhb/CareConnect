@@ -40,6 +40,8 @@ public sealed class AuthTests
         var reservations = new ConcurrentBag<bool>();
         Parallel.For(0, 12, i => reservations.Add(cooldown.Reserve(i % 2 == 0 ? "person@example.test" : " PERSON@EXAMPLE.TEST ").Allowed));
         Assert.Single(reservations, allowed => allowed);
+        Assert.True(cooldown.Reserve("person@example.test", "email-confirmation").Allowed);
+        Assert.False(cooldown.Reserve("PERSON@example.test", "email-confirmation").Allowed);
         clock.Advance(TimeSpan.FromSeconds(44));
         Assert.False(cooldown.Reserve("person@example.test").Allowed);
         clock.Advance(TimeSpan.FromSeconds(1));
@@ -57,6 +59,21 @@ public sealed class AuthTests
         using var response = await client.GetAsync(path);
         response.EnsureSuccessStatusCode();
         Assert.Contains("__RequestVerificationToken", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData("/Identity/Account/ForgotPasswordConfirmation", "Check your inbox")]
+    [InlineData("/Identity/Account/RegisterConfirmation", "Verify your email")]
+    public async Task Confirmation_pages_use_the_illustrated_auth_layout(string path, string heading)
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync(path);
+        Assert.Contains(heading, html);
+        Assert.Contains("auth-recovery-page", html);
+        Assert.Contains("/images/auth-pets.svg", html);
+        Assert.Contains("http://localhost:8025/", html);
+        Assert.DoesNotContain("EmailConfirmationUrl", html);
     }
 
     [Theory]
@@ -111,8 +128,28 @@ public sealed class AuthTests
             Assert.False(user.EmailConfirmed);
             Assert.True(await users.IsInRoleAsync(user, Roles.Customer));
             Assert.False(await users.IsInRoleAsync(user, Roles.PlatformManager));
+            var registrationConfirmation = await client.GetStringAsync("/Identity/Account/RegisterConfirmation");
+            Assert.Contains("Verify your email", registrationConfirmation);
+            Assert.Contains(email, registrationConfirmation);
+            Assert.Contains("data-resend-at", registrationConfirmation);
+            var registrationMailCount = mail.Messages.Count;
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/Identity/Account/RegisterConfirmation?handler=Resend", new FormUrlEncodedContent([]))).StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/RegisterConfirmation?handler=Resend", new())).StatusCode);
+            Assert.Equal(registrationMailCount, mail.Messages.Count);
+            clock.Advance(TimeSpan.FromSeconds(46));
+            Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/RegisterConfirmation?handler=Resend", new())).StatusCode);
+            Assert.Equal(registrationMailCount + 1, mail.Messages.Count);
             var login = new Dictionary<string, string> { ["Input.Email"] = email, ["Input.Password"] = password };
-            Assert.Equal(HttpStatusCode.OK, (await Post(client, "/Identity/Account/Login", login)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await Post(client, "/Identity/Account/Login", new()
+            { ["Input.Email"] = email, ["Input.Password"] = "Wrong!Password123" })).StatusCode);
+            var unverifiedLogin = await Post(client, "/Identity/Account/Login?returnUrl=%2FDashboard%2FCustomer", login);
+            Assert.Equal(HttpStatusCode.Redirect, unverifiedLogin.StatusCode);
+            Assert.Contains("RegisterConfirmation", unverifiedLogin.Headers.Location!.ToString());
+            Assert.Contains("returnUrl=", unverifiedLogin.Headers.Location.ToString());
+            var verifyEmail = await client.GetStringAsync(unverifiedLogin.Headers.Location);
+            Assert.Contains("Verify your email", verifyEmail);
+            Assert.Contains(email, verifyEmail);
+            Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Dashboard/Customer")).StatusCode);
             var confirmationLink = mail.LastLink();
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(confirmationLink)).StatusCode);
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/Login", login)).StatusCode);
