@@ -1,0 +1,14 @@
+@using PetSitting.ViewModels
+@model OwnerRequestResult
+@{
+    ViewData["Title"] = Model.Reference;
+    ViewData["Breadcrumb"] = "Requests / " + Model.Reference;
+}
+<header class="request-page-heading"><div><h1>Your sitting request</h1><p>#@Model.Reference · @Model.Request.City</p></div><a class="btn btn-light" asp-controller="Dashboard" asp-action="Customer" asp-fragment="requests"><svg class="line-icon"><use href="#icon-back" /></svg>Back to requests</a></header>
+<div class="request-columns"><section class="request-step-card request-details"><h2>@Model.Request.Title</h2><p class="request-intro">@OwnerRequestForm.ServiceName(Model.Request.ServiceType) · @Model.Request.Status</p><dl class="request-review-list">
+    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><div><dt>When · Beirut local time</dt><dd>@DashboardViewModel.Local(Model.Request.StartsAtUtc).ToString("ddd d MMM yyyy · h:mm tt")<br />to @DashboardViewModel.Local(Model.Request.EndsAtUtc).ToString("ddd d MMM yyyy · h:mm tt")</dd></div></div>
+    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-pin" /></svg></span><div><dt>Location</dt><dd>@Model.Request.City@(Model.Request.ServiceAddress is null ? " · at the sitter’s home" : " · " + Model.Request.ServiceAddress)</dd></div></div>
+    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-wallet" /></svg></span><div><dt>Total budget</dt><dd>@DashboardViewModel.Money(Model.Request.Budget, Model.Request.Currency)@(Model.Form?.BudgetMax is { } max && max > Model.Request.Budget ? $" – ${max:0.##}" : "")</dd></div></div>
+    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-edit" /></svg></span><div><dt>Instructions</dt><dd class="review-instructions">@Model.Request.Description</dd></div></div>
+</dl><h3>Pets needing care</h3><div class="request-result-pets">@foreach (var pet in Model.Request.Pets.Select(p => p.Pet)) { <a asp-controller="Pets" asp-action="Details" asp-route-id="@pet.Id"><span class="request-summary-pet species-@pet.Species.ToLowerInvariant()"><partial name="/Views/Pets/_PetPortrait.cshtml" model="pet.Species" /></span><span><strong>@pet.Name</strong><small>@pet.Species · @(pet.Breed ?? "View profile")</small></span><svg class="line-icon"><use href="#icon-chevron" /></svg></a> }</div><a class="btn btn-dark" asp-action="Create" asp-route-fresh="true"><svg class="line-icon"><use href="#icon-plus" /></svg>Create another request</a></section><aside><section class="request-status-card" data-request-status="@Url.Action("Status", new { id = Model.Request.Id })" aria-live="polite"><partial name="_Status" model="Model" /></section></aside></div>
+@section Scripts { <script src="~/js/owner-requests.js" asp-append-version="true"></script> }

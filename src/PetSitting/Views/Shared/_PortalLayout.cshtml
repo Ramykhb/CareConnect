@@ -30,6 +30,10 @@
     {
         <link rel="stylesheet" href="~/css/pet-profiles.css" asp-append-version="true" />
     }
+    @if (controller == "CareRequests")
+    {
+        <link rel="stylesheet" href="~/css/owner-requests.css" asp-append-version="true" />
+    }
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="pet-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
@@ -43,7 +47,7 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "CareRequests" && key == "bookings" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
                         var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }

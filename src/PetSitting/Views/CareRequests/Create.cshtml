@@ -1,0 +1,120 @@
+@using PetSitting.ViewModels
+@model OwnerRequestWizard
+@{
+    ViewData["Title"] = "Create request";
+    ViewData["Breadcrumb"] = "Create request";
+    var selected = Model.Pets.Where(p => Model.Form.PetIds.Contains(p.Id)).ToArray();
+    var preferred = Model.Sitters.FirstOrDefault(s => s.Id == Model.Form.PreferredSitterId);
+    var today = DashboardViewModel.Local(DateTimeOffset.UtcNow).ToString("yyyy-MM-dd");
+    var firstPet = Model.Pets.FirstOrDefault(p => Model.Form.PetIds.Contains(p.Id));
+}
+<form asp-action="Save" method="post" class="request-wizard" id="request-wizard" novalidate data-step="@Model.Step" data-draft-id="@Model.DraftId" data-autosave-url="@Url.Action("Save")">
+    <input type="hidden" name="draftId" value="@Model.DraftId" />
+    <input type="hidden" name="version" value="@Model.Version" />
+    <input type="hidden" name="step" value="@Model.Step" />
+    <header class="request-page-heading"><div><h1>Create a sitting request</h1><p>Step @Model.Step of 6 · @OwnerRequestWizard.Steps[Model.Step - 1]</p></div><button type="submit" name="command" value="exit" class="request-exit"><svg class="line-icon"><use href="#icon-close" /></svg>Save draft &amp; exit</button></header>
+    <nav class="request-progress" aria-label="Request steps">
+        @for (var i = 1; i <= 6; i++)
+        {
+            <button type="submit" name="command" value="goto:@i" class="@(i == Model.Step ? "current" : i < Model.Step ? "complete" : "")" disabled="@(i > Model.Step)" aria-current="@(i == Model.Step ? "step" : null)"><span>@if (i < Model.Step) { <svg class="line-icon"><use href="#icon-check" /></svg> } else { @i }</span>@OwnerRequestWizard.Steps[i - 1]</button>
+        }
+    </nav>
+    <div class="request-columns">
+        <div class="request-step-card">
+            <div asp-validation-summary="All" class="request-errors" role="alert"></div>
+            <section class="request-step" hidden="@(Model.Step != 1)" aria-labelledby="pet-heading">
+                <h2 id="pet-heading">Who needs care?</h2><p class="request-intro">Select one or more pets. Their medical notes and feeding instructions are shared with the sitter.</p>
+                @if (Model.Pets.Count == 0)
+                {
+                    <div class="request-no-pets"><span class="round-icon lime"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span><h3>First, introduce your pet</h3><p>Add a pet profile so your sitter knows who they’ll be caring for.</p><a class="btn btn-dark" asp-controller="Pets" asp-action="Create">Add your first pet<svg class="line-icon"><use href="#icon-plus" /></svg></a></div>
+                }
+                else
+                {
+                    <div class="request-pet-options">
+                        @foreach (var pet in Model.Pets)
+                        {
+                            <label class="request-option pet-option"><input type="checkbox" name="Form.PetIds" value="@pet.Id" checked="@Model.Form.PetIds.Contains(pet.Id)" data-pet-name="@pet.Name" /><span class="option-content"><span class="option-check"><svg class="line-icon"><use href="#icon-check" /></svg></span><span class="request-pet-art species-@pet.Species.ToLowerInvariant()"><partial name="/Views/Pets/_PetPortrait.cshtml" model="pet.Species" /></span><strong>@pet.Name</strong><small>@(pet.Breed ?? pet.Species)@(pet.AgeYears is int age ? $" · {age} yrs" : "")</small></span></label>
+                        }
+                    </div>
+                    <a class="request-inline-link" asp-controller="Pets" asp-action="Create">Add another pet ↗</a>
+                }
+                <div class="request-info"><svg class="line-icon"><use href="#icon-shield" /></svg>Keep your pet profiles up to date so sitters can prepare for their routines.</div>
+            </section>
+            <section class="request-step" hidden="@(Model.Step != 2)" aria-labelledby="service-heading">
+                <h2 id="service-heading">Which service do you need?</h2><p class="request-intro">A little help for every kind of day. Choose the care that fits your pets.</p>
+                <div class="request-service-options">
+                    @foreach (var service in Enum.GetValues<ServiceType>())
+                    {
+                        var description = service switch { ServiceType.PetSitting => "A sitter stays overnight in your home.", ServiceType.DogWalking => "Fresh air and exercise for your dogs.", ServiceType.Boarding => "A stay at the sitter’s home.", _ => "A visit for food, fresh water and company." };
+                        <label class="request-option service-option"><input asp-for="Form.ServiceType" id="service-@service" type="radio" value="@service" checked="@(Model.Form.ServiceType == service)" /><span class="option-content"><span class="option-check"><svg class="line-icon"><use href="#icon-check" /></svg></span><span class="round-icon"><svg class="line-icon"><use href="#icon-@OwnerRequestForm.ServiceIcon(service)" /></svg></span><strong>@OwnerRequestForm.ServiceName(service)</strong><small>@description</small><span class="service-rate">Agree on a total budget with your sitter</span></span></label>
+                    }
+                </div>
+            </section>
+            <section class="request-step" hidden="@(Model.Step != 3)" aria-labelledby="date-heading">
+                <h2 id="date-heading">When do you need care?</h2><p class="request-intro">Choose the full care period. All dates and times are in Beirut local time.</p>
+                <div class="request-dates-grid">
+                    <div class="request-field"><label asp-for="Form.StartDate">Start date</label><input asp-for="Form.StartDate" type="date" min="@today" /><span asp-validation-for="Form.StartDate"></span></div>
+                    <div class="request-field"><label asp-for="Form.EndDate">End date</label><input asp-for="Form.EndDate" type="date" min="@today" /><span asp-validation-for="Form.EndDate"></span></div>
+                    <div class="request-calendar" hidden data-calendar aria-label="Select care dates"><div class="calendar-heading"><button type="button" data-month="-1" aria-label="Previous month"><svg class="line-icon"><use href="#icon-back" /></svg></button><strong data-calendar-title></strong><button type="button" data-month="1" aria-label="Next month"><svg class="line-icon"><use href="#icon-arrow" /></svg></button></div><div class="calendar-weekdays" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div><div class="calendar-days" data-calendar-days></div><small data-calendar-hint>Select a start date, then an end date.</small></div>
+                    <div class="request-time-column"><div class="request-two-fields"><div class="request-field"><label asp-for="Form.StartTime">Start time</label><input asp-for="Form.StartTime" type="time" /><span asp-validation-for="Form.StartTime"></span></div><div class="request-field"><label asp-for="Form.EndTime">End time</label><input asp-for="Form.EndTime" type="time" /><span asp-validation-for="Form.EndTime"></span></div></div><div class="request-field"><label>Quick duration</label><div class="duration-options"><button type="button" data-duration="1">1 day</button><button type="button" data-duration="2">2 days</button><button type="button" data-duration="3">3 days</button><button type="button" data-duration="7">1 week</button></div></div><div class="request-info date-total"><svg class="line-icon"><use href="#icon-calendar" /></svg><span data-date-total>Choose your dates and times to see the total duration.</span></div><p class="request-helper">Need regular care? Create a separate request for each visit. Each request can cover up to 14 days.</p></div>
+                </div>
+            </section>
+            <section class="request-step" hidden="@(Model.Step != 4)" aria-labelledby="location-heading">
+                <h2 id="location-heading">Where will care take place?</h2><p class="request-intro">Your exact address and access notes are shared only with the sitter who accepts.</p>
+                <div class="location-choice"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-home" /></svg></span><div><strong>@(Model.Form.ServiceType == ServiceType.Boarding ? "At the sitter’s home" : "At my home")</strong><small>@(Model.Form.ServiceType == ServiceType.Boarding ? "Choose a city to find boarding care nearby." : "Your sitter comes to your pet’s familiar surroundings.")</small></div></div>
+                <div class="request-location-grid"><div class="request-location-fields">
+                    <div class="request-field"><label asp-for="Form.City">City</label><input asp-for="Form.City" maxlength="150" placeholder="e.g. Beirut" autocomplete="address-level2" /><span asp-validation-for="Form.City"></span></div>
+                    <div class="request-field"><label asp-for="Form.Area">Area <small>optional</small></label><input asp-for="Form.Area" maxlength="120" placeholder="e.g. Achrafieh" autocomplete="address-level3" /></div>
+                    @if (Model.Form.ServiceType != ServiceType.Boarding)
+                    {
+                        <div class="request-field"><label asp-for="Form.StreetAddress">Street address</label><input asp-for="Form.StreetAddress" maxlength="140" placeholder="Street name and number" autocomplete="address-line1" /><span asp-validation-for="Form.StreetAddress"></span></div>
+                        <div class="request-field"><label asp-for="Form.Building">Building / floor <small>optional</small></label><input asp-for="Form.Building" maxlength="60" placeholder="Building name, floor" autocomplete="address-line2" /></div>
+                        <div class="request-field"><label asp-for="Form.AccessNotes">Access notes <small>optional</small></label><input asp-for="Form.AccessNotes" maxlength="80" placeholder="Doorbell, entrance or doorman instructions" /></div>
+                    }
+                    else
+                    {
+                        <input asp-for="Form.StreetAddress" type="hidden" /><input asp-for="Form.Building" type="hidden" /><input asp-for="Form.AccessNotes" type="hidden" />
+                    }
+                </div><div class="location-illustration" aria-hidden="true"><svg viewBox="0 0 360 330" fill="none"><rect width="360" height="330" rx="28" fill="#E9EFEA"/><path d="M35 0v330M100 0v330M170 0v330M230 0v330M300 0v330M0 40l360 44M0 130l360-70M0 230l360-70M0 280l360 40" stroke="white" stroke-width="2"/><rect x="224" y="33" width="98" height="68" rx="21" fill="#BDCEC1"/><circle cx="181" cy="173" r="88" fill="#75866B" fill-opacity=".18" stroke="#B0CD63" stroke-width="2"/><circle cx="181" cy="173" r="24" fill="#191B1C"/><path d="m170 174 11-10 11 10m-19-2v14h6v-8h5v8h5v-14" stroke="#EAFF87" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><svg class="line-icon"><use href="#icon-lock" /></svg>Exact address stays private</span></div></div>
+            </section>
+            <section class="request-step" hidden="@(Model.Step != 5)" aria-labelledby="budget-heading">
+                <h2 id="budget-heading">Details &amp; budget</h2><p class="request-intro">Help sitters understand your pets’ routine and your price expectations.</p>
+                <div class="request-field"><label asp-for="Form.Instructions">Special instructions <small>optional</small></label><textarea asp-for="Form.Instructions" maxlength="3000" rows="4" placeholder="Favourite routines, walk preferences and anything else your sitter should know…"></textarea><span asp-validation-for="Form.Instructions"></span><small>Your pets’ saved care notes are included. Keep entry codes and private access instructions in the location step.</small></div>
+                <div class="budget-heading"><label>Total budget range</label><strong data-budget-total>@(Model.Form.BudgetMin is { } min && Model.Form.BudgetMax is { } max ? $"${min:0.##} – ${max:0.##}" : "In USD")</strong></div>
+                <div class="request-two-fields"><div class="request-field"><label asp-for="Form.BudgetMin">Minimum (USD)</label><input asp-for="Form.BudgetMin" type="number" min="1" max="99999" step="0.01" placeholder="e.g. 120" /><span asp-validation-for="Form.BudgetMin"></span></div><div class="request-field"><label asp-for="Form.BudgetMax">Maximum (USD)</label><input asp-for="Form.BudgetMax" type="number" min="1" max="99999" step="0.01" placeholder="e.g. 150" /><span asp-validation-for="Form.BudgetMax"></span></div></div>
+                <p class="request-helper">Your minimum is the initial offer a sitter can accept. Your maximum records your budget limit. No payment is taken when you submit.</p>
+                <fieldset class="preferred-sitters"><legend><svg class="line-icon"><use href="#icon-sparkles" /></svg>Notify a preferred sitter <small>optional</small></legend><p class="request-helper">Available for your city, service and dates. Your request also stays open to other eligible sitters.</p><div class="sitter-options"><label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-any" type="radio" value="" checked="@(Model.Form.PreferredSitterId is null)" /><span><span class="round-icon"><svg class="line-icon"><use href="#icon-paw" /></svg></span><span><strong>No preference</strong><small>Open to local sitters</small></span></span></label>
+                    @foreach (var sitter in Model.Sitters)
+                    {
+                        <label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-@sitter.Id" type="radio" value="@sitter.Id" checked="@(Model.Form.PreferredSitterId == sitter.Id)" /><span><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><span><strong>@sitter.User.FirstName @sitter.User.LastName</strong><small>@sitter.YearsOfExperience yrs experience · @sitter.City</small></span></span></label>
+                    }
+                </div>@if (Model.Sitters.Count == 0) { <p class="request-helper">No preferred sitters are available for these details right now. You can still submit an open request.</p> }<span asp-validation-for="Form.PreferredSitterId"></span></fieldset>
+            </section>
+            <section class="request-step" hidden="@(Model.Step != 6)" aria-labelledby="review-heading">
+                <h2 id="review-heading">Review &amp; submit</h2><p class="request-intro">One last look before we send your request@(preferred is null ? "." : " to " + preferred.User.FirstName + ".")</p>
+                <div class="request-review-grid"><dl class="request-review-list">
+                    <div><span class="round-icon"><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span><div><dt>Pets</dt><dd>@string.Join(", ", selected.Select(p => p.Name + (p.Breed is null ? "" : " · " + p.Breed)))</dd></div><button type="submit" name="command" value="goto:1">Edit</button></div>
+                    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-moon" /></svg></span><div><dt>Service</dt><dd>@OwnerRequestForm.ServiceName(Model.Form.ServiceType)</dd></div><button type="submit" name="command" value="goto:2">Edit</button></div>
+                    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><div><dt>When</dt><dd>@Model.Form.StartDate?.ToString("ddd d MMM") @Model.Form.StartTime?.ToString("h:mm tt") → @Model.Form.EndDate?.ToString("ddd d MMM") @Model.Form.EndTime?.ToString("h:mm tt")<small>Beirut local time</small></dd></div><button type="submit" name="command" value="goto:3">Edit</button></div>
+                    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-pin" /></svg></span><div><dt>Where</dt><dd>@Model.Form.City · @(Model.Form.ServiceType == ServiceType.Boarding ? "at the sitter’s home" : Model.Form.Address)</dd></div><button type="submit" name="command" value="goto:4">Edit</button></div>
+                    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-edit" /></svg></span><div><dt>Instructions</dt><dd class="review-instructions">@(string.IsNullOrWhiteSpace(Model.Form.Instructions) ? "Follow the pets’ saved care notes." : Model.Form.Instructions)</dd></div><button type="submit" name="command" value="goto:5">Edit</button></div>
+                    <div><span class="round-icon"><svg class="line-icon"><use href="#icon-user" /></svg></span><div><dt>Preferred sitter</dt><dd>@(preferred is null ? "No preference" : preferred.User.FirstName + " " + preferred.User.LastName)</dd></div><button type="submit" name="command" value="goto:5">Edit</button></div>
+                </dl><aside class="review-offer"><h3>Your offer to the sitter</h3><div><span>Initial offer</span><strong>$@Model.Form.BudgetMin?.ToString("0.##")</strong></div><div><span>Budget limit</span><strong>$@Model.Form.BudgetMax?.ToString("0.##")</strong></div><hr /><div class="review-offer-total"><span>Due now</span><strong>$0</strong></div><p><svg class="line-icon"><use href="#icon-lock" /></svg>Payment comes after a sitter accepts. No fee is added to this request.</p></aside></div>
+                <label class="request-confirm"><input asp-for="Form.CareConfirmed" /><span>I’ve checked the request details and my pets’ medical, feeding and care notes are up to date.</span></label><span asp-validation-for="Form.CareConfirmed"></span>
+            </section>
+            <footer class="request-step-actions">
+                @if (Model.Step > 1) { <button type="submit" name="command" value="back" class="btn btn-light"><svg class="line-icon"><use href="#icon-back" /></svg>Back</button> } else { <span>Step 1 of 6</span> }
+                @if (Model.Step < 6) { <button type="submit" name="command" value="next" class="btn btn-dark" disabled="@(Model.Pets.Count == 0)"><svg class="line-icon"><use href="#icon-arrow" /></svg>Continue</button> }
+                else { <button type="submit" name="command" value="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-send" /></svg>Submit request</button> }
+            </footer>
+        </div>
+        <aside class="request-summary"><div class="request-summary-heading"><span class="request-summary-pet species-@(firstPet?.Species.ToLowerInvariant() ?? "dog")"><partial name="/Views/Pets/_PetPortrait.cshtml" model="@(firstPet?.Species ?? "Dog")" /></span><div><h2>Request summary</h2><p data-draft-status role="status">@(Model.SavedAt is null ? "Draft · not saved yet" : "Draft · saved")</p></div></div><dl>
+            <div><span class="summary-check @(selected.Length > 0 ? "done" : "")"><svg class="line-icon"><use href="@(selected.Length > 0 ? "#icon-check" : "#icon-clock")" /></svg></span><dt>Pets</dt><dd data-summary="pets">@(selected.Length > 0 ? string.Join(", ", selected.Select(p => p.Name)) : "—")</dd></div>
+            <div><span class="summary-check @(Model.Form.ServiceType is not null ? "done" : "")"><svg class="line-icon"><use href="@(Model.Form.ServiceType is not null ? "#icon-check" : "#icon-clock")" /></svg></span><dt>Service</dt><dd data-summary="service">@(Model.Form.ServiceType is null ? "—" : OwnerRequestForm.ServiceName(Model.Form.ServiceType))</dd></div>
+            <div><span class="summary-check @(Model.Form.StartDate is not null && Model.Form.EndDate is not null ? "done" : "")"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><dt>When</dt><dd data-summary="when">@(Model.Form.StartDate is { } start && Model.Form.EndDate is { } end ? $"{start:d MMM} – {end:d MMM}" : "—")</dd></div>
+            <div><span class="summary-check @(!string.IsNullOrWhiteSpace(Model.Form.City) ? "done" : "")"><svg class="line-icon"><use href="#icon-pin" /></svg></span><dt>Where</dt><dd data-summary="where">@(string.IsNullOrWhiteSpace(Model.Form.City) ? "—" : Model.Form.City)</dd></div>
+            <div><span class="summary-check @(Model.Form.BudgetMin is not null ? "done" : "")"><svg class="line-icon"><use href="#icon-wallet" /></svg></span><dt>Budget</dt><dd data-summary="budget">@(Model.Form.BudgetMin is { } low && Model.Form.BudgetMax is { } high ? $"${low:0.##} – ${high:0.##}" : "—")</dd></div>
+        </dl><div class="request-matching"><strong><svg class="line-icon"><use href="#icon-sparkles" /></svg>A good fit starts here</strong><p>@(Model.Sitters.Count > 0 ? $"{Model.Sitters.Count} {(Model.Sitters.Count == 1 ? "sitter is" : "sitters are")} available for your city, service and dates." : "Choose your service, dates and city to see available preferred sitters.")</p></div><p class="request-payment-note"><svg class="line-icon"><use href="#icon-lock" /></svg>No payment when you submit.</p></aside>
+    </div>
+</form>
+@section Scripts { <script src="~/js/owner-requests.js" asp-append-version="true"></script> }

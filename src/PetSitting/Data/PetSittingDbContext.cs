@@ -28,6 +28,7 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
     public DbSet<Pet> Pets => Set<Pet>();
     public DbSet<PetCareRequestPet> PetCareRequestPets => Set<PetCareRequestPet>();
+    public DbSet<OwnerRequestDraft> OwnerRequestDrafts => Set<OwnerRequestDraft>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +50,10 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
         modelBuilder.Entity<BookingUpdate>().HasIndex(x => new { x.BookingId, x.ClientToken }).IsUnique();
         modelBuilder.Entity<BookingUpdatePhoto>().HasOne(x => x.BookingUpdate).WithOne(x => x.Photo).HasForeignKey<BookingUpdatePhoto>(x => x.BookingUpdateId);
         modelBuilder.Entity<PetCareRequest>().HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId);
+        modelBuilder.Entity<OwnerRequestDraft>().HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId);
+        modelBuilder.Entity<OwnerRequestDraft>().HasOne(x => x.SubmittedRequest).WithMany().HasForeignKey(x => x.SubmittedRequestId);
+        modelBuilder.Entity<OwnerRequestDraft>().HasIndex(x => new { x.CustomerId, x.UpdatedAtUtc });
+        modelBuilder.Entity<OwnerRequestDraft>().HasIndex(x => x.SubmittedRequestId).IsUnique().HasFilter("[SubmittedRequestId] IS NOT NULL");
         modelBuilder.Entity<Pet>().HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId);
         modelBuilder.Entity<PetCareRequestPet>().HasKey(x => new { x.PetCareRequestId, x.PetId });
         modelBuilder.Entity<PetCareRequestPet>().HasOne(x => x.PetCareRequest).WithMany(x => x.Pets).HasForeignKey(x => x.PetCareRequestId);

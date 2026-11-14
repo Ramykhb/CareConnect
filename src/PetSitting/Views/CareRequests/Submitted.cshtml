@@ -1,0 +1,17 @@
+@using PetSitting.ViewModels
+@model OwnerRequestResult
+@{
+    ViewData["Title"] = "Request sent";
+    ViewData["Breadcrumb"] = "Create request";
+}
+<header class="request-page-heading"><div><h1>Request sent!</h1><p>Your pets’ next chapter of care starts here.</p></div></header>
+<div class="request-columns request-submitted-columns">
+    <section class="request-success-card"><span class="request-sent-icon"><svg class="line-icon"><use href="#icon-send" /></svg></span><h2>Your request is on its way</h2><span class="request-pending"><svg class="line-icon"><use href="#icon-clock" /></svg>@Model.Request.Status</span><p>@(Model.PreferredSitter is null ? "Your request is available to eligible sitters in " + Model.Request.City + "." : Model.PreferredSitter.User.FirstName + " has been notified. Your request is also open to eligible sitters in " + Model.Request.City + ".") Follow its progress here or from your dashboard.</p><div class="request-info"><svg class="line-icon"><use href="#icon-shield" /></svg>Your request is saved. No payment is taken until a sitter accepts and you complete payment.</div><div class="request-success-actions"><a class="btn btn-light" asp-controller="Dashboard" asp-action="Customer">Back to dashboard</a><a class="btn btn-dark" asp-action="Details" asp-route-id="@Model.Request.Id"><svg class="line-icon"><use href="#icon-arrow" /></svg>View request</a></div></section>
+    <aside><section class="request-status-card" data-request-status="@Url.Action("Status", new { id = Model.Request.Id })" aria-live="polite"><partial name="_Status" model="Model" /></section>
+        @if (Model.PreferredSitter is { } sitter)
+        {
+            <div class="submitted-sitter"><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><div><strong>@sitter.User.FirstName @sitter.User.LastName</strong><small>Preferred sitter · @sitter.City</small></div></div>
+        }
+    </aside>
+</div>
+@section Scripts { <script src="~/js/owner-requests.js" asp-append-version="true"></script> }

@@ -1,0 +1,13 @@
+@using PetSitting.ViewModels
+@model OwnerRequestResult
+@{
+    var bookingActive = Model.Booking is not null && Model.Booking.Status is not (BookingStatus.Cancelled or BookingStatus.Rejected);
+    var open = Model.Request.Status == RequestStatus.Open;
+}
+<div class="request-timeline-heading"><h2>Request #@Model.Reference</h2><span><i></i><span data-sync-label>Status updated</span></span></div>
+<ol class="request-timeline">
+    <li class="finished"><span><svg class="line-icon"><use href="#icon-check" /></svg></span><div><strong>Request submitted</strong><small>@DashboardViewModel.Local(Model.Request.CreatedAtUtc).ToString("ddd d MMM · h:mm tt")</small></div></li>
+    <li class="@(bookingActive ? "finished" : open ? "waiting" : "")"><span><svg class="line-icon"><use href="@(bookingActive ? "#icon-check" : "#icon-clock")" /></svg></span><div><strong>@(bookingActive ? "A sitter accepted" : open ? "Awaiting a sitter’s decision" : "Request " + Model.Request.Status.ToString().ToLowerInvariant())</strong><small>@(bookingActive ? "Your booking is ready for the next step." : open ? "We’ll update this status when a sitter responds." : "Check your dashboard for the latest activity.")</small></div></li>
+    <li class="@(bookingActive && Model.Booking!.Status is BookingStatus.Confirmed or BookingStatus.InProgress or BookingStatus.Completed ? "finished" : "")"><span><svg class="line-icon"><use href="#icon-lock" /></svg></span><div><strong>Payment</strong><small>@(bookingActive && Model.Booking!.TotalAmount == 0 ? "No payment required" : bookingActive && Model.Booking!.Status == BookingStatus.AwaitingPayment ? "Payment is awaiting completion" : "After a sitter accepts")</small></div></li>
+    <li class="@(bookingActive && Model.Booking!.Status is BookingStatus.InProgress or BookingStatus.Completed ? "finished" : "")"><span><svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span><div><strong>Care begins</strong><small>@DashboardViewModel.Local(Model.Request.StartsAtUtc).ToString("ddd d MMM · h:mm tt")</small></div></li>
+</ol>

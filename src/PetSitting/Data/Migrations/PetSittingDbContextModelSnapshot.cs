@@ -526,6 +526,49 @@ namespace PetSitting.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PetSitting.Models.OwnerRequestDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Step")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SubmittedRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmittedRequestId")
+                        .IsUnique()
+                        .HasFilter("[SubmittedRequestId] IS NOT NULL");
+
+                    b.HasIndex("CustomerId", "UpdatedAtUtc");
+
+                    b.ToTable("OwnerRequestDrafts");
+                });
+
             modelBuilder.Entity("PetSitting.Models.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1351,6 +1394,24 @@ namespace PetSitting.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PetSitting.Models.OwnerRequestDraft", b =>
+                {
+                    b.HasOne("PetSitting.Models.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("PetSitting.Models.PetCareRequest", "SubmittedRequest")
+                        .WithMany()
+                        .HasForeignKey("SubmittedRequestId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SubmittedRequest");
                 });
 
             modelBuilder.Entity("PetSitting.Models.Payment", b =>
