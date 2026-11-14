@@ -25,7 +25,7 @@ public sealed class CareRequestsController(ICareRequestRepository repository, IF
         var now = clock.GetUtcNow();
         var bookings = await repository.GetBookingsForParentAsync(UserId);
         var items = (await repository.GetAllForParentAsync(UserId))
-            .Select(r => new MyRequestItem(r, bookings.FirstOrDefault(b => b.RequestId == r.Id), now)).ToList();
+            .Select(r => new MyRequestItem(r, Pick(bookings, r), now)).ToList();
         return View(new MyRequestsViewModel { Items = items, Filter = MyRequestsViewModel.Filters.Contains(status) ? status! : "all" });
     }
 
@@ -35,7 +35,7 @@ public sealed class CareRequestsController(ICareRequestRepository repository, IF
     {
         var request = await repository.GetByIdAsync(id, UserId);
         if (request is null) return NotFound();
-        var booking = (await repository.GetBookingsForParentAsync(UserId, id)).FirstOrDefault();
+        var booking = Pick(await repository.GetBookingsForParentAsync(UserId, id), request);
         ViewBag.CanEdit = ICareRequestRepository.IsEditable(request, clock.GetUtcNow());
         return View(new MyRequestItem(request, booking, clock.GetUtcNow()));
     }
@@ -165,6 +165,14 @@ public sealed class CareRequestsController(ICareRequestRepository repository, IF
         if (result.NotFound) return NotFound();
         TempData[result.Succeeded ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Details), new { id = requestId });
+    }
+
+    // The booking to show for a request: the active or finished one. When a sitter cancelled and the
+    // request reopened, the cancelled booking is history, so the request shows as waiting again.
+    private static BabysittingBooking? Pick(IEnumerable<BabysittingBooking> bookings, ChildcareRequest request)
+    {
+        var mine = bookings.Where(b => b.RequestId == request.Id).ToList();
+        return mine.FirstOrDefault(b => b.Status != BookingStatus.Cancelled) ?? (request.Status == RequestStatus.Open ? null : mine.FirstOrDefault());
     }
 
     // Converts the Beirut wall-clock times to UTC; adds a form error for a time skipped by daylight saving.
