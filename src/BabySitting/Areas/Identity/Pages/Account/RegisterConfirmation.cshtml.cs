@@ -23,12 +23,25 @@ public sealed class RegisterConfirmationModel(
     public string? ReturnUrl { get; private set; }
     public string? InboxUrl { get; private set; }
 
-    public void OnGet(string? returnUrl = null)
+    public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
         ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
+        if (Email is { Length: > 0 } email)
+        {
+            var user = await users.FindByEmailAsync(email);
+            if (user is not null && await users.IsEmailConfirmedAsync(user))
+            {
+                TempData.Remove(EmailKey);
+                TempData.Remove(RetryKey);
+                return User.Identity?.IsAuthenticated == true
+                    ? LocalRedirect(ReturnUrl ?? "/Dashboard")
+                    : RedirectToPage("Login", new { returnUrl = ReturnUrl });
+            }
+        }
         if (Uri.TryCreate(configuration["Email:InboxUrl"], UriKind.Absolute, out var inbox)
             && (inbox.Scheme == "https" || (environment.IsDevelopment() && inbox.IsLoopback && inbox.Scheme == "http")))
             InboxUrl = inbox.AbsoluteUri;
+        return Page();
     }
 
     public async Task<IActionResult> OnPostResendAsync(string? returnUrl = null)
