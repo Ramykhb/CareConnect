@@ -42,6 +42,11 @@
         @if (!string.IsNullOrWhiteSpace(r.CareInstructions)) { <h3>Care instructions</h3><p>@r.CareInstructions</p> }
     </section>
 
+    <aside>
+    @if (ViewBag.Status is ParentRequestResult status)
+    {
+        <section class="request-status-card" data-request-status="@Url.Action("Status", new { id = r.Id })" aria-live="polite"><partial name="_Status" model="status" /></section>
+    }
     <section class="card side-card">
         @if (b is not null)
         {
@@ -49,7 +54,7 @@
             <p><strong>@Model.SitterName</strong><br /><span class="pet-meta">@b.SitterProfile.YearsOfExperience yrs experience · @DashboardViewModel.Money(b.SitterProfile.HourlyRate, b.SitterProfile.Currency)/hr</span></p>
             <p>Booking: <span class="status-chip @DashboardViewModel.StatusClass(b.Status)">@DashboardViewModel.Status(b.Status)</span> · @DashboardViewModel.Money(b.TotalAmount, b.Currency)</p>
             @if (b.Status == BookingStatus.Cancelled) { <p class="pet-meta">@b.CancellationReason</p> }
-            @if (ParentBookingService.CanPay(b))
+            @if (ParentPaymentService.CanPay(b))
             {
                 <form asp-action="Pay" method="post" class="pay-form">
                     <input type="hidden" name="requestId" value="@r.Id" />
@@ -65,7 +70,7 @@
             {
                 <div class="review-box"><strong>Your review · @(new string('★', b.Review.Rating))@(new string('☆', 5 - b.Review.Rating))</strong>@if (b.Review.Comment is not null) { <p>@b.Review.Comment</p> }@if (b.Review.SitterReply is not null) { <p class="pet-meta">Sitter replied: @b.Review.SitterReply</p> }</div>
             }
-            else if (ParentBookingService.CanReview(b))
+            else if (ParentPaymentService.CanReview(b))
             {
                 <form asp-action="Review" method="post" class="review-form">
                     <input type="hidden" name="requestId" value="@r.Id" />
@@ -100,4 +105,6 @@
             <p>This request is no longer open.</p>
         }
     </section>
+    </aside>
 </div>
+@section Scripts { <script src="~/js/parent-requests.js" asp-append-version="true"></script> }

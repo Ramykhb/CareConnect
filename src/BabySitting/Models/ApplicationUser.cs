@@ -9,5 +9,9 @@ public class ApplicationUser : IdentityUser<Guid>
     [PersonalData, MaxLength(150)] public string? City { get; set; }
     [PersonalData] public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public bool IsActive { get; set; } = true;
+    [PersonalData, MaxLength(300)] public string? HomeAddress { get; set; }
+    [PersonalData, MaxLength(10)] public string PreferredLanguage { get; set; } = "en";
+    [PersonalData, MaxLength(200)] public string? EmergencyContact { get; set; }
+    public Guid? ProfilePhotoVersion { get; set; }
     public BabysitterProfile? SitterProfile { get; set; }
 }

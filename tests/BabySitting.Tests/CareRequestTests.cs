@@ -205,7 +205,7 @@ public sealed class CareRequestTests
     private static Task<BookingWriteResult> Pay(Data d, Guid userId, Guid token) => d.GetAsync(async db =>
     {
         var v = Convert.ToBase64String((await db.BabysittingBookings.AsNoTracking().SingleAsync(b => b.Id == d.BookingId)).RowVersion);
-        return await new ParentBookingService(db, TimeProvider.System).PayAsync(userId, d.BookingId, token, v);
+        return await new ParentPaymentService(db, TimeProvider.System).PayAsync(userId, d.BookingId, token, v);
     });
 
     [SqlServerFact]
@@ -226,12 +226,12 @@ public sealed class CareRequestTests
     public async Task Parents_review_only_completed_bookings_once()
     {
         await using var upcoming = await Data.CreateAsync(booked: true);
-        Assert.False((await upcoming.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(upcoming.Parent.Id, upcoming.BookingId, 5, "Great"))).Succeeded);
+        Assert.False((await upcoming.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).ReviewAsync(upcoming.Parent.Id, upcoming.BookingId, 5, "Great"))).Succeeded);
         await using var d = await Data.CreateAsync(booked: true, BookingStatus.Completed);
-        Assert.False((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 6, null))).Succeeded);
-        Assert.True((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Stranger.Id, d.BookingId, 5, null))).NotFound);
-        Assert.True((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 5, "Lovely evening"))).Succeeded);
-        Assert.False((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 4, "Again"))).Succeeded);
+        Assert.False((await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 6, null))).Succeeded);
+        Assert.True((await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).ReviewAsync(d.Stranger.Id, d.BookingId, 5, null))).NotFound);
+        Assert.True((await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 5, "Lovely evening"))).Succeeded);
+        Assert.False((await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 4, "Again"))).Succeeded);
         Assert.Equal(5, await d.GetAsync(db => db.Reviews.Where(r => r.BookingId == d.BookingId).Select(r => r.Rating).SingleAsync()));
     }
 
@@ -241,9 +241,9 @@ public sealed class CareRequestTests
         await using var d = await Data.CreateAsync(booked: false);
         var id = Guid.NewGuid();
         await d.UseAsync(async db => { db.Notifications.Add(new Notification { Id = id, UserId = d.Parent.Id, Title = "Hi", Body = "Test" }); await db.SaveChangesAsync(); });
-        Assert.False(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).MarkReadAsync(d.Stranger.Id, id)));
-        Assert.Single(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).NotificationsAsync(d.Parent.Id)));
-        Assert.True(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).MarkReadAsync(d.Parent.Id, id)));
+        Assert.False(await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).MarkReadAsync(d.Stranger.Id, id)));
+        Assert.Single(await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).NotificationsAsync(d.Parent.Id)));
+        Assert.True(await d.GetAsync(db => new ParentPaymentService(db, TimeProvider.System).MarkReadAsync(d.Parent.Id, id)));
         Assert.NotNull(await d.GetAsync(db => db.Notifications.Where(n => n.Id == id).Select(n => n.ReadAtUtc).SingleAsync()));
     }
 

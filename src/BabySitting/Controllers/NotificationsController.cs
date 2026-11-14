@@ -9,7 +9,7 @@ namespace BabySitting.Controllers;
 // Parent notifications: list, open, and mark as read. Sitters have their own page under /Sitter/Notifications.
 [Authorize(Roles = Roles.Customer)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class NotificationsController(IParentBookingService service, UserManager<ApplicationUser> userManager) : Controller
+public sealed class NotificationsController(IParentPaymentService service, UserManager<ApplicationUser> userManager) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
 

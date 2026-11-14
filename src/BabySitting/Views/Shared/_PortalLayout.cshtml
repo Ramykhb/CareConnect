@@ -26,6 +26,18 @@
     <link rel="stylesheet" href="~/css/baby-auth.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/baby-portal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/baby-dashboard.css" asp-append-version="true" />
+    @if (controller == "ParentSettings")
+    {
+        <link rel="stylesheet" href="~/css/parent-settings.css" asp-append-version="true" />
+    }
+    @if (controller == "ParentBookings")
+    {
+        <link rel="stylesheet" href="~/css/parent-bookings.css" asp-append-version="true" />
+    }
+    @if (controller == "CareRequests")
+    {
+        <link rel="stylesheet" href="~/css/parent-requests.css" asp-append-version="true" />
+    }
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="baby-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
@@ -39,14 +51,14 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Family" && key == "family" || controller == "CareRequests" && key == "requests" || controller == "Notifications" && key == "notifications" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
-                        var href = key == "family" ? Url.Action("Index", "Family") : !sitter && key == "requests" ? Url.Action("Index", "CareRequests") : !sitter && key == "notifications" ? Url.Action("Index", "Notifications") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Family" && key == "family" || controller == "CareRequests" && key == "requests" || controller == "ParentBookings" && key == "bookings" || controller == "Notifications" && key == "notifications" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var href = !sitter && key == "bookings" ? Url.Action("Index", "ParentBookings") : key == "family" ? Url.Action("Index", "Family") : !sitter && key == "requests" ? Url.Action("Index", "CareRequests") : !sitter && key == "notifications" ? Url.Action("Index", "Notifications") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
                         </a>
                     }
-                    <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Page("/Account/Manage/Index", new { area = "Identity" }))" class="@(controller == "SitterPortal" && action == "Settings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
+                    <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" class="@(controller == "SitterPortal" && action == "Settings" || controller == "ParentSettings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
                 </nav>
             </div>
             <div class="sidebar-bottom">
@@ -59,7 +71,7 @@
                     <a class="sidebar-promo" href="@(home)#sitters"><span class="round-icon"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span><strong>A little help. A lot of care.</strong><small>Find a friendly sitter for your child’s next stay.</small><span>Explore sitters ↗</span></a>
                 }
                 <div class="portal-user">
-                    <a class="portal-avatar" asp-area="Identity" asp-page="/Account/Manage/Index" aria-label="Manage account">@initial</a>
+                    <a class="portal-avatar" href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" aria-label="Manage account">@if (!sitter && user?.ProfilePhotoVersion is { } photo) { <img src="@Url.Action("Photo", "ParentSettings", new { v = photo })" alt="" /> } else { @initial }</a>
                     <span class="portal-user-text"><strong>@displayName</strong><small>@(sitter ? "Babysitter" : "Parent")@(string.IsNullOrEmpty(user?.City) ? "" : " · " + user.City)</small></span>
                     <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
                         <button type="submit" class="portal-icon-button" aria-label="Log out"><svg class="line-icon"><use href="#icon-logout" /></svg></button>
@@ -78,7 +90,7 @@
                     }
                     <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : Url.Action("Index", "Notifications"))" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
                     <button type="button" class="round-icon topbar-message" data-feature="Messages" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></button>
-                    <details class="account-menu"><summary><span class="portal-avatar">@initial</span><span><strong>@displayName</strong><small>@(sitter ? "Babysitter" : "Parent")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Page("/Account/Manage/Index", new { area = "Identity" }))">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
+                    <details class="account-menu"><summary><span class="portal-avatar">@if (!sitter && user?.ProfilePhotoVersion is { } topPhoto) { <img src="@Url.Action("Photo", "ParentSettings", new { v = topPhoto })" alt="" /> } else { @initial }</span><span><strong>@displayName</strong><small>@(sitter ? "Babysitter" : "Parent")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
                 </div>
             </header>
             <main id="main-content">

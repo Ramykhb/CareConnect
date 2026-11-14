@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using BabySitting.Data;
 using BabySitting.Models;
 using BabySitting.Repositories;
 using BabySitting.Services.Bookings;
@@ -13,10 +14,13 @@ namespace BabySitting.Controllers;
 // GET actions display pages; POST actions change data and then redirect (Post/Redirect/Get).
 [Authorize(Roles = Roles.Customer)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class CareRequestsController(ICareRequestRepository repository, IFamilyRepository families, IBookingCancellationService cancellations, IParentBookingService parentBookings,
+public sealed partial class CareRequestsController(BabySittingDbContext db, ICareRequestRepository repository, IFamilyRepository families, IBookingCancellationService cancellations, IParentPaymentService parentBookings,
     UserManager<ApplicationUser> userManager, TimeProvider clock) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
+    private BabySittingDbContext Db => db;
+    private UserManager<ApplicationUser> Users => userManager;
+    private TimeProvider Clock => clock;
 
     // GET /CareRequests?status=open
     [HttpGet]
@@ -37,42 +41,8 @@ public sealed class CareRequestsController(ICareRequestRepository repository, IF
         if (request is null) return NotFound();
         var booking = Pick(await repository.GetBookingsForParentAsync(UserId, id), request);
         ViewBag.CanEdit = ICareRequestRepository.IsEditable(request, clock.GetUtcNow());
+        ViewBag.Status = await LoadResult(id);
         return View(new MyRequestItem(request, booking, clock.GetUtcNow()));
-    }
-
-    // GET /CareRequests/Create — the family profile supplies the children's details.
-    [HttpGet]
-    public async Task<IActionResult> Create()
-    {
-        var family = await families.GetForUserAsync(UserId);
-        if (family is null)
-        {
-            TempData["Error"] = "Create your family profile first, so sitters know who they'll care for.";
-            return RedirectToAction("Create", "Family");
-        }
-        var start = DashboardViewModel.Local(clock.GetUtcNow()).Date.AddDays(1).AddHours(18);
-        return View(new CareRequestFormViewModel
-        {
-            Title = "Evening babysitting", City = family.City, NumberOfChildren = family.NumberOfChildren,
-            YoungestChildAgeYears = family.YoungestChildAgeYears, OldestChildAgeYears = family.OldestChildAgeYears,
-            StartsAtLocal = start, EndsAtLocal = start.AddHours(4)
-        });
-    }
-
-    // POST /CareRequests/Create
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CareRequestFormViewModel form)
-    {
-        var family = await families.GetForUserAsync(UserId);
-        if (family is null) return RedirectToAction("Create", "Family");
-        var times = ToUtc(form);
-        if (!ModelState.IsValid || times is null) return View(form);
-        var request = new ChildcareRequest { CustomerId = UserId, FamilyProfileId = family.Id, CorrelationId = Guid.NewGuid(), Status = RequestStatus.Open, Currency = "USD" };
-        Copy(form, request, times.Value);
-        await repository.AddAsync(request);
-        TempData["Success"] = "Your request was sent to sitters in " + request.City + ".";
-        return RedirectToAction(nameof(Details), new { id = request.Id });
     }
 
     // GET /CareRequests/Edit/{id}

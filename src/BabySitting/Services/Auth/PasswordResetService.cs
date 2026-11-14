@@ -15,9 +15,9 @@ namespace BabySitting.Services.Auth;
 public sealed class PasswordResetCooldown(IMemoryCache cache, TimeProvider clock)
 {
     private readonly object gate = new();
-    public (bool Allowed, DateTimeOffset RetryAt) Reserve(string email)
+    public (bool Allowed, DateTimeOffset RetryAt) Reserve(string email, string purpose = "password-reset")
     {
-        var key = "password-reset:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(email.Trim().ToUpperInvariant())));
+        var key = purpose + ":" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(email.Trim().ToUpperInvariant())));
         lock (gate)
         {
             var now = clock.GetUtcNow();

@@ -62,6 +62,9 @@ public sealed class RegisterModel(RegistrationService registration, UserManager<
             HttpContext.RequestServices.GetRequiredService<ILogger<RegisterModel>>().LogWarning("Confirmation email delivery failed; user can resend confirmation.");
             TempData["StatusMessage"] = "Your account was created, but email delivery failed. Use Resend email confirmation on the login page.";
         }
-        return RedirectToPage("RegisterConfirmation", new { email = user.Email, returnUrl = ReturnUrl });
+        TempData[RegisterConfirmationModel.EmailKey] = user.Email;
+        var retry = HttpContext.RequestServices.GetRequiredService<PasswordResetCooldown>().Reserve(user.Email!, "email-confirmation");
+        TempData[RegisterConfirmationModel.RetryKey] = retry.RetryAt.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return RedirectToPage("RegisterConfirmation", new { returnUrl = ReturnUrl });
     }
 }

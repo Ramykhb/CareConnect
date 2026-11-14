@@ -1,0 +1,17 @@
+@using BabySitting.ViewModels
+@model ParentBookingsViewModel
+@{
+    ViewData["Title"] = "Requests & bookings";
+    ViewData["Breadcrumb"] = "Requests & Bookings";
+    ViewData["BookingSearch"] = Model.Search;
+}
+<header class="ob-heading"><div><h1>My requests &amp; bookings</h1><p>Track every request from sent to completed — all in one place.</p></div><a class="btn btn-dark" asp-controller="CareRequests" asp-action="Create">New request<svg class="line-icon"><use href="#icon-plus" /></svg></a></header>
+<nav class="ob-tabs" aria-label="Filter by booking status">
+    @foreach (var (key, label) in ParentBookingsViewModel.Tabs)
+    {
+        <a class="@(Model.Filter == key ? "active" : "")" aria-current="@(Model.Filter == key ? "page" : null)" asp-action="Index" asp-route-status="@key" asp-route-search="@Model.Search" asp-route-petId="@Model.PetId" asp-route-service="@Model.Service" asp-route-days="@Model.Days">@label <span data-ob-count="@key">@Model.Count(key)</span></a>
+    }
+</nav>
+<div class="ob-toolbar"><form asp-action="Index" method="get" class="ob-filters" role="search" id="owner-booking-search"><input type="hidden" name="status" value="@Model.Filter" /><label class="ob-search"><svg class="line-icon"><use href="#icon-search" /></svg><input type="search" name="search" value="@Model.Search" maxlength="150" placeholder="Search by sitter or request ID…" aria-label="Search requests and bookings" /></label><label class="ob-filter"><svg class="line-icon"><use href="#icon-home" /></svg><select name="service" aria-label="Filter by service"><option value="">All services</option>@foreach (var service in Enum.GetValues<ServiceType>()) { <option value="@service" selected="@(Model.Service == service)">@ParentRequestForm.ServiceName(service)</option> }</select></label><label class="ob-filter date-filter"><svg class="line-icon"><use href="#icon-calendar" /></svg><select name="days" aria-label="Filter by care dates"><option value="0" selected="@(Model.Days == 0)">All dates</option><option value="30" selected="@(Model.Days == 30)">Past 30 days &amp; upcoming</option><option value="90" selected="@(Model.Days == 90)">Past 90 days &amp; upcoming</option><option value="365" selected="@(Model.Days == 365)">Past year &amp; upcoming</option></select></label><button class="ob-filter-apply" type="submit" aria-label="Apply search and filters"><svg class="line-icon"><use href="#icon-arrow" /></svg></button></form><span class="ob-sync" data-ob-sync role="status"><i></i><span>Updates automatically</span></span></div>
+<div data-ob-list data-refresh-url="@Url.Action("Updates", new { status = Model.Filter, search = Model.Search, petId = Model.PetId, service = Model.Service, days = Model.Days, page = Model.CurrentPage })"><partial name="_List" model="Model" /></div>
+@section Scripts { <script src="~/js/parent-bookings.js" asp-append-version="true"></script> }
