@@ -76,6 +76,18 @@ public sealed class AuthTests
         Assert.DoesNotContain("EmailConfirmationUrl", html);
     }
 
+    [Fact]
+    public async Task Incomplete_verification_links_show_a_styled_recovery_screen()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync("/Identity/Account/ConfirmEmail?userId=invalid&code=invalid&returnUrl=https://example.com");
+        Assert.Contains("auth-confirmed", html);
+        Assert.Contains("Send a new verification link", html);
+        Assert.DoesNotContain("Email verified.", html);
+        Assert.DoesNotContain("returnUrl=https", html);
+    }
+
     [Theory]
     [InlineData("Both")]
     [InlineData("PlatformManager")]
@@ -151,7 +163,13 @@ public sealed class AuthTests
             Assert.Contains(email, verifyEmail);
             Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Dashboard/Customer")).StatusCode);
             var confirmationLink = mail.LastLink();
-            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(confirmationLink)).StatusCode);
+            var confirmedPage = await client.GetStringAsync(confirmationLink);
+            Assert.Contains("Email verified.", confirmedPage);
+            Assert.Contains("auth-confirmed", confirmedPage);
+            var refreshedVerification = await client.GetAsync(unverifiedLogin.Headers.Location);
+            Assert.Equal(HttpStatusCode.Redirect, refreshedVerification.StatusCode);
+            Assert.Contains("Login", refreshedVerification.Headers.Location!.ToString());
+            Assert.Contains("Email verified.", await client.GetStringAsync(confirmationLink));
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/Login", login)).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Dashboard/Customer")).StatusCode);
             Assert.Contains("AccessDenied", (await client.GetAsync("/Dashboard/Manager")).Headers.Location!.ToString());

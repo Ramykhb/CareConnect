@@ -1,0 +1,33 @@
+@page
+@model PetSitting.Areas.Identity.Pages.Account.ConfirmEmailModel
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["AuthVariant"] = "auth-recovery-page";
+    ViewData["Title"] = Model.Confirmed ? "Email verified" : "Verification link unavailable";
+}
+<section class="auth-form auth-recovery auth-confirmed" aria-labelledby="auth-heading">
+    <a class="auth-back" asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl"><svg class="line-icon back-arrow"><use href="#icon-arrow" /></svg>Back to log in</a>
+    <div class="confirmation-art" aria-hidden="true">
+        <span class="confirmation-orbit"></span>
+        <span class="confirmation-envelope"><svg class="line-icon"><use href="#icon-mail" /></svg></span>
+        <span class="confirmation-seal"><svg class="line-icon"><use href="@(Model.Confirmed ? "#icon-check" : "#icon-lock")" /></svg></span>
+        <span class="confirmation-spark spark-one">✦</span><span class="confirmation-spark spark-two">✦</span>
+    </div>
+    @if (Model.Confirmed)
+    {
+        <p class="confirmation-eyebrow">ALL SET, PET LOVER</p>
+        <h1 id="auth-heading">Email verified.<br />You’re part of the pack.</h1>
+        <p class="auth-subtitle">One little step for you. A whole lot of care for your pets. Your email is confirmed and your account is ready.</p>
+        <div class="confirmation-detail"><span class="confirmation-detail-icon"><svg class="line-icon"><use href="#icon-shield" /></svg></span><div><strong>Your account is verified</strong><p>Log in to find care you can feel good about.</p></div></div>
+        <a class="auth-submit" asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl">Let’s get started<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
+        <p class="recovery-resend">Happy pets. Peace of mind.</p>
+    }
+    else
+    {
+        <p class="confirmation-eyebrow">LET’S TRY THAT AGAIN</p>
+        <h1 id="auth-heading">This link needs<br />a fresh start.</h1>
+        <p class="auth-subtitle">Your verification link may have expired or is incomplete. Request a new email to finish setting up your account.</p>
+        <a class="auth-submit" asp-page="ResendEmailConfirmation">Send a new verification link<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
+        <p class="recovery-resend">Already verified? <a asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a></p>
+    }
+</section>
