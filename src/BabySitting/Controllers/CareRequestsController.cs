@@ -14,7 +14,7 @@ namespace BabySitting.Controllers;
 // GET actions display pages; POST actions change data and then redirect (Post/Redirect/Get).
 [Authorize(Roles = Roles.Customer)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed partial class CareRequestsController(BabySittingDbContext db, ICareRequestRepository repository, IFamilyRepository families, IBookingCancellationService cancellations, IParentPaymentService parentBookings,
+public sealed partial class CareRequestsController(BabySittingDbContext db, ICareRequestRepository repository, IBookingCancellationService cancellations, IParentPaymentService parentBookings,
     UserManager<ApplicationUser> userManager, TimeProvider clock) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
