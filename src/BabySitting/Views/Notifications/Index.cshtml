@@ -1,0 +1,38 @@
+@using BabySitting.ViewModels
+@model IReadOnlyList<Notification>
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Notifications</h1>
+        <p>Updates about your requests, bookings and payments.</p>
+    </div>
+    @if (Model.Any(n => n.ReadAtUtc is null))
+    {
+        <form asp-action="ReadAll" method="post" class="header-actions"><button type="submit" class="btn btn-ghost"><svg class="line-icon"><use href="#icon-check" /></svg>Mark all as read</button></form>
+    }
+</div>
+
+@if (Model.Count == 0)
+{
+    <section class="empty-state">
+        <span class="add-circle"><svg class="line-icon" width="40" height="40"><use href="#icon-bell" /></svg></span>
+        <h2>You're all caught up</h2>
+        <p>When a sitter accepts, cancels or updates a booking, you'll see it here.</p>
+    </section>
+}
+else
+{
+    <div class="request-list">
+        @foreach (var n in Model)
+        {
+            <form asp-action="Read" asp-route-id="@n.Id" method="post" class="card request-row notification-row @(n.ReadAtUtc is null ? "unread" : "")">
+                <input type="hidden" name="returnUrl" value="@n.RelativeUrl" />
+                <div><strong>@n.Title</strong><span class="pet-meta">@n.Body</span><span class="pet-meta">@DashboardViewModel.Local(n.CreatedAtUtc).ToString("ddd d MMM, HH:mm")</span></div>
+                <div class="request-row-side">@if (n.ReadAtUtc is null) { <span class="status-chip yellow">New</span> }<button type="submit" class="btn btn-light btn-sm">@(n.RelativeUrl is null ? "Mark read" : "Open")</button></div>
+            </form>
+        }
+    </div>
+}

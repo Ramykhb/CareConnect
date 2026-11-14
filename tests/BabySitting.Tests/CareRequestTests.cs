@@ -79,7 +79,7 @@ public sealed class CareRequestTests
         public Guid RequestId { get; private set; }
         public Guid BookingId { get; private set; }
 
-        public static async Task<Data> CreateAsync(bool booked, BookingStatus status = BookingStatus.Confirmed)
+        public static async Task<Data> CreateAsync(bool booked, BookingStatus status = BookingStatus.Confirmed, bool paid = true)
         {
             var data = new Data { Factory = CreateFactory() };
             await data.UseAsync(async db =>
@@ -96,7 +96,7 @@ public sealed class CareRequestTests
                     var offer = new BabysittingOffer { Request = request, SitterProfile = profile, Amount = 40, Status = OfferStatus.Accepted };
                     var booking = new BabysittingBooking { Request = request, Offer = offer, Customer = data.Parent, SitterProfile = profile, StartsAtUtc = request.StartsAtUtc, EndsAtUtc = request.EndsAtUtc, TotalAmount = 40, Status = status };
                     db.AddRange(offer, booking);
-                    db.Payments.Add(new Payment { Booking = booking, Payer = data.Parent, Amount = 40, Status = PaymentStatus.Succeeded });
+                    if (paid) db.Payments.Add(new Payment { Booking = booking, Payer = data.Parent, Amount = 40, Status = PaymentStatus.Succeeded });
                     data.BookingId = booking.Id;
                 }
                 await db.SaveChangesAsync();
@@ -123,6 +123,7 @@ public sealed class CareRequestTests
             await UseAsync(async db =>
             {
                 await db.Notifications.Where(n => users.Contains(n.UserId)).ExecuteDeleteAsync();
+                await db.Reviews.Where(r => users.Contains(r.ReviewerId)).ExecuteDeleteAsync();
                 await db.Payments.Where(p => users.Contains(p.PayerId)).ExecuteDeleteAsync();
                 await db.BabysittingBookings.Where(b => users.Contains(b.CustomerId)).ExecuteDeleteAsync();
                 await db.BabysittingOffers.Where(o => users.Contains(o.SitterProfile.UserId)).ExecuteDeleteAsync();
@@ -199,6 +200,51 @@ public sealed class CareRequestTests
         Assert.Equal(RequestStatus.Open, await d.GetAsync(db => db.ChildcareRequests.Where(r => r.Id == d.RequestId).Select(r => r.Status).SingleAsync()));
         Assert.Equal(OfferStatus.Withdrawn, await d.GetAsync(db => db.BabysittingOffers.Where(o => o.RequestId == d.RequestId).Select(o => o.Status).SingleAsync()));
         Assert.Equal(1, await d.GetAsync(db => db.Notifications.CountAsync(n => n.UserId == d.Parent.Id)));
+    }
+
+    private static Task<BookingWriteResult> Pay(Data d, Guid userId, Guid token) => d.GetAsync(async db =>
+    {
+        var v = Convert.ToBase64String((await db.BabysittingBookings.AsNoTracking().SingleAsync(b => b.Id == d.BookingId)).RowVersion);
+        return await new ParentBookingService(db, TimeProvider.System).PayAsync(userId, d.BookingId, token, v);
+    });
+
+    [SqlServerFact]
+    public async Task Demo_payment_confirms_the_booking_once_and_notifies_the_sitter()
+    {
+        await using var d = await Data.CreateAsync(booked: true, BookingStatus.AwaitingPayment, paid: false);
+        var token = Guid.NewGuid();
+        Assert.True((await Pay(d, d.Stranger.Id, token)).NotFound);
+        Assert.True((await Pay(d, d.Parent.Id, token)).Succeeded);
+        Assert.True((await Pay(d, d.Parent.Id, token)).Succeeded); // a resubmitted form is not charged twice
+        Assert.False((await Pay(d, d.Parent.Id, Guid.NewGuid())).Succeeded); // already paid
+        Assert.Equal(BookingStatus.Confirmed, await d.GetAsync(db => db.BabysittingBookings.Where(b => b.Id == d.BookingId).Select(b => b.Status).SingleAsync()));
+        Assert.Equal(40m, await d.GetAsync(db => db.Payments.Where(p => p.BookingId == d.BookingId && p.Status == PaymentStatus.Succeeded).SumAsync(p => p.Amount)));
+        Assert.Equal(1, await d.GetAsync(db => db.Notifications.CountAsync(n => n.UserId == d.Sitter.Id)));
+    }
+
+    [SqlServerFact]
+    public async Task Parents_review_only_completed_bookings_once()
+    {
+        await using var upcoming = await Data.CreateAsync(booked: true);
+        Assert.False((await upcoming.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(upcoming.Parent.Id, upcoming.BookingId, 5, "Great"))).Succeeded);
+        await using var d = await Data.CreateAsync(booked: true, BookingStatus.Completed);
+        Assert.False((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 6, null))).Succeeded);
+        Assert.True((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Stranger.Id, d.BookingId, 5, null))).NotFound);
+        Assert.True((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 5, "Lovely evening"))).Succeeded);
+        Assert.False((await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).ReviewAsync(d.Parent.Id, d.BookingId, 4, "Again"))).Succeeded);
+        Assert.Equal(5, await d.GetAsync(db => db.Reviews.Where(r => r.BookingId == d.BookingId).Select(r => r.Rating).SingleAsync()));
+    }
+
+    [SqlServerFact]
+    public async Task Notifications_are_marked_read_only_for_their_owner()
+    {
+        await using var d = await Data.CreateAsync(booked: false);
+        var id = Guid.NewGuid();
+        await d.UseAsync(async db => { db.Notifications.Add(new Notification { Id = id, UserId = d.Parent.Id, Title = "Hi", Body = "Test" }); await db.SaveChangesAsync(); });
+        Assert.False(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).MarkReadAsync(d.Stranger.Id, id)));
+        Assert.Single(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).NotificationsAsync(d.Parent.Id)));
+        Assert.True(await d.GetAsync(db => new ParentBookingService(db, TimeProvider.System).MarkReadAsync(d.Parent.Id, id)));
+        Assert.NotNull(await d.GetAsync(db => db.Notifications.Where(n => n.Id == id).Select(n => n.ReadAtUtc).SingleAsync()));
     }
 
     [SqlServerFact]

@@ -152,3 +152,14 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 .cancel-booking-form textarea { min-height:80px; border-radius:14px; border:1px solid var(--card); padding:10px; }
 .cancel-booking-card { margin-top:18px; }
 @media (max-width:640px) { .request-row { flex-direction:column; align-items:flex-start; } .request-row-side { justify-items:start; text-align:left; } }
+
+/* Payment, review and notification additions */
+.pay-form, .review-form { display:grid; gap:10px; margin:14px 0; }
+.review-form textarea { min-height:80px; border-radius:14px; border:1px solid var(--card); padding:10px; }
+.star-picker { display:inline-flex; flex-direction:row-reverse; justify-content:flex-end; gap:4px; }
+.star-picker input { position:absolute; opacity:0; width:1px; height:1px; }
+.star-picker label { font-size:28px; color:#cfd6d1; cursor:pointer; }
+.star-picker input:checked ~ label, .star-picker label:hover, .star-picker label:hover ~ label { color:#e3b505; }
+.star-picker input:focus-visible + label { outline:3px solid #778d2d; border-radius:6px; }
+.review-box { margin:14px 0; padding:14px; border-radius:16px; background:var(--card-2); display:grid; gap:6px; }
+.notification-row.unread { border-left:4px solid var(--lime); }

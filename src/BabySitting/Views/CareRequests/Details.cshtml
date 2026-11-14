@@ -49,6 +49,33 @@
             <p><strong>@Model.SitterName</strong><br /><span class="pet-meta">@b.SitterProfile.YearsOfExperience yrs experience · @DashboardViewModel.Money(b.SitterProfile.HourlyRate, b.SitterProfile.Currency)/hr</span></p>
             <p>Booking: <span class="status-chip @DashboardViewModel.StatusClass(b.Status)">@DashboardViewModel.Status(b.Status)</span> · @DashboardViewModel.Money(b.TotalAmount, b.Currency)</p>
             @if (b.Status == BookingStatus.Cancelled) { <p class="pet-meta">@b.CancellationReason</p> }
+            @if (ParentBookingService.CanPay(b))
+            {
+                <form asp-action="Pay" method="post" class="pay-form">
+                    <input type="hidden" name="requestId" value="@r.Id" />
+                    <input type="hidden" name="bookingId" value="@b.Id" />
+                    <input type="hidden" name="clientToken" value="@Guid.NewGuid()" />
+                    <input type="hidden" name="version" value="@Convert.ToBase64String(b.RowVersion)" />
+                    <p class="pet-meta">Your sitter accepted. Pay to confirm the booking — this is a demo payment, no card is charged.</p>
+                    <button type="submit" class="btn btn-lime"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(b.TotalAmount - BookingRules.Paid(b), b.Currency) (demo)</button>
+                </form>
+            }
+            @if (b.Payments.Any(p => p.Status == PaymentStatus.Succeeded)) { <p class="pet-meta">Paid @DashboardViewModel.Money(BookingRules.Paid(b), b.Currency) · ref @b.Payments.First(p => p.Status == PaymentStatus.Succeeded).ProviderTransactionId</p> }
+            @if (b.Review is not null)
+            {
+                <div class="review-box"><strong>Your review · @(new string('★', b.Review.Rating))@(new string('☆', 5 - b.Review.Rating))</strong>@if (b.Review.Comment is not null) { <p>@b.Review.Comment</p> }@if (b.Review.SitterReply is not null) { <p class="pet-meta">Sitter replied: @b.Review.SitterReply</p> }</div>
+            }
+            else if (ParentBookingService.CanReview(b))
+            {
+                <form asp-action="Review" method="post" class="review-form">
+                    <input type="hidden" name="requestId" value="@r.Id" />
+                    <input type="hidden" name="bookingId" value="@b.Id" />
+                    <label>How was the care?</label>
+                    <div class="star-picker">@for (var i = 5; i >= 1; i--) { <input type="radio" id="star-@i" name="rating" value="@i" required /><label for="star-@i" title="@i stars">★</label> }</div>
+                    <textarea name="comment" maxlength="2000" placeholder="Tell other families about your sitter…"></textarea>
+                    <button type="submit" class="btn btn-dark">Publish review</button>
+                </form>
+            }
             @if (BookingCancellationService.CanCancel(b))
             {
                 <form asp-action="CancelBooking" method="post" class="cancel-booking-form">
