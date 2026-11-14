@@ -27,6 +27,7 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
             .Where(b => b.CustomerId == parentId && (requestId == null || b.RequestId == requestId))
             .Include(b => b.SitterProfile).ThenInclude(p => p.User)
             .Include(b => b.Payments)
+            .Include(b => b.Review)
             .AsSplitQuery()
             .OrderByDescending(b => b.CreatedAtUtc)
             .ToListAsync();
