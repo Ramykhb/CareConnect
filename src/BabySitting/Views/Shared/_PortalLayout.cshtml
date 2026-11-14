@@ -26,6 +26,10 @@
     <link rel="stylesheet" href="~/css/baby-auth.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/baby-portal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/baby-dashboard.css" asp-append-version="true" />
+    @if (controller == "CareRequests")
+    {
+        <link rel="stylesheet" href="~/css/parent-requests.css" asp-append-version="true" />
+    }
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="baby-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">

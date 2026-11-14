@@ -778,6 +778,49 @@ namespace BabySitting.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BabySitting.Models.ParentRequestDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Step")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SubmittedRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmittedRequestId")
+                        .IsUnique()
+                        .HasFilter("[SubmittedRequestId] IS NOT NULL");
+
+                    b.HasIndex("CustomerId", "UpdatedAtUtc");
+
+                    b.ToTable("ParentRequestDrafts");
+                });
+
             modelBuilder.Entity("BabySitting.Models.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1410,6 +1453,24 @@ namespace BabySitting.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.ParentRequestDraft", b =>
+                {
+                    b.HasOne("BabySitting.Models.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BabySitting.Models.ChildcareRequest", "SubmittedRequest")
+                        .WithMany()
+                        .HasForeignKey("SubmittedRequestId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SubmittedRequest");
                 });
 
             modelBuilder.Entity("BabySitting.Models.Payment", b =>
