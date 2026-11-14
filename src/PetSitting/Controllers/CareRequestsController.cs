@@ -211,7 +211,7 @@ public sealed class CareRequestsController(PetSittingDbContext db, UserManager<A
     public async Task<IActionResult> Details(Guid id)
     {
         var result = await LoadResult(id);
-        return result is null ? NotFound() : View(result);
+        return result is null ? NotFound() : RedirectToAction("Details", "OwnerBookings", new { id });
     }
     [HttpGet]
     public async Task<IActionResult> Status(Guid id)

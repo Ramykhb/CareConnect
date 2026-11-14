@@ -121,7 +121,7 @@ public sealed class SitterBookingService(PetSittingDbContext db, TimeProvider cl
         catch (DbUpdateConcurrencyException) { return new(false, "The booking changed. Refresh and try again."); }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 }) { return new(false, "This update has already been processed. Refresh to see the saved result."); }
     }
-    private void Notify(PetBooking b, DateTimeOffset now, string title, string body) => db.Notifications.Add(new() { Category = NotificationCategory.Booking, UserId = b.CustomerId, Title = title, Body = body, RelativeUrl = $"/Dashboard/Customer?booking={b.Id}#bookings", CreatedAtUtc = now });
+    private void Notify(PetBooking b, DateTimeOffset now, string title, string body) => db.Notifications.Add(new() { Category = NotificationCategory.Booking, UserId = b.CustomerId, Title = title, Body = body, RelativeUrl = $"/OwnerBookings/Details/{b.RequestId}", CreatedAtUtc = now });
     private static bool VersionMatches(byte[] actual, string version)
     {
         try { return actual.Length == 8 && actual.SequenceEqual(Convert.FromBase64String(version ?? "")); } catch (FormatException) { return false; }

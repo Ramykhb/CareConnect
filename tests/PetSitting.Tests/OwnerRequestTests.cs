@@ -138,7 +138,7 @@ public sealed class OwnerRequestTests
             var submitted = await client.GetStringAsync(sent.Headers.Location);
             Assert.Contains("Your request is on its way", submitted);
             Assert.Contains("Awaiting a sitter", submitted);
-            Assert.Contains("Wizard Max", await client.GetStringAsync($"/CareRequests/Details/{draftId}"));
+            Assert.Contains("Wizard Max", await client.GetStringAsync($"/OwnerBookings/Details/{draftId}"));
             Assert.Equal(HttpStatusCode.NotFound, (await otherClient.GetAsync($"/CareRequests/Details/{draftId}")).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await otherClient.GetAsync($"/CareRequests/Status/{draftId}")).StatusCode);
             var inbox = await sitterClient.GetStringAsync($"/SitterRequests?id={draftId}");

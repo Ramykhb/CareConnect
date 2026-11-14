@@ -1,0 +1,27 @@
+@using PetSitting.ViewModels
+@using PetSitting.Services.Bookings
+@model OwnerBookingDetails
+@{
+    var b = Model.Booking;
+    var accepted = b is not null && b.Status is not (BookingStatus.Pending or BookingStatus.Rejected);
+    var paid = b is not null && BookingRules.FullyPaid(b);
+    var refunded = Model.Refunded > 0;
+    var started = b?.StartedAtUtc is not null || b?.Status is BookingStatus.InProgress or BookingStatus.Completed;
+    var complete = b?.Status == BookingStatus.Completed;
+    var cancelled = Model.Request.Status == RequestStatus.Cancelled || b?.Status == BookingStatus.Cancelled;
+    var timeline = new[]
+    {
+        ("Request submitted", (DateTimeOffset?)Model.Request.CreatedAtUtc, true, false),
+        (accepted ? "Sitter accepted" : Model.Item.Bucket == "rejected" ? "Sitter declined" : "Awaiting a sitter’s decision", accepted ? b?.Offer.DecidedAtUtc ?? b?.CreatedAtUtc : null, accepted, !accepted && !cancelled && Model.Item.Bucket == "pending"),
+        (refunded ? "Demo payment refunded" : b?.TotalAmount == 0 ? "No payment required" : "Payment confirmed", refunded ? null : b?.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.Currency == b.Currency).Max(p => p.PaidAtUtc), paid || refunded, accepted && !paid && !refunded && !cancelled),
+        ("Care in progress", b?.StartedAtUtc, started, paid && !started && !cancelled),
+        ("Completed", b?.CompletedAtUtc, complete, started && !complete && !cancelled)
+    };
+}
+<ol class="ob-timeline">
+    @foreach (var (label, date, done, current) in timeline)
+    {
+        <li class="@(done ? "done" : current ? "current" : "")"><span><svg class="line-icon"><use href="@(done ? "#icon-check" : current ? "#icon-clock" : "#icon-circle")" /></svg></span><div><strong>@label</strong><small>@(date is { } value ? DashboardViewModel.Local(value).ToString("ddd d MMM · h:mm tt") : done ? "Recorded in your booking" : current ? "We’ll update this when the status changes." : "")</small></div></li>
+    }
+    @if (cancelled) { <li class="cancelled"><span><svg class="line-icon"><use href="#icon-close" /></svg></span><div><strong>Cancelled</strong><small>@(b?.CancelledAtUtc is { } date ? DashboardViewModel.Local(date).ToString("ddd d MMM · h:mm tt") : "This request is closed.")</small></div></li> }
+</ol>

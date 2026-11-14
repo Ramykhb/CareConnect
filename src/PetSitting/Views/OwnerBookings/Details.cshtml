@@ -1,0 +1,5 @@
+@using PetSitting.ViewModels
+@model OwnerBookingDetails
+@{ ViewData["Title"] = Model.Item.Reference; ViewData["Breadcrumb"] = "Requests & Bookings / #" + Model.Item.Reference; }
+<div data-ob-detail data-refresh-url="@Url.Action("DetailUpdates", new { id = Model.Request.Id })"><partial name="_DetailBody" model="Model" /></div>
+@section Scripts { <script src="~/js/owner-bookings.js" asp-append-version="true"></script> }

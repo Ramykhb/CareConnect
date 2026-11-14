@@ -30,6 +30,10 @@
     {
         <link rel="stylesheet" href="~/css/pet-profiles.css" asp-append-version="true" />
     }
+    @if (controller == "OwnerBookings")
+    {
+        <link rel="stylesheet" href="~/css/owner-bookings.css" asp-append-version="true" />
+    }
     @if (controller == "CareRequests")
     {
         <link rel="stylesheet" href="~/css/owner-requests.css" asp-append-version="true" />
@@ -47,8 +51,8 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || controller == "CareRequests" && key == "bookings" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
-                        var href = key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
+                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || (controller == "CareRequests" || controller == "OwnerBookings") && key == "bookings" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var href = !sitter && key == "bookings" ? Url.Action("Index", "OwnerBookings") : key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
@@ -84,6 +88,12 @@
                     {
                         <form class="dashboard-search pets-top-search" asp-controller="Pets" asp-action="Index" method="get" role="search">
                             <svg class="line-icon"><use href="#icon-search" /></svg><input type="search" name="search" value="@ViewBag.Search" placeholder="Search your pets…" aria-label="Search pets by name or breed" /><button type="submit" aria-label="Search pets"><svg class="line-icon"><use href="#icon-arrow" /></svg></button>
+                        </form>
+                    }
+                    else if (controller == "OwnerBookings")
+                    {
+                        <form class="dashboard-search" asp-controller="OwnerBookings" asp-action="Index" method="get" role="search">
+                            <svg class="line-icon"><use href="#icon-search" /></svg><input type="search" name="search" value="@ViewData["BookingSearch"]" placeholder="Search sitters, pets, bookings…" aria-label="Search your bookings" /><button class="ob-top-search-submit" type="submit" aria-label="Search bookings"><svg class="line-icon"><use href="#icon-arrow" /></svg></button>
                         </form>
                     }
                     else if (portal is not null)
