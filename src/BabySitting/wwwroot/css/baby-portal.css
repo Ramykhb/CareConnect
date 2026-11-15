@@ -214,3 +214,6 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 .chat-conversation.unread { border-left:4px solid var(--lime); }
 .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 @media (max-width:640px) { .chat-bubble { max-width:90%; } .chat-form { flex-direction:column; align-items:stretch; } }
+
+/* My Family portrait: a clear, large family icon */
+.family-page .pet-photo .line-icon { width:72px; height:72px; stroke-width:1.4; }
