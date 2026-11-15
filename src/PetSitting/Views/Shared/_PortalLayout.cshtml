@@ -40,7 +40,7 @@
     }
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="pet-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
+<body data-live-notifications="@(User.Identity?.IsAuthenticated == true ? "on" : null)" class="pet-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
     <a class="auth-skip" href="#main-content">Skip to content</a>
     <partial name="_PortalIcons" />
     <div class="portal-shell">
@@ -51,8 +51,8 @@
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
-                        var active = controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || (controller == "CareRequests" || controller == "OwnerBookings") && key == "bookings" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
-                        var href = !sitter && key == "bookings" ? Url.Action("Index", "OwnerBookings") : key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
+                        var active = controller == "Notifications" && key == "notifications" || controller == "Dashboard" && key == "overview" || controller == "Pets" && key == "pets" || (controller == "CareRequests" || controller == "OwnerBookings") && key == "bookings" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
+                        var href = !sitter && key == "notifications" ? Url.Action("Index", "Notifications") : !sitter && key == "bookings" ? Url.Action("Index", "OwnerBookings") : key == "pets" ? Url.Action("Index", "Pets") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
@@ -100,7 +100,7 @@
                     {
                         <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@(sitter ? "Search requests, pets…" : "Search pets, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }
-                    <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : home + "#notifications")" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
+                    <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : Url.Action("Index", "Notifications"))" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
                     <button type="button" class="round-icon topbar-message" data-feature="Messages" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></button>
                     <details class="account-menu"><summary><span class="portal-avatar">@if (!sitter && user?.ProfilePhotoVersion is { } topPhoto) { <img src="@Url.Action("Photo", "OwnerSettings", new { v = topPhoto })" alt="" /> } else { @initial }</span><span><strong>@displayName</strong><small>@(sitter ? "Pet sitter" : "Pet owner")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "OwnerSettings"))">Manage your account ↗</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
                 </div>
@@ -116,6 +116,11 @@
     <dialog id="feature-dialog" class="dashboard-dialog" aria-labelledby="feature-title"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-paw" /></svg></span><h2 id="feature-title">More care is on the way</h2><p id="feature-description">This feature is being prepared. You can manage your pets and account today.</p><button class="btn btn-dark" type="button" data-close>Got it</button></dialog>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/pet-dashboard.js" asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="~/js/live-notifications.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

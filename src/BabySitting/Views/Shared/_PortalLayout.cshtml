@@ -40,7 +40,7 @@
     }
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="baby-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
+<body data-live-notifications="@(User.Identity?.IsAuthenticated == true ? "on" : null)" class="baby-portal @(portal is null ? "" : "dashboard-page") @ViewData["PortalClass"]">
     <a class="auth-skip" href="#main-content">Skip to content</a>
     <partial name="_PortalIcons" />
     <div class="portal-shell">
@@ -104,6 +104,11 @@
     <dialog id="feature-dialog" class="dashboard-dialog" aria-labelledby="feature-title"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2 id="feature-title">More care is on the way</h2><p id="feature-description">This feature is being prepared. You can manage your children and account today.</p><button class="btn btn-dark" type="button" data-close>Got it</button></dialog>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/baby-dashboard.js" asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="~/js/live-notifications.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

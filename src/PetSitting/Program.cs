@@ -8,16 +8,23 @@ using PetSitting.Services.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
+// Live notifications (WatchWise-style): SignalR hub + EF Core hook that pushes saved notifications.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<PetSitting.Services.Notifications.LiveNotifications>();
+builder.Services.AddSingleton<PetSitting.Services.Notifications.NotificationBroadcastInterceptor>();
+builder.Services.AddScoped<PetSitting.Services.Notifications.INotificationFeedService, PetSitting.Services.Notifications.NotificationFeedService>();
 builder.Services.AddScoped<PetSitting.Services.Bookings.OwnerBookingService>();
 builder.Services.AddScoped<PetSitting.Services.Portal.ISitterReportingService, PetSitting.Services.Portal.SitterReportingService>();
 builder.Services.AddScoped<PetSitting.Services.Portal.ISitterAccountService, PetSitting.Services.Portal.SitterAccountService>();
+builder.Services.AddScoped<PetSitting.Services.Bookings.IBookingCancellationService, PetSitting.Services.Bookings.BookingCancellationService>();
 builder.Services.AddScoped<PetSitting.Services.Bookings.ISitterBookingService, PetSitting.Services.Bookings.SitterBookingService>();
 builder.Services.AddScoped<PetSitting.Services.Scheduling.ISitterAvailabilityService, PetSitting.Services.Scheduling.SitterAvailabilityService>();
 builder.Services.AddScoped<PetSitting.Services.Requests.ISitterRequestService, PetSitting.Services.Requests.SitterRequestService>();
 builder.Services.AddScoped<PetSitting.Services.Dashboard.IDashboardService, PetSitting.Services.Dashboard.DashboardService>();
-builder.Services.AddDbContext<PetSittingDbContext>(options =>
+builder.Services.AddDbContext<PetSittingDbContext>((services, options) =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.EnableRetryOnFailure()));
+        sql => sql.EnableRetryOnFailure())
+        .AddInterceptors(services.GetRequiredService<PetSitting.Services.Notifications.NotificationBroadcastInterceptor>()));
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IPetRepository, PetRepository>();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
@@ -66,6 +73,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapStaticAssets();
 app.MapHealthChecks("/health/live");
+app.MapHub<PetSitting.Services.Notifications.NotificationHub>(PetSitting.Services.Notifications.NotificationHub.Path);
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 app.Run();
