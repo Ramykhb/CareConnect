@@ -24,6 +24,7 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<MessageOutbox> MessageOutboxEntries => Set<MessageOutbox>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
     public DbSet<Pet> Pets => Set<Pet>();
@@ -143,6 +144,13 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
         modelBuilder.Entity<PayoutAllocation>().HasOne(a => a.Payment).WithMany().HasForeignKey(a => a.PaymentId);
         modelBuilder.Entity<PayoutAllocation>().HasIndex(a => new { a.PayoutId, a.PaymentId }).IsUnique();
         modelBuilder.Entity<PayoutAllocation>().ToTable(t => t.HasCheckConstraint("CK_PayoutAllocation_Amount", "[Amount] > 0"));
+
+        modelBuilder.Entity<ChatMessage>().HasOne(m => m.Booking).WithMany().HasForeignKey(m => m.BookingId);
+        modelBuilder.Entity<ChatMessage>().HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.SenderId);
+        modelBuilder.Entity<ChatMessage>().HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.RecipientId);
+        modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.BookingId, m.CreatedAtUtc });
+        modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.RecipientId, m.ReadAtUtc });
+        modelBuilder.Entity<ChatMessage>().HasIndex(m => m.ReadAtUtc);
 
         // Avoid SQL Server multiple cascade paths and accidental removal of booking history.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

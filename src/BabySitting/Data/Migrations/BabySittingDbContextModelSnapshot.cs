@@ -541,6 +541,45 @@ namespace BabySitting.Data.Migrations
                     b.ToTable("BookingUpdatePhotos");
                 });
 
+            modelBuilder.Entity("BabySitting.Models.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReadAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReadAtUtc");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("BookingId", "CreatedAtUtc");
+
+                    b.HasIndex("RecipientId", "ReadAtUtc");
+
+                    b.ToTable("ChatMessages");
+                });
+
             modelBuilder.Entity("BabySitting.Models.ChildcareRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1479,6 +1518,29 @@ namespace BabySitting.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("BookingUpdate");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.ChatMessage", b =>
+                {
+                    b.HasOne("BabySitting.Models.BabysittingBooking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BabySitting.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BabySitting.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BabySitting.Models.ChildcareRequest", b =>

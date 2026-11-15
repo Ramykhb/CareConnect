@@ -1,0 +1,32 @@
+@using BabySitting.Services.Chat
+@using BabySitting.ViewModels
+@model IReadOnlyList<ChatConversation>
+@{
+    ViewData["Title"] = "Messages";
+}
+<div class="page-header">
+    <div>
+        <h1>Messages</h1>
+        <p>Chat about each booking. Messages disappear 24 hours after they're read.</p>
+    </div>
+</div>
+@if (Model.Count == 0)
+{
+    <section class="empty-state">
+        <span class="add-circle"><svg class="line-icon" width="40" height="40"><use href="#icon-chat" /></svg></span>
+        <h2>No conversations yet</h2>
+        <p>Once a booking is accepted, you can message each other here.</p>
+    </section>
+}
+else
+{
+    <div class="request-list">
+        @foreach (var c in Model)
+        {
+            <a class="card request-row chat-conversation @(c.Unread > 0 ? "unread" : "")" asp-action="Chat" asp-route-id="@c.Booking.Id">
+                <div><strong>@c.OtherName</strong><span class="pet-meta">@c.Title · @DashboardViewModel.Local(c.Booking.StartsAtUtc).ToString("d MMM")</span><span class="pet-meta">@(c.Last?.Body ?? "No messages yet")</span></div>
+                <div class="request-row-side">@if (c.Unread > 0) { <span class="status-chip yellow">@c.Unread new</span> }@if (c.Last is not null) { <small>@DashboardViewModel.Local(c.Last.CreatedAtUtc).ToString("d MMM, HH:mm")</small> }</div>
+            </a>
+        }
+    </div>
+}

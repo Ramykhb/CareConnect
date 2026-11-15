@@ -10,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 // Live notifications (WatchWise-style): SignalR hub + EF Core hook that pushes saved notifications.
 builder.Services.AddSignalR();
+builder.Services.AddScoped<PetSitting.Services.Chat.IChatService, PetSitting.Services.Chat.ChatService>();
+builder.Services.AddHostedService<PetSitting.Services.Chat.MessageCleanupService>();
 builder.Services.AddSingleton<PetSitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddSingleton<PetSitting.Services.Notifications.NotificationBroadcastInterceptor>();
 builder.Services.AddScoped<PetSitting.Services.Notifications.INotificationFeedService, PetSitting.Services.Notifications.NotificationFeedService>();
@@ -73,6 +75,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapStaticAssets();
 app.MapHealthChecks("/health/live");
+app.MapHub<PetSitting.Services.Chat.ChatHub>(PetSitting.Services.Chat.ChatHub.Path);
 app.MapHub<PetSitting.Services.Notifications.NotificationHub>(PetSitting.Services.Notifications.NotificationHub.Path);
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
