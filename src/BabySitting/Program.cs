@@ -8,9 +8,15 @@ using BabySitting.Services.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
-builder.Services.AddDbContext<BabySittingDbContext>(options =>
+// Live notifications (WatchWise-style): SignalR hub + EF Core hook that pushes saved notifications.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
+builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationBroadcastInterceptor>();
+builder.Services.AddScoped<BabySitting.Services.Notifications.INotificationFeedService, BabySitting.Services.Notifications.NotificationFeedService>();
+builder.Services.AddDbContext<BabySittingDbContext>((services, options) =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.EnableRetryOnFailure()));
+        sql => sql.EnableRetryOnFailure())
+        .AddInterceptors(services.GetRequiredService<BabySitting.Services.Notifications.NotificationBroadcastInterceptor>()));
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
 builder.Services.AddScoped<ICareRequestRepository, CareRequestRepository>();
@@ -69,6 +75,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapStaticAssets();
 app.MapHealthChecks("/health/live");
+app.MapHub<BabySitting.Services.Notifications.NotificationHub>(BabySitting.Services.Notifications.NotificationHub.Path);
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 app.Run();
