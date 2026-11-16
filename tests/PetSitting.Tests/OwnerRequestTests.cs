@@ -19,6 +19,8 @@ public sealed class OwnerRequestTests
 {
     [Theory]
     [InlineData("/CareRequests/Create")]
+    [InlineData("/CareRequests/Edit/00000000-0000-0000-0000-000000000001")]
+    [InlineData("/CareRequests/Delete/00000000-0000-0000-0000-000000000001")]
     [InlineData("/CareRequests/Submitted/00000000-0000-0000-0000-000000000001")]
     [InlineData("/CareRequests/Status/00000000-0000-0000-0000-000000000001")]
     public async Task Request_flow_requires_an_authenticated_owner(string path)

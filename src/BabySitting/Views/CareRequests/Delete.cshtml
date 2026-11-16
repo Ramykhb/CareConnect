@@ -22,6 +22,7 @@
     {
         <p>@(hasResponses ? "Sitters already responded, so the request is kept in their history and marked cancelled." : "No sitter has responded yet, so the request is removed completely. This can't be undone.")</p>
         <form asp-action="Delete" asp-route-id="@r.Id" method="post">
+            <input type="hidden" name="version" value="@Convert.ToBase64String(r.RowVersion)" />
             <a class="btn btn-light" asp-action="Details" asp-route-id="@r.Id">Keep it</a>
             <button type="submit" class="btn btn-danger"><svg class="line-icon"><use href="#icon-trash" /></svg>@(hasResponses ? "Yes, cancel" : "Yes, delete")</button>
         </form>

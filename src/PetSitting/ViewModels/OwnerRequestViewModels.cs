@@ -14,10 +14,10 @@ public sealed class OwnerRequestForm
     public TimeOnly? EndTime { get; set; }
     [StringLength(150)] public string? City { get; set; } = "";
     [StringLength(120)] public string? Area { get; set; } = "";
-    [StringLength(140)] public string? StreetAddress { get; set; } = "";
+    [StringLength(300)] public string? StreetAddress { get; set; } = "";
     [StringLength(60)] public string? Building { get; set; } = "";
     [StringLength(80)] public string? AccessNotes { get; set; } = "";
-    [StringLength(3000)] public string? Instructions { get; set; } = "";
+    [StringLength(4000)] public string? Instructions { get; set; } = "";
     [Range(typeof(decimal), "1", "99999")] public decimal? BudgetMin { get; set; }
     [Range(typeof(decimal), "1", "99999")] public decimal? BudgetMax { get; set; }
     public Guid? PreferredSitterId { get; set; }

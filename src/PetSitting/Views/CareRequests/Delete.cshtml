@@ -1,0 +1,11 @@
+@model PetCareRequest
+@{ var responses = Model.Offers.Count > 0; ViewData["Title"] = responses ? "Cancel request" : "Delete request"; }
+<section class="card confirm-card">
+    <h1>@ViewData["Title"]?</h1><h2>@Model.Title</h2>
+    <p>@(responses ? "Sitter responses and any booking history will be preserved. The request will be marked cancelled." : "This removes the request and its saved draft if no sitter has responded. Any existing booking history is preserved by cancelling the request instead. Deletion cannot be undone.")</p>
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+        <input type="hidden" name="version" value="@Convert.ToBase64String(Model.RowVersion)" />
+        <a class="btn btn-light" asp-controller="OwnerBookings" asp-action="Details" asp-route-id="@Model.Id">Keep request</a>
+        <button class="btn btn-danger" type="submit">@(responses ? "Cancel request" : "Delete request")</button>
+    </form>
+</section>
