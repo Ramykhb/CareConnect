@@ -91,9 +91,9 @@ public sealed partial class CareRequestsController(BabySittingDbContext db, ICar
     // POST /CareRequests/Delete/{id}
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(Guid id)
+    public async Task<IActionResult> DeleteConfirmed(Guid id, string? version)
     {
-        switch (await repository.DeleteOrCancelAsync(UserId, id))
+        switch (await repository.DeleteOrCancelAsync(UserId, id, version ?? ""))
         {
             case CareRequestWriteResult.NotFound: return NotFound();
             case CareRequestWriteResult.Deleted: TempData["Success"] = "Your request was deleted."; return RedirectToAction(nameof(Index));

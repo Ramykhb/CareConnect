@@ -272,3 +272,11 @@ dotnet ef database update --project src/BabySitting -- --environment Development
 ```
 
 Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/BabySitting.Tests` for the HTTP and SQL-backed checks.
+
+### Editing and deleting submitted requests
+
+Pet owners can open a request from **Bookings** and choose **Edit request** while it is open and its care start time is still in the future. Editing updates the pets, service, dates (Beirut time), city, private address, care instructions and total budget. Only the owner's pets may be selected; dog walking requires dogs. Pending invitations use the updated budget. Every edit invalidates older sitter confirmations, including edits that only change the selected pets.
+
+Both applications provide a delete confirmation for open requests. Requests without offers or booking history are deleted together with their submitted wizard draft (and pet links in PetSitting). Requests with offers or previous bookings are marked cancelled to preserve history; pending invitations are withdrawn and their sitters notified. Accepted, in-progress and completed bookings remain protected and use the existing booking cancellation rules. Delete POSTs require antiforgery tokens and the request version from the confirmation page.
+
+Regression coverage includes pet edit validation and access control, ownership and stale-version checks, deleting wizard-linked requests, and preserving reopened booking history. SQL-backed tests require the configured SQL Server and `CARECONNECT_SQL_TESTS=1`.

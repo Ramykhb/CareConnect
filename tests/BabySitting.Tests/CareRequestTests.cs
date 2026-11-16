@@ -127,6 +127,7 @@ public sealed class CareRequestTests
                 await db.Payments.Where(p => users.Contains(p.PayerId)).ExecuteDeleteAsync();
                 await db.BabysittingBookings.Where(b => users.Contains(b.CustomerId)).ExecuteDeleteAsync();
                 await db.BabysittingOffers.Where(o => users.Contains(o.SitterProfile.UserId)).ExecuteDeleteAsync();
+                await db.ParentRequestDrafts.Where(d => users.Contains(d.CustomerId)).ExecuteDeleteAsync();
                 await db.ChildcareRequests.Where(r => r.CustomerId != null && users.Contains(r.CustomerId.Value)).ExecuteDeleteAsync();
                 await db.FamilyProfiles.Where(f => users.Contains(f.UserId)).ExecuteDeleteAsync();
                 await db.BabysitterProfiles.Where(p => users.Contains(p.UserId)).ExecuteDeleteAsync();
@@ -159,7 +160,17 @@ public sealed class CareRequestTests
     {
         await using (var open = await Data.CreateAsync(booked: false))
         {
-            await open.UseAsync(async db => Assert.Equal(CareRequestWriteResult.Deleted, await new CareRequestRepository(db).DeleteOrCancelAsync(open.Parent.Id, open.RequestId)));
+            await open.UseAsync(async db =>
+            {
+                db.ParentRequestDrafts.Add(new ParentRequestDraft { CustomerId = open.Parent.Id, SubmittedRequestId = open.RequestId });
+                await db.SaveChangesAsync();
+                var request = await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == open.RequestId);
+                var repo = new CareRequestRepository(db);
+                Assert.Equal(CareRequestWriteResult.NotFound, await repo.DeleteOrCancelAsync(open.Stranger.Id, open.RequestId));
+                Assert.Equal(CareRequestWriteResult.Conflict, await repo.DeleteOrCancelAsync(open.Parent.Id, open.RequestId, Convert.ToBase64String(new byte[8])));
+                Assert.Equal(CareRequestWriteResult.Deleted, await repo.DeleteOrCancelAsync(open.Parent.Id, open.RequestId, Convert.ToBase64String(request.RowVersion)));
+                Assert.False(await db.ParentRequestDrafts.AnyAsync(d => d.SubmittedRequestId == open.RequestId));
+            });
             Assert.False(await open.GetAsync(db => db.ChildcareRequests.AnyAsync(r => r.Id == open.RequestId)));
         }
         await using var booked = await Data.CreateAsync(booked: true);
@@ -169,6 +180,20 @@ public sealed class CareRequestTests
             Assert.Equal(CareRequestWriteResult.NotEditable, await repo.DeleteOrCancelAsync(booked.Parent.Id, booked.RequestId));
             var request = await repo.GetByIdAsync(booked.RequestId, booked.Parent.Id);
             Assert.Equal(CareRequestWriteResult.NotEditable, await repo.UpdateAsync(booked.Parent.Id, booked.RequestId, request!.RowVersion, r => r.Title = "x", DateTimeOffset.UtcNow));
+        });
+    }
+
+    [SqlServerFact]
+    public async Task Deleting_a_reopened_request_preserves_previous_booking_history()
+    {
+        await using var data = await Data.CreateAsync(booked: true);
+        Assert.True((await Cancel(data, data.Sitter.Id)).Succeeded);
+        await data.UseAsync(async db =>
+        {
+            var request = await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == data.RequestId);
+            Assert.Equal(CareRequestWriteResult.Cancelled, await new CareRequestRepository(db).DeleteOrCancelAsync(data.Parent.Id, data.RequestId, Convert.ToBase64String(request.RowVersion)));
+            Assert.True(await db.BabysittingBookings.AnyAsync(b => b.Id == data.BookingId));
+            Assert.Equal(RequestStatus.Cancelled, (await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == data.RequestId)).Status);
         });
     }
 

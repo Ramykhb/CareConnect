@@ -12,7 +12,7 @@ public interface ICareRequestRepository
     Task<IReadOnlyList<BabysittingBooking>> GetBookingsForParentAsync(Guid parentId, Guid? requestId = null);
     Task AddAsync(ChildcareRequest request);
     Task<CareRequestWriteResult> UpdateAsync(Guid parentId, Guid id, byte[] version, Action<ChildcareRequest> apply, DateTimeOffset now);
-    Task<CareRequestWriteResult> DeleteOrCancelAsync(Guid parentId, Guid id);
+    Task<CareRequestWriteResult> DeleteOrCancelAsync(Guid parentId, Guid id, string? version = null);
     // Only an open request whose start is still in the future can be edited.
     static bool IsEditable(ChildcareRequest request, DateTimeOffset now) => request.Status == RequestStatus.Open && request.StartsAtUtc > now;
 }

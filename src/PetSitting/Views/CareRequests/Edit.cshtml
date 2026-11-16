@@ -1,0 +1,19 @@
+@using PetSitting.ViewModels
+@model RequestEditViewModel
+@{ ViewData["Title"] = "Edit sitting request"; }
+
+<header class="page-header"><div><h1>Edit sitting request</h1><p>Sitters will see the updated details. Times are in Beirut time.</p></div></header>
+<form asp-action="Edit" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" class="card form-card">
+    <div asp-validation-summary="All" role="alert"></div>
+    <input asp-for="Version" type="hidden" />
+    <div class="field"><label asp-for="Title"></label><input asp-for="Title" /><span asp-validation-for="Title"></span></div>
+    <fieldset class="request-pet-picker"><legend>Pets</legend>@foreach (var pet in Model.AvailablePets) { <label><input type="checkbox" name="PetIds" value="@pet.Id" checked="@Model.PetIds.Contains(pet.Id)" /> @pet.Name (@pet.Species)</label> }<span asp-validation-for="PetIds"></span></fieldset>
+    <div class="field"><label asp-for="ServiceType">Service</label><select asp-for="ServiceType">@foreach (var service in Enum.GetValues<ServiceType>()) { <option value="@service">@OwnerRequestForm.ServiceName(service)</option> }</select><span asp-validation-for="ServiceType"></span></div>
+    <div class="form-row"><div class="field"><label asp-for="StartsAtLocal"></label><input asp-for="StartsAtLocal" type="datetime-local" /><span asp-validation-for="StartsAtLocal"></span></div><div class="field"><label asp-for="EndsAtLocal"></label><input asp-for="EndsAtLocal" type="datetime-local" /><span asp-validation-for="EndsAtLocal"></span></div></div>
+    <div class="field"><label asp-for="City"></label><input asp-for="City" /><span asp-validation-for="City"></span></div>
+    <div class="field"><label asp-for="ServiceAddress"></label><input asp-for="ServiceAddress" /><small>Shared only with the sitter who accepts. Not required for boarding.</small><span asp-validation-for="ServiceAddress"></span></div>
+    <div class="field"><label asp-for="Budget">Total budget (@Model.Currency)</label><input asp-for="Budget" type="number" min="0" max="99999" step="0.01" /><span asp-validation-for="Budget"></span></div>
+    <div class="field"><label asp-for="Description">Care instructions</label><textarea asp-for="Description" rows="5"></textarea><span asp-validation-for="Description"></span></div>
+    <div class="form-actions"><a class="btn btn-light" asp-controller="OwnerBookings" asp-action="Details" asp-route-id="@ViewContext.RouteData.Values["id"]">Cancel</a><button class="btn btn-dark" type="submit">Save changes</button></div>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

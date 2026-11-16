@@ -29,6 +29,7 @@ builder.Services.AddDbContext<PetSittingDbContext>((services, options) =>
         .AddInterceptors(services.GetRequiredService<PetSitting.Services.Notifications.NotificationBroadcastInterceptor>()));
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IPetRepository, PetRepository>();
+builder.Services.AddScoped<PetCareRequestRepository>();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>

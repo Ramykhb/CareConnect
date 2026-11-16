@@ -58,28 +58,45 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
         }
     }
 
-    public async Task<CareRequestWriteResult> DeleteOrCancelAsync(Guid parentId, Guid id)
+    public async Task<CareRequestWriteResult> DeleteOrCancelAsync(Guid parentId, Guid id, string? version = null)
     {
-        var request = await db.ChildcareRequests.Include(r => r.Offers).SingleOrDefaultAsync(r => r.Id == id && r.CustomerId == parentId);
-        if (request is null) return CareRequestWriteResult.NotFound;
-        // A booked request is cancelled through its booking; finished requests stay as history.
-        if (request.Status != RequestStatus.Open) return CareRequestWriteResult.NotEditable;
         try
         {
-            if (request.Offers.Count == 0)
+            return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                db.ChildcareRequests.Remove(request);
-                await db.SaveChangesAsync();
-                return CareRequestWriteResult.Deleted;
-            }
-            // Sitters already responded, so keep the record and mark it cancelled instead.
-            request.Status = RequestStatus.Cancelled;
-            await db.SaveChangesAsync();
-            return CareRequestWriteResult.Cancelled;
+                db.ChangeTracker.Clear();
+                await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                var request = await db.ChildcareRequests.Include(r => r.Offers).ThenInclude(o => o.SitterProfile)
+                    .SingleOrDefaultAsync(r => r.Id == id && r.CustomerId == parentId);
+                if (request is null) return CareRequestWriteResult.NotFound;
+                if (request.Status != RequestStatus.Open) return CareRequestWriteResult.NotEditable;
+                if (version is not null)
+                {
+                    byte[] original;
+                    try { original = Convert.FromBase64String(version); } catch (FormatException) { return CareRequestWriteResult.Conflict; }
+                    if (original.Length != 8 || !request.RowVersion.SequenceEqual(original)) return CareRequestWriteResult.Conflict;
+                }
+                var delete = request.Offers.Count == 0 && !await db.BabysittingBookings.AnyAsync(b => b.RequestId == id);
+                if (delete)
+                {
+                    // Wizard submissions retain a draft FK. Delete both in the same transaction.
+                    db.ParentRequestDrafts.RemoveRange(await db.ParentRequestDrafts.Where(d => d.SubmittedRequestId == id).ToListAsync());
+                    db.ChildcareRequests.Remove(request);
+                }
+                else
+                {
+                    request.Status = RequestStatus.Cancelled;
+                    foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))
+                    {
+                        offer.Status = OfferStatus.Withdrawn; offer.DecidedAtUtc = DateTimeOffset.UtcNow;
+                        db.Notifications.Add(new() { UserId = offer.SitterProfile.UserId, Category = NotificationCategory.Request,
+                            Title = "A parent cancelled a request", Body = request.Title, RelativeUrl = "/SitterRequests?id=" + id });
+                    }
+                }
+                await db.SaveChangesAsync(); await tx.CommitAsync();
+                return delete ? CareRequestWriteResult.Deleted : CareRequestWriteResult.Cancelled;
+            });
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            return CareRequestWriteResult.Conflict;
-        }
+        catch (DbUpdateConcurrencyException) { return CareRequestWriteResult.Conflict; }
     }
 }

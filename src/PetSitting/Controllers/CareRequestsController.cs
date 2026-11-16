@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
+using PetSitting.Repositories;
 using PetSitting.Models;
 using PetSitting.Services.Requests;
 using PetSitting.Services.Scheduling;
@@ -13,7 +14,7 @@ namespace PetSitting.Controllers;
 
 [Authorize(Roles = Roles.Customer)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class CareRequestsController(PetSittingDbContext db, UserManager<ApplicationUser> users, TimeProvider clock) : Controller
+public sealed partial class CareRequestsController(PetSittingDbContext db, UserManager<ApplicationUser> users, TimeProvider clock, PetCareRequestRepository requests) : Controller
 {
     private Guid OwnerId => Guid.Parse(users.GetUserId(User)!);
 
