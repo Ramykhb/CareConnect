@@ -29,5 +29,5 @@ public sealed class DashboardController(IDashboardService dashboard, UserManager
     }
 
     [Authorize(Roles = Roles.PlatformManager)]
-    public IActionResult Manager() => View("Role", "Platform manager");
+    public IActionResult Manager() => RedirectToAction("Index", "AccountClosures");
 }

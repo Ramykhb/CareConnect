@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 // Live notifications (WatchWise-style): SignalR hub + EF Core hook that pushes saved notifications.
 builder.Services.AddSignalR();
+builder.Services.AddScoped<BabySitting.Services.Accounts.IAccountClosureService, BabySitting.Services.Accounts.AccountClosureService>();
 builder.Services.AddScoped<BabySitting.Services.Chat.IChatService, BabySitting.Services.Chat.ChatService>();
 builder.Services.AddHostedService<BabySitting.Services.Chat.MessageCleanupService>();
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();

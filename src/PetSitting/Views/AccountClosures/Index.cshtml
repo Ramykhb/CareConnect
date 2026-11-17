@@ -1,0 +1,42 @@
+@using PetSitting.Models
+@using PetSitting.Services.Accounts
+@model IReadOnlyList<ClosureItem>
+@{
+    ViewData["Title"] = "Account closure requests";
+    var filter = (string)ViewBag.Filter;
+}
+<div class="py-4">
+    <h1>Account closure requests</h1>
+    <p class="text-secondary">Accounts with care records can't be deleted directly. Closing one deactivates it and removes personal details while bookings, payments and reviews are kept.</p>
+    <partial name="_Notice" />
+    <nav class="nav nav-pills mb-3" aria-label="Filter requests">
+        @foreach (var (key, label) in new[] { ("pending", "Pending"), ("approved", "Approved"), ("rejected", "Declined"), ("withdrawn", "Withdrawn"), ("all", "All") })
+        {
+            <a class="nav-link @(filter == key ? "active" : "")" asp-action="Index" asp-route-status="@key" aria-current="@(filter == key ? "page" : null)">@label</a>
+        }
+    </nav>
+    @if (Model.Count == 0)
+    {
+        <p class="text-secondary">No requests here.</p>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table align-middle">
+            <thead><tr><th scope="col">Account</th><th scope="col">Role</th><th scope="col">Requested</th><th scope="col">Records</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Open</span></th></tr></thead>
+            <tbody>
+            @foreach (var i in Model)
+            {
+                var badge = i.Request.Status switch { ClosureStatus.Pending => "text-bg-warning", ClosureStatus.Approved => "text-bg-success", ClosureStatus.Rejected => "text-bg-danger", _ => "text-bg-secondary" };
+                <tr>
+                    <td><strong>@i.Request.User.FirstName @i.Request.User.LastName</strong><br /><small class="text-secondary">@i.Request.User.Email</small></td>
+                    <td>@i.Role</td>
+                    <td>@i.Request.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
+                    <td>@i.Records.Bookings bookings@(i.Records.ActiveBookings > 0 ? $" ({i.Records.ActiveBookings} active)" : "")</td>
+                    <td><span class="badge @badge">@i.Request.Status</span></td>
+                    <td><a class="btn btn-sm btn-outline-dark" asp-action="Details" asp-route-id="@i.Request.Id">Review</a></td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</div>

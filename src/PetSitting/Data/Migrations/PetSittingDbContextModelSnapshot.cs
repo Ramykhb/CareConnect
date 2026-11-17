@@ -161,6 +161,56 @@ namespace PetSitting.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PetSitting.Models.AccountClosureRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DecidedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ManagerNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AccountClosureRequests_PendingUser")
+                        .HasFilter("[Status] = 0");
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("AccountClosureRequests", t =>
+                        {
+                            t.HasCheckConstraint("CK_AccountClosureRequest_Status", "[Status] BETWEEN 0 AND 3");
+                        });
+                });
+
             modelBuilder.Entity("PetSitting.Models.AccountPhoto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1432,6 +1482,17 @@ namespace PetSitting.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PetSitting.Models.AccountClosureRequest", b =>
+                {
+                    b.HasOne("PetSitting.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PetSitting.Models.AccountPhoto", b =>

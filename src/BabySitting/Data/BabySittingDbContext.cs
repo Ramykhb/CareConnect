@@ -17,6 +17,7 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AccountClosureRequest> AccountClosureRequests => Set<AccountClosureRequest>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<MessageOutbox> MessageOutboxEntries => Set<MessageOutbox>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
@@ -158,6 +159,12 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
         modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.BookingId, m.CreatedAtUtc });
         modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.RecipientId, m.ReadAtUtc });
         modelBuilder.Entity<ChatMessage>().HasIndex(m => m.ReadAtUtc);
+
+        modelBuilder.Entity<AccountClosureRequest>().HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId);
+        // At most one pending request per account.
+        modelBuilder.Entity<AccountClosureRequest>().HasIndex(r => r.UserId).IsUnique().HasFilter("[Status] = 0").HasDatabaseName("UX_AccountClosureRequests_PendingUser");
+        modelBuilder.Entity<AccountClosureRequest>().HasIndex(r => new { r.Status, r.CreatedAtUtc });
+        modelBuilder.Entity<AccountClosureRequest>().ToTable(t => t.HasCheckConstraint("CK_AccountClosureRequest_Status", "[Status] BETWEEN 0 AND 3"));
 
         // Avoid SQL Server multiple cascade paths and accidental removal of booking history.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
