@@ -102,7 +102,7 @@ Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit
 
 Incoming linked requests can have no local customer initially, but must carry a valid source, external request ID, and correlation ID. Attaching them to a verified local account is a later application workflow. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
-Identity authentication and role authorization are implemented. PetSitting sitter request decisions now enforce request eligibility, booking ownership, and overlapping-booking prevention. Sitter booking start/completion, care checklists, private photo updates, and calendar availability are also implemented. Review submission and payment/payout processing remain future service work.
+Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally; bank transfers and administrative payout processing are not connected.
 
 ## RabbitMQ
 
@@ -118,9 +118,9 @@ AMQP uses port 5672; management is at http://localhost:15672. Set `RabbitMq:User
 
 Each MVC app owns its users, database, migrations, services, and repositories. Controllers delegate business operations to services. Applications must never access each other's databases or call each other's APIs. RabbitMQ is the sole cross-application transport. Shared contracts contain message data only, with no shared persistence or business entities.
 
-Planned local relationships: users own pets or family profiles and care requests; sitters submit offers on requests; an accepted offer creates a booking; bookings own payments and reviews. Availability belongs to a sitter. Outbox and processed-message records belong to the local application. Cross-platform links use external request IDs and correlation IDs, never cross-database foreign keys. Child information is restricted to essential local data.
+Implemented local relationships: users own pets or family profiles and care requests; sitters submit offers on requests; an accepted offer creates a booking; bookings own payments and reviews. Availability belongs to a sitter. Outbox and processed-message records belong to the local application. Cross-platform links use external request IDs and correlation IDs, never cross-database foreign keys. Child information is restricted to essential local data.
 
-Planned topic exchange: `careconnect.events`, with durable `petsitting.events` and `babysitting.events` queues. Combined-care events carry event ID, correlation ID, source, version, timestamp, external request IDs, and minimal service details. Each platform consumes relevant events from the other and updates its own database. Publishers, consumers, retries, dead-letter queues, idempotency, outbox processing, and cancellation synchronization are Phase 5–6 work; configuring the broker does not implement these features.
+Planned topic exchange: `careconnect.events`, with durable `petsitting.events` and `babysitting.events` queues. Combined-care events carry event ID, correlation ID, source, version, timestamp, external request IDs, and minimal service details. The planned consumers will receive relevant events from the other platform and update their own database. Publishers, consumers, retries, dead-letter queues, idempotency, outbox processing, and cancellation synchronization are Phase 5–6 work; configuring the broker does not implement these features.
 
 1. Foundation: solution, default MVC folders, layouts, EF Core configuration, infrastructure configuration, independent startup checks.
 2. Identity: registration/login, roles, authorization, and profile management using the migrated Identity tables.
@@ -131,7 +131,7 @@ Planned topic exchange: `careconnect.events`, with durable `petsitting.events` a
 7. Advanced features: SignalR, dummy payments, AI matching, reporting.
 8. Quality assurance: business and integration tests, messaging reliability, deployment verification.
 
-Current verification: both MVC applications build without warnings; InitialCreate, ConfigureIdentity, and EnforceSingleAccountRole migrations have been applied independently on `localhost:1433`. All 36 checks pass, including SQL Server constraints and full HTTP authentication flows. Database constraint tests roll back; authentication tests delete their temporary accounts. Live SMTP delivery and confirmation were verified in both applications using Mailpit.
+Verification is available through the application test projects. Database constraint tests roll back; workflow and authentication tests clean up their temporary records. SQL-backed tests require `CARECONNECT_SQL_TESTS=1`, accessible local databases, and initialized roles. Focused checks cover chat ownership and read receipts, request submission, Google authentication, and committed notification delivery and preferences. Run commands below rather than relying on a fixed historical test count.
 
 Run route/configuration checks with `dotnet test`. To include the actual SQL Server checks using local user secrets:
 
@@ -139,7 +139,7 @@ Run route/configuration checks with `dotnet test`. To include the actual SQL Ser
 CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln
 ```
 
-RabbitMQ connectivity and the remaining care workflows remain future work.
+RabbitMQ publishing/consuming, reliable cross-application messaging, combined-care synchronization, external AI integration and manager operations remain future work. Local care workflows run independently in each app.
 
 ## Authentication
 
@@ -171,7 +171,7 @@ Registration requires exactly one account type: customer or sitter. Accounts can
 - `/Identity/Account/Logout`: POST with antiforgery protection.
 - `/Identity/Account/ResendEmailConfirmation` and `/Identity/Account/ForgotPassword`: email confirmation and recovery.
 - `/Identity/Account/Manage`: edit name, city, and phone; change password/email; enable authenticator, manage recovery codes, export personal data, and delete an unused account after password verification.
-- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. PetSitting routes display the owner or sitter dashboard; BabySitting and management care pages remain access-controlled placeholders.
+- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. Both apps display their customer and sitter dashboards. Manager pages remain access-controlled placeholders.
 
 Use an authenticator app's manual time-based setup with the secret shown on the setup page. Save recovery codes privately. Accounts linked to care records cannot be hard-deleted through self-service; the form explains that a platform manager must handle account closure while retaining those records.
 
@@ -219,7 +219,7 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
-Tabs and sidebar links switch dashboard sections. Search filters the current view, booking rows open a details dialog, and sitter reports download as CSV. Request creation, pricing, general messaging, reviews, payments, payouts, and AI matching still require their planned backend workflows. Booking care updates and availability editing are implemented on their dedicated sitter pages. Sitter request responses are implemented on the Incoming requests page. Related buttons explicitly explain availability instead of simulating a successful operation. No database migration is needed.
+Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching, real payment charges, bank transfers and manager processing remain unimplemented. Dashboard shortcuts link to the implemented pages.
 
 Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.
 
@@ -241,7 +241,7 @@ Care can start only at or after the scheduled start and after successful payment
 
 The availability page supports month and week navigation, Today, date selection, private reasons, all-day/hour ranges, yearly recurrence, and a global accepting-requests preference. In week view, drag within a day to choose hours and review them in the editor before saving; day headings and keyboard Enter/Space provide alternatives. Monthly calendars include every date, including the sixth row when required. Dates and hours use `Asia/Beirut`; week totals include overnight care. A new rule overrides older rules for its selected interval, so a single date can be reopened without deleting a recurring block. Yearly ranges cannot start or end on February 29. Future recurring hours that fall in a DST gap begin at the next valid local minute.
 
-Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages, reports, and owner notifications are local application records; no email, chat transport, RabbitMQ event, payment charge, or payout is sent by these actions.
+Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages, reports, and owner notifications are local application records; these actions do not send email, RabbitMQ messages, real payment charges or bank transfers. Booking conversations use a separate implemented SignalR chat flow.
 
 Apply the additive migration before running the updated application:
 
@@ -257,7 +257,7 @@ The sitter portal now includes `/Sitter/Earnings`, `/Sitter/Analytics`, `/Sitter
 
 Payout requests reserve eligible, unallocated successful payments from completed bookings in a serializable transaction. Requests may be cancelled while pending. These are local records: no bank transfer is made. Bank details are not collected, and email/SMS alert switches remain disabled until those transports are connected. Existing prices are not converted between currencies. Analytics request counts refer to recorded sitter responses and their current outcomes; average reply time is available only for responses with a recorded decision timestamp.
 
-Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Verification for these account-page additions was skipped at the user’s request.
+Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Notification delivery and preference checks are covered by `LiveNotificationTests`; these do not validate all report/export or payout behaviors.
 
 ### BabySitting sitter portal
 
@@ -281,6 +281,24 @@ Both applications provide a delete confirmation for open requests. Requests with
 
 Regression coverage includes pet edit validation and access control, ownership and stale-version checks, deleting wizard-linked requests, and preserving reopened booking history. SQL-backed tests require the configured SQL Server and `CARECONNECT_SQL_TESTS=1`.
 
+
+## Live chat and notification delivery
+
+Customer chat links open the local booking route. Chat connections join the booking group
+before fetching visible history on initial connection, reconnect and return to a visible tab.
+History and live messages merge by message ID. Read receipts acknowledge only displayed
+message IDs, so messages missed during a disconnect remain unread until recovered.
+
+New requests save alerts for every eligible sitter in the same database save as the request,
+including any preferred sitter invitation. Eligibility uses city, services, active/available
+profiles, saved schedules and booking conflicts. Notifications are pushed after commit;
+explicit transaction rollbacks discard pending broadcasts. This is local SignalR delivery,
+not RabbitMQ integration.
+
+Category preferences apply consistently to notifications, unread badges, dashboards and
+live toasts. Disabled categories remain stored as activity records and become visible again
+when re-enabled. Preference updates notify other tabs to update counts and remove disabled
+categories from their current view. General account notices remain enabled.
 
 ## Google sign-in (both applications)
 
