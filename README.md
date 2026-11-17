@@ -424,3 +424,5 @@ A real Google consent round trip requires configured Google Cloud credentials.
 References: [Google consent configuration](https://developers.google.com/workspace/guides/configure-oauth-consent),
 [Google web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server),
 and [ASP.NET Core Google login](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/google-logins?view=aspnetcore-10.0).
+
+Payment receipts download as PDF in both apps after a successful payment. Receipts include payment references, Beirut care dates, totals, and an explicit notice for demo payments. The generator embeds the app fonts, supports multiple pages, and runs without a browser installation.

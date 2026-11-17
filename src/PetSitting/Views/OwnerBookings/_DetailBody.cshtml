@@ -14,7 +14,7 @@
         @if (Model.Request.StartsAtUtc > item.Now) { <a class="btn btn-light" asp-controller="CareRequests" asp-action="Edit" asp-route-id="@Model.Request.Id">Edit request</a> }
         <a class="btn btn-danger" asp-controller="CareRequests" asp-action="Delete" asp-route-id="@Model.Request.Id">@(Model.Request.Offers.Count == 0 ? "Delete request" : "Cancel request")</a>
     }
-    @if (Model.HasReceipt) { <a class="btn btn-light" asp-action="Receipt" asp-route-id="@Model.Request.Id"><svg class="line-icon"><use href="#icon-download" /></svg>Download receipt</a> }
+    @if (Model.HasReceipt) { <a class="btn btn-light" asp-action="Receipt" asp-route-id="@Model.Request.Id"><svg class="line-icon"><use href="#icon-download" /></svg>Download receipt (PDF)</a> }
     @if (completed) { <form asp-action="Again" method="post"><input type="hidden" name="id" value="@Model.Request.Id" /><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-calendar" /></svg>Book @sitterFirst again</button></form> }
     @if (Model.CanCancel) { <a class="btn btn-danger" href="#cancel-booking"><svg class="line-icon"><use href="#icon-close" /></svg>Cancel @(b is null ? "request" : "booking")</a> }
 </div></header>

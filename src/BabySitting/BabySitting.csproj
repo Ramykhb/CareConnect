@@ -4,6 +4,9 @@
     <UserSecretsId>careconnect-babysitting-development</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="PDFsharp-MigraDoc" />
+    <EmbeddedResource Include="wwwroot/fonts/manrope-400.ttf" LogicalName="BabySitting.ReceiptFonts.manrope-400.ttf" />
+    <EmbeddedResource Include="wwwroot/fonts/manrope-600.ttf" LogicalName="BabySitting.ReceiptFonts.manrope-600.ttf" />
     <ProjectReference Include="../CareConnect.Messaging/CareConnect.Messaging.csproj" />
     <ProjectReference Include="../CareConnect.Contracts/CareConnect.Contracts.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />

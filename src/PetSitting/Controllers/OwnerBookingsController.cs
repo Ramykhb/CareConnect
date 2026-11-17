@@ -1,3 +1,4 @@
+using PetSitting.Services.Receipts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -52,7 +53,6 @@ public sealed class OwnerBookingsController(OwnerBookingService bookings, UserMa
         var model = await bookings.DetailsAsync(OwnerId, id);
         if (model is null) return NotFound();
         if (!model.HasReceipt) return BadRequest("A receipt is available after a successful payment.");
-        Response.Headers.ContentDisposition = $"attachment; filename=\"PawPal-{model.Item.Reference}-receipt.html\"";
-        return View(model);
+        return File(ReceiptPdf.Create(model), "application/pdf", $"PawPal-{model.Item.Reference}-receipt.pdf");
     }
 }

@@ -145,7 +145,13 @@ public sealed class ParentBookingTests
             var receipt = await ownerClient.GetAsync($"/ParentBookings/Receipt/{completed}");
             receipt.EnsureSuccessStatusCode();
             Assert.Contains("attachment", receipt.Content.Headers.ContentDisposition!.ToString());
-            Assert.Contains("Demo payment", await receipt.Content.ReadAsStringAsync());
+            Assert.Equal("application/pdf", receipt.Content.Headers.ContentType!.MediaType);
+            Assert.EndsWith(".pdf", receipt.Content.Headers.ContentDisposition.FileNameStar ?? receipt.Content.Headers.ContentDisposition.FileName?.Trim('"'));
+            var pdf = await receipt.Content.ReadAsByteArrayAsync();
+            Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(pdf, 0, 5));
+            using var parsed = PdfSharp.Pdf.IO.PdfReader.Open(new MemoryStream(pdf), PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import);
+            Assert.True(parsed.PageCount > 0);
+            Assert.Contains("Receipt", parsed.Info.Title);
             var reviewFields = new Dictionary<string, string> { ["id"] = completedBooking.ToString(), ["rating"] = "5", ["comment"] = "Kind and attentive <script>unsafe</script>" };
             await Post(ownerClient, "/ParentBookings/Review", reviewFields);
             await Post(ownerClient, "/ParentBookings/Review", reviewFields);
