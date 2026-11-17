@@ -10,6 +10,15 @@
 else
 {
     <header class="incoming-detail-heading"><span class="portal-avatar" aria-hidden="true">@item.OwnerFirstName.FirstOrDefault()</span><div><div><h2>@item.OwnerName</h2><span class="status-chip @item.StateClass">@(item.State == IncomingRequestState.Accepted ? "✓ " : item.State == IncomingRequestState.New ? "↳ " : "")@item.StateLabel</span></div><p>Parent · member since @item.OwnerSince</p></div><div class="incoming-offer"><strong>@DashboardViewModel.Money(item.Amount, item.Currency)</strong><small>offered · @item.Duration</small></div></header>
+    @if (item.IsCombinedCare)
+    {
+        <section class="combined-care-context" aria-label="Combined care">
+            <h3>Combined pet and baby care</h3>
+            <p><strong>Pet care:</strong> @item.CombinedStatus</p>
+            <p>Your booking covers baby care. Pet care has its own sitter, booking and payment. Cancelling a linked customer request also cancels the other service when care has not started.</p>
+            @if (item.CombinedLastUpdatedAtUtc is { } updated) { <small>Other service last updated: @DashboardViewModel.Local(updated).ToString("d MMM h:mm tt", CultureInfo.InvariantCulture)</small> }
+        </section>
+    }
     <dl class="incoming-facts">
         <div><span class="round-icon"><svg class="line-icon"><use href="#icon-moon" /></svg></span><div><dt>Service</dt><dd>@item.Service</dd></div></div>
         <div><span class="round-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><div><dt>Dates</dt><dd>@DashboardViewModel.Local(item.StartsAtUtc).ToString("ddd d MMM h:mm tt", CultureInfo.InvariantCulture) <span aria-hidden="true">→</span> @DashboardViewModel.Local(item.EndsAtUtc).ToString("ddd d MMM h:mm tt", CultureInfo.InvariantCulture)</dd></div></div>

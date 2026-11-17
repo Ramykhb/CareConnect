@@ -138,3 +138,9 @@ body:has(.decision-dialog:modal)::after { display:none; }
     .incoming-fit-check ul { gap:5px; }
     .fit-icon { width:15px; height:15px; }
 }
+
+.combined-care-badge { color:var(--text, #26382c); font-weight:600; white-space:normal; }
+.combined-care-context { margin:16px 0; padding:16px; border:1px solid #cbd9ce; border-radius:12px; background:#f1f6f0; }
+.combined-care-context h3 { margin:0 0 8px; font-size:14px; }
+.combined-care-context p { margin:6px 0; font-size:13px; line-height:1.5; }
+.combined-care-context small { font-size:12px; color:#526158; }

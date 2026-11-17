@@ -44,6 +44,21 @@ public sealed class SitterRequestsViewModel : IPortalViewModel
 public sealed class IncomingRequestViewModel
 {
     public Guid Id { get; init; }
+    public bool IsCombinedCare { get; init; }
+    public bool IsCombinedLinked { get; init; }
+    public string? CombinedPeerRequestStatus { get; init; }
+    public string? CombinedPeerBookingStatus { get; init; }
+    public DateTimeOffset? CombinedLastUpdatedAtUtc { get; init; }
+    public bool CombinedInvitationExpired { get; init; }
+    public string CombinedStatus => !IsCombinedLinked
+        ? CombinedInvitationExpired ? "Link invitation expired" : "Awaiting linked request"
+        : CombinedPeerBookingStatus switch
+        {
+            "AwaitingPayment" => "Awaiting payment",
+            "InProgress" => "Care in progress",
+            { } status => status,
+            null => CombinedPeerRequestStatus ?? "Awaiting update"
+        };
     public string Version { get; init; } = "";
     public string Title { get; init; } = "";
     public string OwnerName { get; init; } = "";

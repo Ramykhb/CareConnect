@@ -30,8 +30,17 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
             .Include(r => r.Offers.Where(o => o.SitterProfile.UserId == account.Id))
             .AsSplitQuery().OrderByDescending(r => r.CreatedAtUtc).ThenBy(r => r.Id).ToListAsync(ct);
         var bookings = await db.PetBookings.AsNoTracking().Where(b => b.SitterProfile.UserId == account.Id).Include(b => b.Payments).ToListAsync(ct);
+        var requestIds = requests.Select(r => r.Id).ToArray();
+        // Project coordination status only; invitation secrets and other-service care data
+        // never enter the sitter view model or polling response.
+        var combinedLinks = await db.CombinedCareLinks.AsNoTracking()
+            .Where(l => l.LocalRequestId != null && requestIds.Contains(l.LocalRequestId.Value))
+            .Select(l => new { RequestId = l.LocalRequestId!.Value, l.PeerRequestId, l.PeerRequestStatus,
+                l.PeerBookingStatus, l.LastPeerUpdateAtUtc, l.InvitationExpiresAtUtc })
+            .ToDictionaryAsync(l => l.RequestId, ct);
         var items = requests.Select(request =>
         {
+            combinedLinks.TryGetValue(request.Id, out var combined);
             var offer = request.Offers.SingleOrDefault();
             var booking = bookings.Where(b => b.RequestId == request.Id).OrderByDescending(b => b.CreatedAtUtc).FirstOrDefault();
             var state = SitterRequestPolicy.State(request, offer, booking, now);
@@ -48,6 +57,10 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
             };
             return new IncomingRequestViewModel
             {
+                IsCombinedCare = combined is not null, IsCombinedLinked = combined?.PeerRequestId is not null,
+                CombinedPeerRequestStatus = combined?.PeerRequestStatus, CombinedPeerBookingStatus = combined?.PeerBookingStatus,
+                CombinedLastUpdatedAtUtc = combined?.LastPeerUpdateAtUtc,
+                CombinedInvitationExpired = combined is not null && combined.PeerRequestId is null && combined.InvitationExpiresAtUtc <= now,
                 Id = request.Id, Version = SitterRequestPolicy.Version(request, offer), Title = request.Title,
                 OwnerName = $"{request.Customer!.FirstName} {request.Customer.LastName}", OwnerFirstName = request.Customer.FirstName, OwnerSince = request.Customer.CreatedAtUtc.Year,
                 ServiceType = request.ServiceType, City = request.City,

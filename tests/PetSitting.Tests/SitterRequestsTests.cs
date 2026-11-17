@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -26,6 +27,9 @@ public sealed class SitterRequestsTests
             var states = new[] { Decision == "accept" ? IncomingRequestState.Accepted : Decision == "decline" ? IncomingRequestState.Declined : IncomingRequestState.New, IncomingRequestState.Pending, IncomingRequestState.Accepted, IncomingRequestState.Declined, IncomingRequestState.Expired };
             var items = states.Select((state, i) => new IncomingRequestViewModel
             {
+                IsCombinedCare = i == 0, IsCombinedLinked = i == 0,
+                CombinedPeerRequestStatus = i == 0 ? "Booked" : null,
+                CombinedPeerBookingStatus = i == 0 ? "Confirmed" : null,
                 Id = i == 0 ? RequestId : Guid.Parse($"10000000-0000-0000-0000-{i:000000000000}"), Version = Convert.ToBase64String(new byte[16]),
                 OwnerName = i == 0 ? "Sarah Haddad" : "Nour Hamdan", OwnerFirstName = i == 0 ? "Sarah" : "Nour", OwnerSince = 2024,
                 Title = "Care for Max", ServiceType = ServiceType.PetSitting, City = "Beirut", Note = "Please leave the radio on low at night.", Amount = 135,
@@ -46,7 +50,7 @@ public sealed class SitterRequestsTests
         }
     }
 
-    private static WebApplicationFactory<Program> Factory(InboxFixture? fixture = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development").ConfigureServices(services =>
+    private static WebApplicationFactory<Program> Factory(InboxFixture? fixture = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development").ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["RabbitMq:Enabled"] = "false" })).ConfigureServices(services =>
     {
         services.RemoveAll<IUserStore<ApplicationUser>>(); services.AddScoped<IUserStore<ApplicationUser>, DashboardTests.DashboardUsers>();
         services.RemoveAll<ISitterRequestService>(); services.AddSingleton<ISitterRequestService>(fixture ?? new InboxFixture());
@@ -89,6 +93,21 @@ public sealed class SitterRequestsTests
         Assert.Contains("__RequestVerificationToken", html);
         if (status == "accepted") Assert.Contains("Accepted address", html);
         else Assert.DoesNotContain("Accepted address", html);
+    }
+
+    [Theory]
+    [InlineData("/SitterRequests")]
+    [InlineData("/SitterRequests/Updates")]
+    public async Task Combined_care_is_visible_in_the_request_list_details_and_polling(string path)
+    {
+        await using var factory = Factory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Dashboard-Test-Role", Roles.Sitter);
+        var html = await client.GetStringAsync(path);
+        Assert.Contains("Combined care · Baby care", html);
+        Assert.Contains("Combined pet and baby care", html);
+        Assert.Contains("Confirmed", html);
+        Assert.Contains("Your booking covers pet care", html);
     }
 
     [Fact]
