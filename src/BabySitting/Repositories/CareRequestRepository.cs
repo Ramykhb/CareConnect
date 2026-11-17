@@ -40,13 +40,20 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
 
     public async Task<CareRequestWriteResult> UpdateAsync(Guid parentId, Guid id, byte[] version, Action<ChildcareRequest> apply, DateTimeOffset now)
     {
-        var request = await db.ChildcareRequests.SingleOrDefaultAsync(r => r.Id == id && r.CustomerId == parentId);
+        var request = await db.ChildcareRequests.Include(r => r.Offers).SingleOrDefaultAsync(r => r.Id == id && r.CustomerId == parentId);
         if (request is null) return CareRequestWriteResult.NotFound;
         if (!ICareRequestRepository.IsEditable(request, now)) return CareRequestWriteResult.NotEditable;
         // The version the parent loaded becomes the original value, so EF Core rejects the save
         // if a sitter accepted (or the parent edited in another tab) in the meantime.
         db.Entry(request).Property(r => r.RowVersion).OriginalValue = version;
         apply(request);
+        // Save pending invitations at the parent's current price together with the request edit.
+        // Decided offers retain their original terms as history.
+        foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))
+        {
+            offer.Amount = request.Budget;
+            offer.Currency = request.Currency;
+        }
         try
         {
             await db.SaveChangesAsync();

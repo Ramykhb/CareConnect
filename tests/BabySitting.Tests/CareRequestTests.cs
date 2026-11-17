@@ -8,6 +8,7 @@ using BabySitting.Data;
 using BabySitting.Models;
 using BabySitting.Repositories;
 using BabySitting.Services.Bookings;
+using BabySitting.Services.Requests;
 using BabySitting.ViewModels;
 using Xunit;
 
@@ -153,6 +154,57 @@ public sealed class CareRequestTests
             Assert.Equal(CareRequestWriteResult.Conflict, await new CareRequestRepository(db).UpdateAsync(d.Parent.Id, d.RequestId, current.RowVersion, r => r.Title = "Stale", DateTimeOffset.UtcNow));
         });
         Assert.Equal("Updated", await d.GetAsync(db => db.ChildcareRequests.Where(r => r.Id == d.RequestId).Select(r => r.Title).SingleAsync()));
+    }
+
+    [SqlServerFact]
+    public async Task Budget_edits_update_pending_offers_and_the_booking_but_preserve_decided_offers()
+    {
+        await using var data = await Data.CreateAsync(booked: false);
+        var pendingId = Guid.NewGuid();
+        var rejectedId = Guid.NewGuid();
+        var staleDecisionVersion = "";
+        await data.UseAsync(async db =>
+        {
+            var request = await db.ChildcareRequests.SingleAsync(r => r.Id == data.RequestId);
+            var profile = await db.BabysitterProfiles.SingleAsync(p => p.UserId == data.Sitter.Id);
+            var otherProfile = new BabysitterProfile { UserId = data.Stranger.Id, Bio = "Test", City = request.City };
+            var pending = new BabysittingOffer { Id = pendingId, RequestId = request.Id, SitterProfileId = profile.Id, Amount = 40 };
+            db.AddRange(otherProfile, pending, new BabysittingOffer { Id = rejectedId, RequestId = request.Id,
+                SitterProfile = otherProfile, Amount = 35, Status = OfferStatus.Rejected });
+            await db.SaveChangesAsync();
+            staleDecisionVersion = SitterRequestPolicy.Version(request, pending);
+        });
+
+        await data.UseAsync(async db =>
+        {
+            var original = await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == data.RequestId);
+            Assert.Equal(CareRequestWriteResult.Saved, await new CareRequestRepository(db).UpdateAsync(
+                data.Parent.Id, data.RequestId, original.RowVersion, r => { r.Budget = 60; r.Currency = "EUR"; }, DateTimeOffset.UtcNow));
+            Assert.Equal(CareRequestWriteResult.Conflict, await new CareRequestRepository(db).UpdateAsync(
+                data.Parent.Id, data.RequestId, original.RowVersion, r => r.Budget = 90, DateTimeOffset.UtcNow));
+        });
+
+        await data.UseAsync(async db =>
+        {
+            var request = await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == data.RequestId);
+            var pending = await db.BabysittingOffers.AsNoTracking().SingleAsync(o => o.Id == pendingId);
+            var rejected = await db.BabysittingOffers.AsNoTracking().SingleAsync(o => o.Id == rejectedId);
+            Assert.Equal(60m, pending.Amount);
+            Assert.Equal("EUR", pending.Currency);
+            Assert.Equal(35m, rejected.Amount);
+            Assert.Equal("USD", rejected.Currency);
+            Assert.Equal(OfferStatus.Rejected, rejected.Status);
+
+            var service = new SitterRequestService(db, TimeProvider.System);
+            Assert.False((await service.DecideAsync(data.Sitter, new RequestDecisionForm {
+                RequestId = request.Id, Decision = "accept", Version = staleDecisionVersion })).Succeeded);
+            Assert.False(await db.BabysittingBookings.AnyAsync(b => b.RequestId == request.Id));
+            Assert.True((await service.DecideAsync(data.Sitter, new RequestDecisionForm {
+                RequestId = request.Id, Decision = "accept", Version = SitterRequestPolicy.Version(request, pending) })).Succeeded);
+            var booking = await db.BabysittingBookings.AsNoTracking().SingleAsync(b => b.RequestId == request.Id);
+            Assert.Equal(60m, booking.TotalAmount);
+            Assert.Equal("EUR", booking.Currency);
+        });
     }
 
     [SqlServerFact]
