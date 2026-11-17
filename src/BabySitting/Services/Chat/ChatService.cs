@@ -18,7 +18,7 @@ public interface IChatService
     Task<IReadOnlyList<ChatConversation>> ConversationsAsync(Guid userId, CancellationToken ct = default);
     Task<ChatThread?> ThreadAsync(Guid userId, Guid bookingId, CancellationToken ct = default);
     Task<ChatMessageDto?> SendAsync(Guid userId, Guid bookingId, string? body, CancellationToken ct = default);
-    Task<IReadOnlyList<ChatMessageDto>> MarkReadAsync(Guid userId, Guid bookingId, CancellationToken ct = default);
+    Task<IReadOnlyList<ChatMessageDto>> MarkReadAsync(Guid userId, Guid bookingId, CancellationToken ct = default, IReadOnlyCollection<Guid>? messageIds = null);
     Task<int> UnreadAsync(Guid userId, CancellationToken ct = default);
 }
 
@@ -72,11 +72,11 @@ public sealed class ChatService(BabySittingDbContext db, TimeProvider clock) : I
     }
 
     // Marks the messages sent to this user as read; their 24-hour countdown starts now.
-    public async Task<IReadOnlyList<ChatMessageDto>> MarkReadAsync(Guid userId, Guid bookingId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatMessageDto>> MarkReadAsync(Guid userId, Guid bookingId, CancellationToken ct = default, IReadOnlyCollection<Guid>? messageIds = null)
     {
         if (!await CanAccessAsync(userId, bookingId, ct)) return [];
         var now = clock.GetUtcNow();
-        var ids = await db.ChatMessages.Where(m => m.BookingId == bookingId && m.RecipientId == userId && m.ReadAtUtc == null).Select(m => m.Id).ToListAsync(ct);
+        var ids = await db.ChatMessages.Where(m => m.BookingId == bookingId && m.RecipientId == userId && m.ReadAtUtc == null && (messageIds == null || messageIds.Contains(m.Id))).Select(m => m.Id).ToListAsync(ct);
         if (ids.Count == 0) return [];
         await db.ChatMessages.Where(m => ids.Contains(m.Id)).ExecuteUpdateAsync(s => s.SetProperty(m => m.ReadAtUtc, now), ct);
         return await db.ChatMessages.AsNoTracking().Where(m => ids.Contains(m.Id)).Select(m => new ChatMessageDto(m.Id, m.BookingId, m.SenderId, m.Body, m.CreatedAtUtc, m.ReadAtUtc)).ToListAsync(ct);
