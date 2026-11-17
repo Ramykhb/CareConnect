@@ -426,3 +426,5 @@ References: [Google consent configuration](https://developers.google.com/workspa
 and [ASP.NET Core Google login](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/google-logins?view=aspnetcore-10.0).
 
 Payment receipts download as PDF in both apps after a successful payment. Receipts include payment references, Beirut care dates, totals, and an explicit notice for demo payments. The generator embeds the app fonts, supports multiple pages, and runs without a browser installation.
+
+Account links route customers and sitters to their portal settings, including the sitter service-city field. All remaining Identity account/security pages share branded layouts, including email changes, password setup/reset, linked logins, authenticator/recovery-code flows, lockout and access-denied screens. Generic MVC fallback pages also use CareConnect styling rather than the Bootstrap starter layout.

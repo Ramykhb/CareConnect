@@ -18,7 +18,7 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a class="header-login" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                <a class="home-button dark" asp-area="Identity" asp-page="/Account/Manage/Index">My account<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
+                <a class="home-button dark" href="@(User.IsInRole(Roles.Sitter) ? Url.Action("Settings", "SitterPortal", new { area = "" }) : User.IsInRole(Roles.Customer) ? Url.Action("Index", "ParentSettings", new { area = "" }) : Url.Page("/Account/Manage/Index", new { area = "Identity" }))">My account<svg class="line-icon"><use href="#icon-arrow" /></svg></a>
             }
             else
             {

@@ -7,4 +7,4 @@
 @if (User.IsInRole(Roles.Sitter)) { <li><a asp-action="Sitter">Sitter dashboard</a></li> }
 @if (User.IsInRole(Roles.PlatformManager)) { <li><a asp-action="Manager">Management dashboard</a></li> }
 </ul>
-<a asp-area="Identity" asp-page="/Account/Manage/Index">Manage your account</a>
+<a href="@(User.IsInRole(Roles.Sitter) ? Url.Action("Settings", "SitterPortal", new { area = "" }) : User.IsInRole(Roles.Customer) ? Url.Action("Index", "ParentSettings", new { area = "" }) : Url.Page("/Account/Manage/Index", new { area = "Identity" }))">Manage your account</a>

@@ -1,7 +1,7 @@
 @if (User.Identity?.IsAuthenticated == true)
 {
     <a class="nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-    <a class="nav-link" asp-area="Identity" asp-page="/Account/Manage/Index">My account</a>
+    <a class="nav-link" href="@(User.IsInRole(Roles.Sitter) ? Url.Action("Settings", "SitterPortal", new { area = "" }) : User.IsInRole(Roles.Customer) ? Url.Action("Index", "OwnerSettings", new { area = "" }) : Url.Page("/Account/Manage/Index", new { area = "Identity" }))">My account</a>
     <form class="d-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post"><button class="btn btn-outline-secondary" type="submit">Log out</button></form>
 }
 else

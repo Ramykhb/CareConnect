@@ -52,6 +52,7 @@ public sealed class AuthTests
     [InlineData("/Identity/Account/Login")]
     [InlineData("/Identity/Account/Register")]
     [InlineData("/Identity/Account/ForgotPassword")]
+    [InlineData("/Identity/Account/ResendEmailConfirmation")]
     public async Task Public_auth_pages_render(string path)
     {
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
@@ -174,10 +175,14 @@ public sealed class AuthTests
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Dashboard/Customer")).StatusCode);
             Assert.Contains("AccessDenied", (await client.GetAsync("/Dashboard/Manager")).Headers.Location!.ToString());
             Assert.Contains("AccessDenied", (await client.GetAsync("/Dashboard/Sitter")).Headers.Location!.ToString());
-            foreach (var path in new[] { "Index", "Email", "ChangePassword", "TwoFactorAuthentication", "PersonalData", "EnableAuthenticator", "DeletePersonalData" })
+            foreach (var path in new[] { "Index", "Email", "ChangePassword", "TwoFactorAuthentication", "PersonalData", "EnableAuthenticator", "DeletePersonalData", "ExternalLogins" })
             {
                 var page = await client.GetAsync("/Identity/Account/Manage/" + path);
                 Assert.True(page.StatusCode == HttpStatusCode.OK, path + ": " + page.StatusCode + " " + page.Headers.Location);
+                var accountHtml = await page.Content.ReadAsStringAsync();
+                Assert.Contains("identity-settings-card", accountHtml);
+                Assert.Contains("/css/pet-portal.css", accountHtml);
+                Assert.DoesNotContain("bootstrap.min.css", accountHtml);
             }
             Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/Identity/Account/Logout", new FormUrlEncodedContent([]))).StatusCode);
             Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Identity/Account/Manage/Index", new()

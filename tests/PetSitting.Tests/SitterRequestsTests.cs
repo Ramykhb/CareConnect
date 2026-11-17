@@ -17,13 +17,14 @@ namespace PetSitting.Tests;
 public sealed class SitterRequestsTests
 {
     private static readonly Guid RequestId = Guid.Parse("06568ee8-bf1e-471d-b8f8-66091a4f6eb5");
-    private sealed class InboxFixture(bool empty = false) : ISitterRequestService
+    private sealed class InboxFixture(bool empty = false, bool missingCity = false) : ISitterRequestService
     {
         public string? Decision { get; private set; }
         public Task<SitterRequestsViewModel> LoadAsync(ApplicationUser account, CancellationToken ct = default)
         {
             var now = new DateTimeOffset(2026, 11, 12, 8, 24, 0, TimeSpan.Zero);
             account.FirstName = "Omar";
+            if (missingCity) account.City = null;
             var states = new[] { Decision == "accept" ? IncomingRequestState.Accepted : Decision == "decline" ? IncomingRequestState.Declined : IncomingRequestState.New, IncomingRequestState.Pending, IncomingRequestState.Accepted, IncomingRequestState.Declined, IncomingRequestState.Expired };
             var items = states.Select((state, i) => new IncomingRequestViewModel
             {
@@ -41,7 +42,7 @@ public sealed class SitterRequestsTests
                 Pets = [new("Max", "Dog", "Golden Retriever", 3, "Chicken allergy.", "1 cup morning and evening.", "Separation anxiety.")],
                 FitChecks = [new("No conflicting bookings for the requested dates", true), new("In your service city · Beirut", true)]
             }).ToArray();
-            return Task.FromResult(new SitterRequestsViewModel { Account = account, Now = now, Items = empty ? [] : items, Profile = new() { City = "Beirut", IsAvailable = true } });
+            return Task.FromResult(new SitterRequestsViewModel { Account = account, Now = now, Items = empty ? [] : items, Profile = new() { City = missingCity ? "" : "Beirut", IsAvailable = true } });
         }
         public Task<RequestDecisionResult> DecideAsync(ApplicationUser account, RequestDecisionForm form, CancellationToken ct = default)
         {
@@ -108,6 +109,17 @@ public sealed class SitterRequestsTests
         Assert.Contains("Combined pet and baby care", html);
         Assert.Contains("Confirmed", html);
         Assert.Contains("Your booking covers pet care", html);
+    }
+
+    [Fact]
+    public async Task The_city_prompt_opens_the_sitter_profile_settings()
+    {
+        await using var factory = Factory(new InboxFixture(empty: true, missingCity: true));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Dashboard-Test-Role", Roles.Sitter);
+        var html = await client.GetStringAsync("/SitterRequests");
+        Assert.Contains("href=\"/Sitter/Settings#profile-settings\"", html);
+        Assert.DoesNotContain("/Identity/Account/Manage/Index", html);
     }
 
     [Fact]

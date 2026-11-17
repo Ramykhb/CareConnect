@@ -5,7 +5,7 @@
 <section class="incoming-detail" data-request-detail data-selected-id="@item?.Id" aria-label="Selected request details">
 @if (item is null)
 {
-    <div class="inbox-empty-detail"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2>Ready for your next family to help</h2><p>@(Model.Items.Count == 0 ? "Add your city in Settings to find local requests. When a request arrives, its care details will appear here." : "Choose another status tab or adjust your search to find a request.")</p>@if (string.IsNullOrWhiteSpace(Model.Profile?.City ?? Model.Account.City)) { <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-dark btn-sm">Update your city ↗</a> }</div>
+    <div class="inbox-empty-detail"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2>Ready for your next family to help</h2><p>@(Model.Items.Count == 0 ? "Add your city in Settings to find local requests. When a request arrives, its care details will appear here." : "Choose another status tab or adjust your search to find a request.")</p>@if (string.IsNullOrWhiteSpace(Model.Profile?.City ?? Model.Account.City)) { <a asp-controller="SitterPortal" asp-action="Settings" asp-fragment="profile-settings" class="btn btn-dark btn-sm">Update your city ↗</a> }</div>
 }
 else
 {

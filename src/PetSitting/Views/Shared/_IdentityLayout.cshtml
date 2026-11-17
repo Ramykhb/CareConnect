@@ -1,0 +1,11 @@
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["AuthVariant"] = "auth-recovery-page";
+}
+<section class="auth-form auth-recovery identity-content" aria-label="Account access">
+    <a class="auth-back" asp-area="Identity" asp-page="/Account/Login"><svg class="line-icon back-arrow"><use href="#icon-arrow" /></svg>Back to log in</a>
+    <div class="recovery-icon" aria-hidden="true"><svg class="line-icon"><use href="#icon-shield" /></svg></div>
+    @RenderBody()
+</section>
+@section Styles { @await RenderSectionAsync("Styles", required: false) }
+@section Scripts { @await RenderSectionAsync("Scripts", required: false) }

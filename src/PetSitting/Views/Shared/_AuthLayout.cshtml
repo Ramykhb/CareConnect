@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#f5f7f3" />
     <title>@ViewData["Title"] · CareConnect Pet Sitting</title>
     <link rel="stylesheet" href="~/css/pet-auth.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/identity.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="pet-auth @ViewData["AuthVariant"]">
     <a class="auth-skip" href="#auth-main">Skip to form</a>
@@ -21,6 +23,6 @@
     </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/pet-auth.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/identity.js" asp-append-version="true"></script>@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,0 +1,29 @@
+@using BabySitting.Models
+@{
+    Layout = "/Views/Shared/_PortalLayout.cshtml";
+    ViewData["PortalClass"] = "identity-settings-page";
+    ViewData["Breadcrumb"] = "Account & security";
+    var page = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    var profileUrl = User.IsInRole(Roles.Sitter) ? Url.Action("Settings", "SitterPortal", new { area = "" })
+        : User.IsInRole(Roles.Customer) ? Url.Action("Index", "ParentSettings", new { area = "" }) : Url.Page("./Index");
+    var links = new[] { ("Index", "Profile", "user"), ("Email", "Email address", "mail"), ("ChangePassword", "Password", "lock"),
+        ("ExternalLogins", "Linked accounts", "shield"), ("TwoFactorAuthentication", "Two-factor authentication", "shield"), ("PersonalData", "Personal data", "user") };
+}
+<div class="identity-settings">
+    <header class="identity-heading"><div><p>YOUR ACCOUNT, YOUR PEACE OF MIND</p><h1>Account &amp; security</h1><span>A few simple settings to keep your account feeling like you.</span></div><a class="btn btn-light btn-sm" href="@profileUrl"><svg class="line-icon"><use href="#icon-back" /></svg>Back to settings</a></header>
+    <div class="identity-settings-grid"><nav class="identity-navigation" aria-label="Account settings">
+        @foreach (var (key, label, icon) in links)
+        {
+            var active = page.EndsWith("/" + key, StringComparison.OrdinalIgnoreCase) || key == "ChangePassword" && page.EndsWith("/SetPassword")
+                || key == "PersonalData" && page.EndsWith("/DeletePersonalData")
+                || key == "TwoFactorAuthentication" && new[] { "EnableAuthenticator", "Disable2fa", "ResetAuthenticator", "GenerateRecoveryCodes", "ShowRecoveryCodes" }.Any(p => page.EndsWith("/" + p));
+            var href = key == "Index" ? profileUrl : Url.Page("./" + key);
+            <a href="@href" class="@(active ? "active" : "")" aria-current="@(active ? "page" : null)"><svg class="line-icon"><use href="#icon-@icon" /></svg>@label</a>
+        }
+    </nav><section class="identity-settings-card identity-content" aria-label="@ViewData["Title"]">@RenderBody()</section></div>
+</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/identity.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+}
+@section Scripts { <script src="~/js/identity.js" asp-append-version="true"></script>@await RenderSectionAsync("Scripts", required: false) }
