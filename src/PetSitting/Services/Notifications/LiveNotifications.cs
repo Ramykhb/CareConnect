@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using PetSitting.Data;
 using PetSitting.Models;
 
 namespace PetSitting.Services.Notifications;
@@ -10,12 +12,23 @@ public sealed record LiveNotification(Guid Id, string Title, string Body, string
 
 // Pushes events to a user's open tabs (WatchWise: LiveNotifications::push / ::changed).
 // A failed push never breaks the request that saved the notification; the page can always reload the feed.
-public sealed class LiveNotifications(IHubContext<NotificationHub> hub, ILogger<LiveNotifications> logger)
+public sealed class LiveNotifications(IHubContext<NotificationHub> hub, ILogger<LiveNotifications> logger, IServiceScopeFactory scopes)
 {
-    public Task PushAsync(Notification notification, bool silent = false) =>
-        SendAsync(notification.UserId, NotificationHub.Pushed, new { notification = LiveNotification.From(notification), silent });
+    public async Task PushAsync(Notification notification, bool silent = false)
+    {
+        try
+        {
+            // Use an independent scope after commit; the writer may still hold its transaction object.
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+            var visible = await NotificationVisibility.ForUser(db, notification.UserId).AsNoTracking().SingleOrDefaultAsync(n => n.Id == notification.Id);
+            if (visible is not null)
+                await SendAsync(visible.UserId, NotificationHub.Pushed, new { notification = LiveNotification.From(visible), silent });
+        }
+        catch (Exception ex) { logger.LogWarning(ex, "Live notification could not be loaded for delivery."); }
+    }
 
-    public Task ChangedAsync(Guid userId) => SendAsync(userId, NotificationHub.Changed, new { userId });
+    public Task ChangedAsync(Guid userId, bool preferencesChanged = false) => SendAsync(userId, NotificationHub.Changed, new { userId, preferencesChanged });
 
     private async Task SendAsync(Guid userId, string eventName, object payload)
     {

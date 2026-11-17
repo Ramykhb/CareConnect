@@ -30,7 +30,7 @@
     }
     @foreach (var n in Model)
     {
-        <article class="card request-row notification-row @(n.ReadAtUtc is null ? "unread" : "")">
+        <article data-notification-category="@n.Category.ToString().ToLowerInvariant()" class="card request-row notification-row @(n.ReadAtUtc is null ? "unread" : "")">
             <div><strong>@n.Title</strong><span class="pet-meta">@n.Body</span><span class="pet-meta">@DashboardViewModel.Local(n.CreatedAtUtc).ToString("ddd d MMM, HH:mm")</span></div>
             <div class="request-row-side notification-actions">
                 @if (n.ReadAtUtc is null) { <span class="status-chip yellow">New</span> }
