@@ -133,8 +133,7 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
         form.PetIds = model.Request.Pets.Select(p => p.PetId).ToList();
         form.PreferredSitterId = model.Sitter?.Id; form.CareConfirmed = false; form.StartDate = null; form.EndDate = null;
         form.StartTime = TimeOnly.FromDateTime(DashboardViewModel.Local(model.Request.StartsAtUtc).DateTime); form.EndTime = TimeOnly.FromDateTime(DashboardViewModel.Local(model.Request.EndsAtUtc).DateTime);
-        if (model.Request.Currency == "USD") { form.BudgetMin = model.Item.Amount; form.BudgetMax = Math.Max(form.BudgetMax ?? model.Item.Amount, model.Item.Amount); }
-        else { form.BudgetMin = null; form.BudgetMax = null; }
+        form.Budget = model.Request.Currency == "USD" ? model.Item.Amount : null;
         var draft = new OwnerRequestDraft { CustomerId = owner, DataJson = JsonSerializer.Serialize(form), Step = 1, UpdatedAtUtc = clock.GetUtcNow() };
         db.OwnerRequestDrafts.Add(draft); await db.SaveChangesAsync(); return draft.Id;
     }

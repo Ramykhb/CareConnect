@@ -46,7 +46,7 @@ public sealed class PetCareRequestRepository(PetSittingDbContext db, TimeProvide
             snapshot.City = request.City; snapshot.Instructions = request.Description;
             snapshot.StartDate = DateOnly.FromDateTime(form.StartsAtLocal!.Value); snapshot.StartTime = TimeOnly.FromDateTime(form.StartsAtLocal.Value);
             snapshot.EndDate = DateOnly.FromDateTime(form.EndsAtLocal!.Value); snapshot.EndTime = TimeOnly.FromDateTime(form.EndsAtLocal.Value);
-            snapshot.BudgetMin = request.Budget; snapshot.BudgetMax = Math.Max(request.Budget, snapshot.BudgetMax ?? request.Budget);
+            snapshot.Budget = request.Budget;
             if (snapshot.Address != (request.ServiceAddress ?? ""))
             {
                 snapshot.StreetAddress = request.ServiceAddress; snapshot.Area = null; snapshot.Building = null; snapshot.AccessNotes = null;

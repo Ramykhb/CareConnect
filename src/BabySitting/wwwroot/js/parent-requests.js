@@ -24,9 +24,9 @@
             const start = field('StartDate').value, end = field('EndDate').value;
             summary('when', start && end ? `${shortDate(start)} – ${shortDate(end)}` : '', !!start && !!end);
             summary('where', field('City').value.trim(), !!field('City').value.trim());
-            const low = field('BudgetMin').value, high = field('BudgetMax').value;
-            const budget = low && high ? `$${low} – $${high}` : '';
-            summary('budget', budget, !!low && !!high && Number(high) >= Number(low));
+            const amount = field('Budget').value;
+            const budget = amount ? `$${amount}` : '';
+            summary('budget', budget, Number(amount) >= 1 && Number(amount) <= 99999);
             form.querySelector('[data-budget-total]').textContent = budget || 'In USD';
             const from = field('StartTime').value, to = field('EndTime').value;
             const total = form.querySelector('[data-date-total]');

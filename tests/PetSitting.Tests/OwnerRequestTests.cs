@@ -41,6 +41,15 @@ public sealed class OwnerRequestTests
         Assert.Equal(new DateTimeOffset(2027, 1, 16, 8, 0, 0, TimeSpan.Zero), times.End);
     }
 
+    [Fact]
+    public void Existing_budget_range_drafts_keep_the_fixed_initial_price()
+    {
+        var form = JsonSerializer.Deserialize<OwnerRequestForm>("""{"BudgetMin":120,"BudgetMax":150}""")!;
+        Assert.Equal(120m, form.Budget);
+        var saved = JsonSerializer.Serialize(form);
+        Assert.DoesNotContain("BudgetMax", saved);
+    }
+
     [SqlServerFact]
     public async Task Six_step_flow_saves_drafts_validates_ownership_and_submits_once()
     {
@@ -125,10 +134,10 @@ public sealed class OwnerRequestTests
             fields["Form.AccessNotes"] = "ENTRY-SECRET-4512";
             await Next(client, fields, 5);
             fields["Form.Instructions"] = "Keep the radio on.\nShort walks only.";
-            fields["Form.BudgetMin"] = "120"; fields["Form.BudgetMax"] = "100";
+            fields["Form.Budget"] = "0";
             fields["Form.PreferredSitterId"] = profileId.ToString();
             Assert.Equal(HttpStatusCode.OK, (await WizardPost(client, fields, "next")).StatusCode);
-            fields["Form.BudgetMax"] = "150";
+            fields["Form.Budget"] = "120";
             fields["Form.PreferredSitterId"] = Guid.NewGuid().ToString();
             Assert.Equal(HttpStatusCode.OK, (await WizardPost(client, fields, "next")).StatusCode);
             fields["Form.PreferredSitterId"] = profileId.ToString();

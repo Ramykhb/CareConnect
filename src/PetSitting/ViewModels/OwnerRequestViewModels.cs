@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using PetSitting.Models;
 using PetSitting.Services.Scheduling;
 
@@ -18,8 +19,8 @@ public sealed class OwnerRequestForm
     [StringLength(60)] public string? Building { get; set; } = "";
     [StringLength(80)] public string? AccessNotes { get; set; } = "";
     [StringLength(4000)] public string? Instructions { get; set; } = "";
-    [Range(typeof(decimal), "1", "99999")] public decimal? BudgetMin { get; set; }
-    [Range(typeof(decimal), "1", "99999")] public decimal? BudgetMax { get; set; }
+    // Keep the stored JSON name so existing drafts retain their agreed initial price.
+    [JsonPropertyName("BudgetMin"), Range(typeof(decimal), "1", "99999")] public decimal? Budget { get; set; }
     public Guid? PreferredSitterId { get; set; }
     public bool CareConfirmed { get; set; }
 

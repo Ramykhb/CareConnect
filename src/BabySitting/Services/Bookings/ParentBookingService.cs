@@ -132,8 +132,7 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
         form.NumberOfChildren = model.Request.NumberOfChildren; form.YoungestChildAgeYears = model.Request.YoungestChildAgeYears; form.OldestChildAgeYears = model.Request.OldestChildAgeYears;
         form.PreferredSitterId = model.Sitter?.Id; form.CareConfirmed = false; form.StartDate = null; form.EndDate = null;
         form.StartTime = TimeOnly.FromDateTime(DashboardViewModel.Local(model.Request.StartsAtUtc).DateTime); form.EndTime = TimeOnly.FromDateTime(DashboardViewModel.Local(model.Request.EndsAtUtc).DateTime);
-        if (model.Request.Currency == "USD") { form.BudgetMin = model.Item.Amount; form.BudgetMax = Math.Max(form.BudgetMax ?? model.Item.Amount, model.Item.Amount); }
-        else { form.BudgetMin = null; form.BudgetMax = null; }
+        form.Budget = model.Request.Currency == "USD" ? model.Item.Amount : null;
         var draft = new ParentRequestDraft { CustomerId = owner, DataJson = JsonSerializer.Serialize(form), Step = 1, UpdatedAtUtc = clock.GetUtcNow() };
         db.ParentRequestDrafts.Add(draft); await db.SaveChangesAsync(); return draft.Id;
     }

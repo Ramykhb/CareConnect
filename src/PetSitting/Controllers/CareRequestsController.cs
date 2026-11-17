@@ -83,7 +83,7 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
                 Description = string.IsNullOrWhiteSpace(form.Instructions) ? "Please follow the selected pets’ medical notes, feeding instructions and care routines." : form.Instructions.Trim(),
                 ServiceType = form.ServiceType!.Value, StartsAtUtc = times.Start, EndsAtUtc = times.End,
                 City = form.City!.Trim(), ServiceAddress = form.ServiceType == ServiceType.Boarding ? null : form.Address,
-                Budget = form.BudgetMin!.Value, Currency = "USD", Status = RequestStatus.Open, CreatedAtUtc = clock.GetUtcNow(),
+                Budget = form.Budget!.Value, Currency = "USD", Status = RequestStatus.Open, CreatedAtUtc = clock.GetUtcNow(),
                 Pets = form.PetIds.Distinct().Select(id => new PetCareRequestPet { PetId = id }).ToList()
             };
             db.PetCareRequests.Add(request);
@@ -194,8 +194,7 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
                 if (form.Address.Length > 300) Error("StreetAddress", "Keep the combined address, building, area and access notes within 300 characters.");
                 break;
             case 5:
-                if (form.BudgetMin is null || form.BudgetMax is null) Error("BudgetMin", "Enter your total budget range in USD.");
-                else if (form.BudgetMax < form.BudgetMin) Error("BudgetMax", "The maximum budget must be at least the minimum.");
+                if (form.Budget is null) Error("Budget", "Enter your fixed total budget in USD.");
                 if (form.PreferredSitterId is { } sitter && model.Sitters.All(s => s.Id != sitter)) Error("PreferredSitterId", "That sitter is no longer available for these details. Choose another sitter or leave the preference empty.");
                 break;
             case 6:
