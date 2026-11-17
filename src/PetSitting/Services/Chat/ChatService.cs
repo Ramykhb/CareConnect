@@ -54,7 +54,7 @@ public sealed class ChatService(PetSittingDbContext db, TimeProvider clock) : IC
             .AsSplitQuery().SingleOrDefaultAsync(b => b.Id == bookingId, ct);
         if (booking is null) return null;
         var messages = await Visible(clock.GetUtcNow()).AsNoTracking().Where(m => m.BookingId == bookingId).OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id).ToListAsync(ct);
-        var url = booking.CustomerId == userId ? "C:/Program Files/Git/OwnerBookings/Details/" + booking.RequestId : "/SitterBookings/Details/" + booking.Id;
+        var url = booking.CustomerId == userId ? "/OwnerBookings/Details/" + booking.RequestId : "/SitterBookings/Details/" + booking.Id;
         return new ChatThread(booking, userId, OtherName(booking, userId), booking.Request.Title, url, messages.Select(ChatMessageDto.From).ToList());
     }
 

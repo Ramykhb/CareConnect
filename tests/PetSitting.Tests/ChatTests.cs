@@ -52,6 +52,8 @@ public sealed class ChatTests
         var chat = new ChatService(db, clock);
         try
         {
+            Assert.Equal("/OwnerBookings/Details/" + request.Id, (await chat.ThreadAsync(owner.Id, booking.Id))!.BookingUrl);
+            Assert.Equal("/SitterBookings/Details/" + booking.Id, (await chat.ThreadAsync(sitter.Id, booking.Id))!.BookingUrl);
             Assert.False(await chat.CanAccessAsync(stranger.Id, booking.Id));
             Assert.Null(await chat.SendAsync(stranger.Id, booking.Id, "Let me in"));
             Assert.Null(await chat.ThreadAsync(stranger.Id, booking.Id));
