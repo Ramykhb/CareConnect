@@ -18,10 +18,16 @@ public sealed class LoginModel(SignInManager<ApplicationUser> signIn) : PageMode
         [Required, DataType(DataType.Password)] public string Password { get; set; } = string.Empty;
         [Display(Name = "Remember me")] public bool RememberMe { get; set; }
     }
-    public void OnGet(string? returnUrl = null) => ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl! : "/Dashboard";
+    public bool GoogleEnabled { get; private set; }
+    public async Task OnGetAsync(string? returnUrl = null, bool googleError = false)
+    {
+        ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl! : "/Dashboard";
+        GoogleEnabled = (await signIn.GetExternalAuthenticationSchemesAsync()).Any(s => s.Name == "Google");
+        if (googleError) ModelState.AddModelError(string.Empty, "Google sign-in could not be completed. Please try again.");
+    }
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        OnGet(returnUrl);
+        await OnGetAsync(returnUrl);
         if (!ModelState.IsValid) return Page();
         var result = await signIn.PasswordSignInAsync(Input.Email.Trim(), Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded) return LocalRedirect(ReturnUrl);

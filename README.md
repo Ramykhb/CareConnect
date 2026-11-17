@@ -280,3 +280,78 @@ Pet owners can open a request from **Bookings** and choose **Edit request** whil
 Both applications provide a delete confirmation for open requests. Requests without offers or booking history are deleted together with their submitted wizard draft (and pet links in PetSitting). Requests with offers or previous bookings are marked cancelled to preserve history; pending invitations are withdrawn and their sitters notified. Accepted, in-progress and completed bookings remain protected and use the existing booking cancellation rules. Delete POSTs require antiforgery tokens and the request version from the confirmation page.
 
 Regression coverage includes pet edit validation and access control, ownership and stale-version checks, deleting wizard-linked requests, and preserving reopened booking history. SQL-backed tests require the configured SQL Server and `CARECONNECT_SQL_TESTS=1`.
+
+
+## Google sign-in (both applications)
+
+Both apps support Google OAuth through ASP.NET Core Identity. Credentials are optional:
+without them, the Google button is hidden and password login remains available. Configure
+both values together; incomplete Google configuration is rejected at startup.
+
+### Google Cloud setup
+
+1. Create or select a Google Cloud project, for example `CareConnect`.
+2. Open **Google Auth platform → Branding** and configure the consent screen: app name,
+   support email, and developer contact email. Choose **External** audience for personal
+   Google accounts. While testing, add your Google accounts under **Audience → Test users**.
+3. Under **Data Access**, use only basic identity scopes (`userinfo.email` and
+   `userinfo.profile`). This implementation does not need Drive, Gmail, or Calendar access.
+4. Under **Clients**, create two OAuth clients of type **Web application**:
+
+   | Client | Authorized redirect URI |
+   | --- | --- |
+   | CareConnect PetSitting local | `http://localhost:5101/signin-google` |
+   | CareConnect BabySitting local | `http://localhost:5102/signin-google` |
+
+   JavaScript origins are not needed for this server-side redirect flow. Use the exact URI,
+   including scheme, hostname, port and path; do not add a trailing slash. The callback is
+   `/signin-google`, not the Identity ExternalLogin page. Keep each client's ID and secret.
+5. Store each client's credentials in that application's user secrets:
+
+   ```sh
+   dotnet user-secrets set "Authentication:Google:ClientId" "<pet-client-id>" --project src/PetSitting
+   dotnet user-secrets set "Authentication:Google:ClientSecret" "<pet-client-secret>" --project src/PetSitting
+   dotnet user-secrets set "Authentication:Google:ClientId" "<baby-client-id>" --project src/BabySitting
+   dotnet user-secrets set "Authentication:Google:ClientSecret" "<baby-client-secret>" --project src/BabySitting
+   ```
+
+6. Ensure both SQL Server databases are available, migrations are applied, and roles have
+   been initialized using the existing `--initialize-identity` commands. Restart the apps,
+   browse their configured `localhost` addresses and select **Continue with Google**.
+
+For deployment, create production clients with HTTPS callback URLs on your public domains,
+set each app's `Auth:PublicOrigin` to the corresponding HTTPS origin, and supply credentials
+through the deployment secret store (`Authentication__Google__ClientId` and
+`Authentication__Google__ClientSecret` for environment variables). Configure the Google
+consent screen's production branding, domains and publishing status as applicable.
+Never commit a client secret or paste one into source files.
+
+### Account behavior
+
+- New Google users finish signup by confirming their name and selecting customer or sitter.
+  The app uses Google's verified email from the external authentication ticket; posted email
+  or administrator role values cannot create privileged accounts. Users have no local password
+  initially and can add one through Identity's **Set a password** page.
+- Each app owns its own account, role and Google login association; signing up in one does
+  not create an account in the other. Sitter profile setup and professional verification are separate.
+- Existing accounts with the same email are not automatically linked. Sign in with the current
+  method, open **Account settings → Google & linked accounts**, then link Google through
+  Identity's authenticated external-login management page.
+- Returning linked users go through Identity's active-account, lockout, confirmation and
+  two-factor checks. Google login does not bypass an enabled authenticator challenge.
+- Cancelling Google consent or an invalid OAuth state returns a generic login error. Redirects
+  after login are restricted to local application URLs. Google access/refresh tokens are not persisted.
+- Account deletion requires a local password; Google-only users are directed to set one first.
+
+### Verification
+
+`dotnet test CareConnect.sln --filter FullyQualifiedName~GoogleAuthTests` exercises redirects,
+CSRF protection, protected external tickets, verified-email claims, invalid state, disabled
+configuration and forbidden signup roles using a simulated Google HTTP backchannel. The
+SQL opt-in test additionally exercises customer/sitter signup and returning Google login:
+`CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln --filter FullyQualifiedName~GoogleAuthTests`.
+A real Google consent round trip requires configured Google Cloud credentials.
+
+References: [Google consent configuration](https://developers.google.com/workspace/guides/configure-oauth-consent),
+[Google web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server),
+and [ASP.NET Core Google login](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/social/google-logins?view=aspnetcore-10.0).

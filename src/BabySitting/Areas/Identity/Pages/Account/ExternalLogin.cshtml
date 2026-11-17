@@ -1,0 +1,19 @@
+@page
+@model BabySitting.Areas.Identity.Pages.Account.ExternalLoginModel
+@{ Layout = "/Views/Shared/_AuthLayout.cshtml"; ViewData["Title"] = "Finish Google sign-up"; }
+<section class="auth-form auth-register" aria-labelledby="auth-heading">
+    <a class="auth-back" asp-page="Login">Back to log in</a>
+    <h1 id="auth-heading">Finish your account</h1>
+    <p class="auth-subtitle">Continue with your verified Google email: @Model.Email</p>
+    <form method="post" asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl">
+        <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
+        <div class="name-fields">
+            <div class="auth-field"><label asp-for="Input.FirstName"></label><div class="input-wrap plain-input"><input asp-for="Input.FirstName" autocomplete="given-name" /></div><span asp-validation-for="Input.FirstName" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="Input.LastName"></label><div class="input-wrap plain-input"><input asp-for="Input.LastName" autocomplete="family-name" /></div><span asp-validation-for="Input.LastName" class="field-error"></span></div>
+        </div>
+        <fieldset class="role-field"><legend>I’m joining as a</legend><div class="role-options"><label><input asp-for="Input.AccountType" type="radio" value="Customer" /><span>Parent</span></label><label><input asp-for="Input.AccountType" type="radio" value="Sitter" /><span>Babysitter</span></label></div><span asp-validation-for="Input.AccountType" class="field-error"></span></fieldset>
+        <p class="role-note">Sitter verification is handled separately. You can add a password later in account settings.</p>
+        <button type="submit" class="auth-submit">Create account</button>
+    </form>
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,12 +1,49 @@
-@{ ViewData["Title"] = "Welcome"; }
-<section class="welcome py-5">
-    <span class="badge rounded-pill text-bg-light mb-3">CareConnect · Babysitting</span>
-    <h1 class="display-4 fw-semibold">Care that feels like home.</h1>
-    <p class="lead mt-3">Trusted care for your family, with peace of mind.</p>
-    <p class="text-secondary">The foundation is ready. Accounts, care requests, and bookings are coming in the next development phases.</p>
+@{
+    Layout = "/Views/Shared/_BabyHomeLayout.cshtml";
+    ViewData["Title"] = "A little help. A lot of care.";
+}
+<section class="home-hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+        <a class="hero-announcement" href="#how-it-works"><span>Made for families</span>A little help. A lot of peace of mind.</a>
+        <h1 id="hero-title">Loving care <span class="title-heart" aria-hidden="true"><svg class="line-icon"><use href="#icon-heart" /></svg></span><br />for little ones,<br /><span class="title-family" aria-hidden="true"><svg class="line-icon"><use href="#icon-family" /></svg></span> anytime</h1>
+        <p class="hero-description">From after-school adventures to bedtime stories, find a babysitter who fits your family’s rhythm. A little support for you. A little more joy for them.</p>
+        <div class="care-finder" aria-label="Find childcare">
+            <a class="finder-detail" href="#services"><svg class="line-icon"><use href="#icon-family" /></svg><span><small>Service</small>Babysitting</span></a>
+            <div class="finder-detail"><svg class="line-icon"><use href="#icon-pin" /></svg><span><small>Where</small>Lebanon</span></div>
+            <div class="finder-detail"><svg class="line-icon"><use href="#icon-calendar" /></svg><span><small>When</small>On your schedule</span></div>
+            <a class="home-button lime" asp-area="Identity" asp-page="/Account/Register"><svg class="line-icon"><use href="#icon-search" /></svg>Find a sitter</a>
+        </div>
+        <div class="hero-community"><div class="community-avatars" aria-hidden="true"><span>S</span><span>M</span><span>R</span><span>J</span></div><div><span class="community-heading"><span aria-hidden="true">♡</span> Big care for your little world</span><small>Because every family needs a helping hand.</small></div></div>
+    </div>
+    <div class="hero-art">
+        <div class="family-orbit" aria-hidden="true"></div><img src="~/images/home-family.svg" alt="A smiling caregiver and child with a toy bunny, framed by a lime circle" width="440" height="440" fetchpriority="high" />
+        <div class="floating-review"><span aria-hidden="true">♡</span>Small moments. Happy memories.</div>
+        <div class="floating-match"><span class="match-avatar" aria-hidden="true">S</span><span>Your family’s kind of sitter<small>Care that fits their routine</small></span><span class="match-family" aria-hidden="true"><svg class="line-icon"><use href="#icon-family" /></svg></span></div>
+        <div class="floating-accepted"><span class="accepted-icon" aria-hidden="true"><svg class="line-icon"><use href="#icon-heart" /></svg></span><span>A little peace of mind<small>For you. For your little ones.</small></span></div>
+    </div>
 </section>
-<section class="row g-4 pb-5" aria-label="Our approach">
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Find your care</h2><p class="mb-0">Share your needs and discover sitters who fit your routine.</p></div></div>
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Stay connected</h2><p class="mb-0">Keep offers, bookings, and updates together in one place.</p></div></div>
-    <div class="col-md-4"><div class="card h-100 p-4"><h2 class="h5">Plan together</h2><p class="mb-0">Coordinate pet sitting and babysitting for the same occasion.</p></div></div>
+<section class="home-stats home-container" aria-label="Care for your family">
+    <div><strong>3</strong><span>ways to care for your family</span></div><div><strong>Your day</strong><span>care around your schedule</span></div><div><strong>One place</strong><span>requests, bookings &amp; updates</span></div><div><strong>You</strong><span>decide what fits your family</span></div>
+</section>
+<section class="how-section home-container" id="how-it-works" aria-labelledby="how-title">
+    <div class="section-heading"><span class="eyebrow">How it works</span><h2 id="how-title">A helping hand, in three steps</h2><p>More time for your day. Thoughtful care for theirs.</p></div>
+    <div class="steps-grid">
+        <article class="step-card"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-plus" /></svg></span><span class="step-number">01</span></div><h3>Tell us about your family</h3><p>Share your children’s age range, routines, and care needs. The little details help a sitter feel prepared.</p></article>
+        <article class="step-card lime-card"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-family" /></svg></span><span class="step-number">02</span></div><h3>Find a familiar face</h3><p>Send a request for your city and dates. Add a preferred sitter, or leave it open to available babysitters nearby.</p></article>
+        <article class="step-card dark-card" id="care-pricing"><div class="step-top"><span class="step-icon"><svg class="line-icon"><use href="#icon-calendar" /></svg></span><span class="step-number">03</span></div><h3>Make a plan that fits</h3><p>Set your dates and total budget. Once a sitter accepts, keep your booking, messages, and care updates together.</p></article>
+    </div>
+    <div class="service-list" id="services" aria-label="Childcare services"><span>A little help for every kind of day</span><span class="service-chip">Babysitting</span><span class="service-chip">After-school care</span><span class="service-chip">Overnight care</span></div>
+</section>
+<section class="trust-section home-container" id="trust-and-care" aria-labelledby="trust-title">
+    <div class="trust-heading"><span class="eyebrow">Thoughtful care</span><h2 id="trust-title">Their little world.<br /> Your peace of mind.<br /> At the heart of it all.</h2></div>
+    <div class="trust-grid">
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-family" /></svg></span><div><h3>People before profiles</h3><p>Read about a sitter’s experience, services, and approach to caring for little ones.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-lock" /></svg></span><div><h3>Privacy from the start</h3><p>Share age ranges and care needs. Your exact address is shared only with the sitter who accepts.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-heart" /></svg></span><div><h3>Their routine comes first</h3><p>Favourite activities, mealtimes, and bedtime rituals help make care feel familiar.</p></div></article>
+        <article><span class="trust-icon"><svg class="line-icon"><use href="#icon-chat" /></svg></span><div><h3>Stay a little closer</h3><p>Message your booked sitter and follow the care updates they share along the way.</p></div></article>
+    </div>
+</section>
+<section class="sitter-section home-container" id="become-a-sitter" aria-labelledby="sitter-title">
+    <div class="sitter-copy"><span class="eyebrow">For caring people</span><h2 id="sitter-title">A little care.<br /> A big difference.</h2><p>Bring your patience, creativity, and care. Share your experience, set your availability, and help make a family’s day a little easier.</p><div class="sitter-actions"><a class="home-button dark" asp-area="Identity" asp-page="/Account/Register" asp-route-accountType="Sitter"><svg class="line-icon"><use href="#icon-arrow" /></svg>Become a babysitter</a><a class="home-button white" asp-area="Identity" asp-page="/Account/Login">Sitter log in</a></div></div>
+    <div class="sitter-art"><img src="~/images/home-babysitter.svg" alt="A babysitter and child sharing a storybook" width="400" height="350" loading="lazy" /><div class="sitter-bubble"><span class="accepted-icon" aria-hidden="true"><svg class="line-icon"><use href="#icon-heart" /></svg></span><span>Little moments<small>Make a big difference.</small></span></div></div>
 </section>

@@ -21,6 +21,7 @@
         <p class="role-note">Babysitter accounts require separate professional verification.</p>
         <button type="submit" class="auth-submit"><svg class="line-icon"><use href="#icon-arrow" /></svg>Create account</button>
     </form>
+    <p class="auth-small-note">Prefer Google? <a asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl">Continue from the login page</a>.</p>
     <p class="auth-switch">Already have an account? <a asp-page="Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a></p>
 </section>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }
