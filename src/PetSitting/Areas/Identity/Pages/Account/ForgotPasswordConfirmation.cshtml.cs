@@ -19,9 +19,7 @@ public sealed class ForgotPasswordConfirmationModel(
     public void OnGet()
     {
         // Configured by the operator, never derived from an untrusted redirect parameter.
-        if (Uri.TryCreate(configuration["Email:InboxUrl"], UriKind.Absolute, out var inbox)
-            && (inbox.Scheme == "https" || (environment.IsDevelopment() && inbox.IsLoopback && inbox.Scheme == "http")))
-            InboxUrl = inbox.AbsoluteUri;
+        InboxUrl = EmailInbox.Url(configuration, environment);
     }
     public async Task<IActionResult> OnPostResendAsync()
     {

@@ -244,6 +244,38 @@ Repeat with `src/BabySitting` for its independent manager. There are no default 
 
 ### Deployment configuration
 
+### Real email through Brevo SMTP
+
+Brevo SMTP uses an **SMTP key**, not a Brevo API key. In Brevo, open **Settings → SMTP & API → SMTP**, copy your SMTP login and generate an SMTP key. Use the email address of your verified/trusted sender as `Email:From`; it can differ from the SMTP login.
+
+From the repository root, run:
+
+```sh
+python3 scripts/configure_brevo.py
+```
+
+On Windows, use `py scripts/configure_brevo.py` if `python3` is unavailable. Enter your SMTP login, verified sender address, and SMTP key when prompted. The key is hidden while typing and sent to the .NET CLI through stdin. The script saves only Email settings to **both apps' user secrets**, preserving other configuration. It does not send an email or put keys in source control. Restart both apps, then register a test account or resend a verification email and check your actual inbox (and spam folder). Inspect Brevo transactional logs if delivery is rejected.
+
+The saved configuration is:
+
+| User-secret key | Value |
+| --- | --- |
+| `Email:Provider` | `Brevo` |
+| `Email:Host` | `smtp-relay.brevo.com` |
+| `Email:Port` | `587` |
+| `Email:EnableSsl` | `true` (STARTTLS) |
+| `Email:UserName` | Your Brevo SMTP login |
+| `Email:Password` | Your **SMTP key** |
+| `Email:From` | Your verified sender email |
+| `Email:FromName` | `CareConnect` |
+| `Email:InboxUrl` | Empty; recipients use their own inbox |
+
+There is no API-key setting for this SMTP integration. To replace an SMTP key later, rerun the setup script or update `Email:Password` in each project's user secrets. Selecting the Brevo provider enforces its host, port and TLS settings, requires SMTP credentials, and rejects API keys beginning with `xkeysib-`. Real SMTP delivery hides the development Mailpit inbox link. Registration, verification/resend, password recovery and Identity email changes use this sender; in-app booking notifications are separate.
+
+For deployment, supply these values through the environment/secret store (`Email__Password`, `Email__UserName`, etc.), and configure each `Auth:PublicOrigin` to its public URL so recipients on other devices can open confirmation/reset links. Local user secrets are per machine and are not shared by Git.
+
+References: [Brevo SMTP integration](https://developers.brevo.com/docs/smtp-integration), [SMTP key setup](https://help.brevo.com/hc/en-us/articles/7959631848850-Create-and-manage-your-SMTP-keys).
+
 Outside Development, configure `Auth:PublicOrigin` as the application's public HTTPS origin, `Email:Host`, `Email:Port`, `Email:From`, `Email:EnableSsl=true`, and SMTP credentials (`Email:UserName`/`Email:Password`) through your deployment secret store. The public origin is used for Identity email links rather than trusting incoming Host headers. Configure each app separately.
 
 Set `DataProtection:KeysPath` to a protected persistent directory mounted into the container, retain those keys across deployments, and protect them at rest. Replicas of the same app need the same key ring; the two applications must keep their distinct application names. Production cookies require HTTPS. Configure trusted proxy handling for your actual hosting topology before deploying behind a reverse proxy. Local SMTP was tested; delivery through a production provider requires that provider's credentials and deployment verification.

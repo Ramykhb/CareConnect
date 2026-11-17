@@ -7,6 +7,8 @@ namespace BabySitting.Services.Auth;
 
 public sealed class EmailOptions
 {
+    public string Provider { get; set; } = "Smtp";
+    public string FromName { get; set; } = "CareConnect";
     public string Host { get; set; } = string.Empty;
     public int Port { get; set; } = 587;
     public string From { get; set; } = string.Empty;
@@ -27,7 +29,11 @@ public sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSend
             Credentials = string.IsNullOrWhiteSpace(settings.UserName) ? null
                 : new NetworkCredential(settings.UserName, settings.Password)
         };
-        using var message = new MailMessage(settings.From, email, subject, htmlMessage) { IsBodyHtml = true };
-        await client.SendMailAsync(message);
+        using var message = new MailMessage { From = new MailAddress(settings.From, settings.FromName), Subject = subject, Body = htmlMessage, IsBodyHtml = true };
+        message.To.Add(new MailAddress(email));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try { await client.SendMailAsync(message, timeout.Token); }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        { throw new SmtpException("Email delivery timed out. Please try again shortly."); }
     }
 }

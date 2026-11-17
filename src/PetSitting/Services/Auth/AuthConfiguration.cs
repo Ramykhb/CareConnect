@@ -88,6 +88,21 @@ public static class AuthConfiguration
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
         services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(2));
         services.AddOptions<EmailOptions>().Bind(configuration.GetSection("Email"))
+            .PostConfigure(options =>
+            {
+                if (string.Equals(options.Provider, "Brevo", StringComparison.OrdinalIgnoreCase))
+                {
+                    options.Host = "smtp-relay.brevo.com";
+                    options.Port = 587;
+                    options.EnableSsl = true; // STARTTLS with certificate validation.
+                }
+            })
+            .Validate(options => options.Provider.Equals("Smtp", StringComparison.OrdinalIgnoreCase)
+                || options.Provider.Equals("Brevo", StringComparison.OrdinalIgnoreCase), "Email:Provider must be Smtp or Brevo.")
+            .Validate(options => !options.Provider.Equals("Brevo", StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrWhiteSpace(options.UserName) && !string.IsNullOrWhiteSpace(options.Password)
+                    && !options.Password.StartsWith("xkeysib-", StringComparison.OrdinalIgnoreCase)),
+                "Brevo requires Email:UserName (SMTP login), Email:Password (SMTP key, not API key), and Email:From (verified sender).")
             .Validate(options => !string.IsNullOrWhiteSpace(options.Host) && MailAddressIsValid(options.From)
                 && options.Port is > 0 and <= 65535, "Configure Email:Host, Email:Port and Email:From.")
             .Validate(options => environment.IsDevelopment() || options.EnableSsl, "SMTP TLS is required outside Development.")

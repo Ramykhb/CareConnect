@@ -38,9 +38,7 @@ public sealed class RegisterConfirmationModel(
                     : RedirectToPage("Login", new { returnUrl = ReturnUrl });
             }
         }
-        if (Uri.TryCreate(configuration["Email:InboxUrl"], UriKind.Absolute, out var inbox)
-            && (inbox.Scheme == "https" || (environment.IsDevelopment() && inbox.IsLoopback && inbox.Scheme == "http")))
-            InboxUrl = inbox.AbsoluteUri;
+        InboxUrl = EmailInbox.Url(configuration, environment);
         return Page();
     }
 

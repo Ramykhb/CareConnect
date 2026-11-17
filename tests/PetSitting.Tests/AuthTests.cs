@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +31,29 @@ public sealed class AuthTests
         public Task SendEmailAsync(string email, string subject, string htmlMessage)
         { Messages.Enqueue(htmlMessage); return Task.CompletedTask; }
         public string LastLink() => WebUtility.HtmlDecode(Regex.Match(Messages.Last(), "href=['\"]([^'\"]+)").Groups[1].Value);
+    }
+
+    [Fact]
+    public async Task Brevo_uses_authenticated_TLS_and_hides_the_local_mail_inbox()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+            b.UseEnvironment("Development").ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                new Dictionary<string, string?> {
+                    ["RabbitMq:Enabled"] = "false", ["Email:Provider"] = "Brevo",
+                    ["Email:UserName"] = "smtp-login@smtp-brevo.com", ["Email:Password"] = "smtp-configuration-test-key",
+                    ["Email:From"] = "sender@example.com"
+                })));
+        using var client = factory.CreateClient();
+        var options = factory.Services.GetRequiredService<IOptions<EmailOptions>>().Value;
+        Assert.Equal("smtp-relay.brevo.com", options.Host);
+        Assert.Equal(587, options.Port);
+        Assert.True(options.EnableSsl);
+        Assert.Equal("smtp-login@smtp-brevo.com", options.UserName);
+        foreach (var page in new[] { "ForgotPasswordConfirmation", "RegisterConfirmation" })
+        {
+            var html = await client.GetStringAsync("/Identity/Account/" + page);
+            Assert.DoesNotContain("localhost:8025", html);
+        }
     }
 
     [Fact]
