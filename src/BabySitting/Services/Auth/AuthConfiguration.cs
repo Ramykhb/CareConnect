@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using BabySitting.Data;
@@ -32,6 +33,26 @@ public static class AuthConfiguration
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<BabySittingDbContext>()
             .AddSignInManager<ActiveUserSignInManager>();
+        // Leave password sign-in available when Google credentials have not been configured.
+        var googleId = configuration["Authentication:Google:ClientId"];
+        var googleSecret = configuration["Authentication:Google:ClientSecret"];
+        if (string.IsNullOrWhiteSpace(googleId) != string.IsNullOrWhiteSpace(googleSecret))
+            throw new InvalidOperationException("Configure both Authentication:Google:ClientId and ClientSecret, or neither.");
+        if (!string.IsNullOrWhiteSpace(googleId))
+            services.AddAuthentication().AddGoogle(options =>
+            {
+                options.ClientId = googleId;
+                options.ClientSecret = googleSecret!;
+                options.CallbackPath = "/signin-google";
+                options.CorrelationCookie.Name = "CareConnect.BabySitting.Google.Correlation.";
+                options.ClaimActions.MapJsonKey("google:email_verified", "email_verified");
+                options.Events.OnRemoteFailure = context =>
+                {
+                    context.HandleResponse();
+                    context.Response.Redirect("/Identity/Account/Login?googleError=true");
+                    return Task.CompletedTask;
+                };
+            });
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = "CareConnect.BabySitting.Identity";

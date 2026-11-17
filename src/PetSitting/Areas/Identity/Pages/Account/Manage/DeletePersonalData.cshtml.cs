@@ -17,7 +17,12 @@ public sealed class DeletePersonalDataModel(UserManager<ApplicationUser> users, 
     {
         [Required, DataType(DataType.Password)] public string Password { get; set; } = string.Empty;
     }
-    public void OnGet() { }
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Challenge();
+        return await users.HasPasswordAsync(user) ? Page() : RedirectToPage("SetPassword");
+    }
     public async Task<IActionResult> OnPostAsync()
     {
         if (!ModelState.IsValid) return Page();

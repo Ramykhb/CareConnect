@@ -7,6 +7,7 @@
 <section class="auth-form auth-login" aria-labelledby="auth-heading">
     <a class="auth-back" asp-area="" asp-controller="Home" asp-action="Index"><svg class="line-icon back-arrow"><use href="#icon-arrow" /></svg>Back to home</a>
     <h1 id="auth-heading">Welcome back</h1>
+    @if (TempData["GoogleLinkMessage"] is string linkMessage) { <p class="auth-errors" role="status">@linkMessage</p> }
     <p class="auth-subtitle">Log in to manage your pets and bookings.</p>
     <form method="post" asp-route-returnUrl="@Model.ReturnUrl">
         <div asp-validation-summary="ModelOnly" class="auth-errors" role="alert"></div>
@@ -15,9 +16,13 @@
         <div class="auth-options"><label class="auth-checkbox"><input asp-for="Input.RememberMe" /><span>Remember me</span></label><a asp-page="ForgotPassword">Forgot password?</a></div>
         <button type="submit" class="auth-submit"><svg class="line-icon"><use href="#icon-arrow" /></svg>Log in</button>
     </form>
-    <div class="auth-divider"><span>or</span></div>
-    <button class="auth-google" type="button" disabled aria-describedby="google-status">Continue with Google</button>
-    <p id="google-status" class="auth-small-note">Google sign-in is coming soon.</p>
+    @if (Model.GoogleEnabled)
+    {
+        <div class="auth-divider"><span>or</span></div>
+        <form asp-page="ExternalLogin" asp-page-handler="Challenge" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+            <button class="auth-google" type="submit">Continue with Google</button>
+        </form>
+    }
     <p class="auth-switch">New to CareConnect? <a asp-page="Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a></p>
     <a class="sitter-link" asp-page="Register" asp-route-accountType="Sitter" asp-route-returnUrl="@Model.ReturnUrl"><svg class="line-icon"><use href="#icon-shield" /></svg><span>Are you a pet sitter? Create a sitter account <span aria-hidden="true">→</span></span></a>
     <a class="auth-resend" asp-page="ResendEmailConfirmation">Resend email confirmation</a>
