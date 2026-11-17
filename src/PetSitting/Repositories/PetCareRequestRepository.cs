@@ -63,13 +63,15 @@ public sealed class PetCareRequestRepository(PetSittingDbContext db, TimeProvide
         if (request is null) return RequestWriteResult.NotFound;
         if (request.Status != RequestStatus.Open) return RequestWriteResult.NotEditable;
         if (!Matches(request.RowVersion, version)) return RequestWriteResult.Conflict;
-        if (request.Offers.Count == 0 && !await db.PetBookings.AnyAsync(b => b.RequestId == id))
+        if (request.Offers.Count == 0 && !await db.PetBookings.AnyAsync(b => b.RequestId == id)
+            && !await db.CombinedCareLinks.AnyAsync(l => l.LocalRequestId == id))
         {
             db.OwnerRequestDrafts.RemoveRange(await db.OwnerRequestDrafts.Where(d => d.SubmittedRequestId == id).ToListAsync());
             db.PetCareRequestPets.RemoveRange(request.Pets);
             db.PetCareRequests.Remove(request);
             return RequestWriteResult.Deleted;
         }
+        // Keep linked requests so the status change queues cancellation for the peer in the same save.
         // Responses and past bookings remain as history. Active bookings use booking cancellation.
         request.Status = RequestStatus.Cancelled;
         foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))

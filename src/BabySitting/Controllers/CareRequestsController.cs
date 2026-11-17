@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using BabySitting.Data;
 using BabySitting.Models;
 using BabySitting.Repositories;
@@ -85,6 +86,7 @@ public sealed partial class CareRequestsController(BabySittingDbContext db, ICar
     {
         var request = await repository.GetByIdAsync(id, UserId);
         if (request is null) return NotFound();
+        ViewBag.IsCombinedCare = await db.CombinedCareLinks.AnyAsync(l => l.LocalRequestId == id);
         return View(new MyRequestItem(request, null, clock.GetUtcNow()));
     }
 
@@ -97,7 +99,7 @@ public sealed partial class CareRequestsController(BabySittingDbContext db, ICar
         {
             case CareRequestWriteResult.NotFound: return NotFound();
             case CareRequestWriteResult.Deleted: TempData["Success"] = "Your request was deleted."; return RedirectToAction(nameof(Index));
-            case CareRequestWriteResult.Cancelled: TempData["Success"] = "Your request was cancelled. Sitters who responded keep it in their history."; break;
+            case CareRequestWriteResult.Cancelled: TempData["Success"] = "Your request was cancelled. Existing history and combined-care links were preserved."; break;
             case CareRequestWriteResult.NotEditable: TempData["Error"] = "A booked request is cancelled by cancelling its booking."; break;
             default: TempData["Error"] = "This request changed. Refresh and try again."; break;
         }

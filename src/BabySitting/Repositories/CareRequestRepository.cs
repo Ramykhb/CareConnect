@@ -76,7 +76,8 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
                     try { original = Convert.FromBase64String(version); } catch (FormatException) { return CareRequestWriteResult.Conflict; }
                     if (original.Length != 8 || !request.RowVersion.SequenceEqual(original)) return CareRequestWriteResult.Conflict;
                 }
-                var delete = request.Offers.Count == 0 && !await db.BabysittingBookings.AnyAsync(b => b.RequestId == id);
+                var delete = request.Offers.Count == 0 && !await db.BabysittingBookings.AnyAsync(b => b.RequestId == id)
+                    && !await db.CombinedCareLinks.AnyAsync(l => l.LocalRequestId == id);
                 if (delete)
                 {
                     // Wizard submissions retain a draft FK. Delete both in the same transaction.
@@ -85,6 +86,7 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
                 }
                 else
                 {
+                    // Keep linked requests so the status change queues cancellation for the peer in the same save.
                     request.Status = RequestStatus.Cancelled;
                     foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))
                     {

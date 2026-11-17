@@ -46,6 +46,7 @@ public sealed partial class CareRequestsController
         var request = await requests.FindAsync(OwnerId, id);
         if (request is null) return NotFound();
         if (request.Status != RequestStatus.Open) return ManagementResult(RequestWriteResult.NotEditable, id);
+        ViewBag.IsCombinedCare = await db.CombinedCareLinks.AnyAsync(l => l.LocalRequestId == id);
         return View(request);
     }
 
@@ -63,7 +64,7 @@ public sealed partial class CareRequestsController
         {
             RequestWriteResult.Saved => "Your request was updated. Sitters must review the latest details before accepting.",
             RequestWriteResult.Deleted => "Your request was deleted.",
-            RequestWriteResult.Cancelled => "Your request was cancelled. Sitter responses and booking history were preserved.",
+            RequestWriteResult.Cancelled => "Your request was cancelled. Existing history and combined-care links were preserved.",
             RequestWriteResult.NotEditable => "Only open requests can be deleted, and only future open requests can be edited. Manage accepted bookings from their booking page.",
             RequestWriteResult.InvalidPets => "The selected pets are no longer valid. Review your request and try again.",
             _ => "This request changed. Review its latest details and try again."
