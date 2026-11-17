@@ -270,7 +270,7 @@ The saved configuration is:
 | `Email:FromName` | `CareConnect` |
 | `Email:InboxUrl` | Empty; recipients use their own inbox |
 
-There is no API-key setting for this SMTP integration. To replace an SMTP key later, rerun the setup script or update `Email:Password` in each project's user secrets. Selecting the Brevo provider enforces its host, port and TLS settings, requires SMTP credentials, and rejects API keys beginning with `xkeysib-`. Real SMTP delivery hides the development Mailpit inbox link. Registration, verification/resend, password recovery and Identity email changes use this sender; in-app booking notifications are separate.
+There is no API-key setting for this SMTP integration. To replace an SMTP key later, rerun the setup script or update `Email:Password` in each project's user secrets. Selecting the Brevo provider enforces its host, port and TLS settings, requires SMTP credentials, and rejects API keys beginning with `xkeysib-`. Real SMTP delivery hides the development Mailpit inbox link. Outgoing emails use the CareConnect charcoal, sage and lime theme, a clear action button, the configured link expiry, a copyable fallback URL and a plain-text alternative. The SMTP wrapper also covers built-in Identity email changes. Registration, verification/resend, password recovery and Identity email changes use this sender; in-app booking notifications are separate.
 
 For deployment, supply these values through the environment/secret store (`Email__Password`, `Email__UserName`, etc.), and configure each `Auth:PublicOrigin` to its public URL so recipients on other devices can open confirmation/reset links. Local user secrets are per machine and are not shared by Git.
 

@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
+using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +20,8 @@ public sealed class EmailOptions
     public bool EnableSsl { get; set; } = true;
 }
 
-public sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSender
+public sealed class SmtpEmailSender(IOptions<EmailOptions> options, IOptions<AuthOriginOptions> origin,
+    IOptions<DataProtectionTokenProviderOptions> tokens) : IEmailSender
 {
     public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
@@ -29,7 +33,10 @@ public sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSend
             Credentials = string.IsNullOrWhiteSpace(settings.UserName) ? null
                 : new NetworkCredential(settings.UserName, settings.Password)
         };
-        using var message = new MailMessage { From = new MailAddress(settings.From, settings.FromName), Subject = subject, Body = htmlMessage, IsBodyHtml = true };
+        var content = EmailTemplate.Create(subject, htmlMessage, origin.Value.PublicOrigin, tokens.Value.TokenLifespan);
+        using var message = new MailMessage { From = new MailAddress(settings.From, settings.FromName), Subject = subject,
+            SubjectEncoding = Encoding.UTF8, BodyEncoding = Encoding.UTF8, Body = content.PlainText, IsBodyHtml = false };
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(content.Html, Encoding.UTF8, MediaTypeNames.Text.Html));
         message.To.Add(new MailAddress(email));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         try { await client.SendMailAsync(message, timeout.Token); }
