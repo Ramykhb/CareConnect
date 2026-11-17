@@ -2,8 +2,29 @@
 @model PetSitting.Areas.Identity.Pages.Account.Manage.DeletePersonalDataModel
 @{ ViewData["Title"] = "Delete account"; }
 <h1>Delete account</h1>
-<p class="alert alert-warning">Deleting your account is permanent. Accounts linked to care records require assistance from a platform manager.</p>
-<form method="post"><div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-<div class="mb-3"><label asp-for="Input.Password"></label><input asp-for="Input.Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Input.Password" class="text-danger"></span></div>
-<button type="submit" class="btn btn-danger">Delete my account permanently</button></form>
+@if (Model.StatusMessage is not null) { <p class="alert alert-info" role="status">@Model.StatusMessage</p> }
+@if (Model.Pending is { } pending)
+{
+    <div class="alert alert-warning">
+        <strong>Closure requested</strong> on @pending.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm"). A platform manager will review it.
+        <form method="post" asp-page-handler="WithdrawClosure" class="mt-2"><button type="submit" class="btn btn-sm btn-outline-dark">Withdraw request</button></form>
+    </div>
+}
+else if (Model.NeedsManager)
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <form method="post" asp-page-handler="RequestClosure">
+        <p>Your bookings, payments and reviews must stay for the other people involved. A platform manager can close your account instead: it will be deactivated and your name, email, phone, address and photo removed.</p>
+        <div class="mb-3"><label asp-for="Reason" class="form-label">Reason (optional)</label><textarea asp-for="Reason" class="form-control" maxlength="1000" rows="3"></textarea></div>
+        <div class="mb-3"><label asp-for="Input.Password" class="form-label">Confirm your password</label><input asp-for="Input.Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Input.Password" class="text-danger"></span></div>
+        <button type="submit" class="btn btn-danger">Request account closure</button>
+    </form>
+}
+else
+{
+    <p class="alert alert-warning">Deleting your account is permanent. If your account has bookings or other care records, you'll be able to ask a platform manager to close it instead.</p>
+    <form method="post"><div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+    <div class="mb-3"><label asp-for="Input.Password"></label><input asp-for="Input.Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Input.Password" class="text-danger"></span></div>
+    <button type="submit" class="btn btn-danger">Delete my account permanently</button></form>
+}
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

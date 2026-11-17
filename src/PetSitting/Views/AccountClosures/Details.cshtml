@@ -1,0 +1,43 @@
+@using PetSitting.Models
+@using PetSitting.Services.Accounts
+@model ClosureItem
+@{
+    var r = Model.Request; var rec = Model.Records;
+    ViewData["Title"] = "Closure request";
+    var version = Convert.ToBase64String(r.RowVersion);
+}
+<div class="py-4" style="max-width:820px">
+    <a asp-action="Index">← All requests</a>
+    <h1 class="mt-2">Close @r.User.FirstName @r.User.LastName's account?</h1>
+    <partial name="_Notice" />
+    <dl class="row">
+        <dt class="col-sm-4">Email</dt><dd class="col-sm-8">@r.User.Email</dd>
+        <dt class="col-sm-4">Role</dt><dd class="col-sm-8">@Model.Role</dd>
+        <dt class="col-sm-4">Requested</dt><dd class="col-sm-8">@r.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+        <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">@(r.Reason ?? "No reason given")</dd>
+        <dt class="col-sm-4">Care records kept</dt><dd class="col-sm-8">@rec.Bookings bookings · @rec.Requests requests · @rec.Payments payments · @rec.Reviews reviews</dd>
+        <dt class="col-sm-4">Status</dt><dd class="col-sm-8">@r.Status@(r.DecidedAtUtc is { } d ? " · " + d.ToLocalTime().ToString("d MMM yyyy, HH:mm") : "")@(r.ManagerNote is null ? "" : " · " + r.ManagerNote)</dd>
+    </dl>
+    @if (r.Status == ClosureStatus.Pending)
+    {
+        @if (rec.ActiveBookings > 0)
+        {
+            <div class="alert alert-warning">This account has @rec.ActiveBookings active booking(s). They must be completed or cancelled before it can be closed.</div>
+        }
+        <div class="row g-3">
+            <form class="col-md-6" asp-action="Approve" asp-route-id="@r.Id" method="post">
+                <input type="hidden" name="version" value="@version" />
+                <label class="form-label" for="approve-note">Note (optional)</label>
+                <textarea class="form-control mb-2" id="approve-note" name="note" maxlength="1000" rows="3"></textarea>
+                <button type="submit" class="btn btn-danger" disabled="@(rec.ActiveBookings > 0)">Close account</button>
+                <p class="small text-secondary mt-2">The account is deactivated and signed out, and its name, email, phone, address and photo are removed. Care records stay for the other people involved.</p>
+            </form>
+            <form class="col-md-6" asp-action="Reject" asp-route-id="@r.Id" method="post">
+                <input type="hidden" name="version" value="@version" />
+                <label class="form-label" for="reject-note">Reason for declining (sent to the user)</label>
+                <textarea class="form-control mb-2" id="reject-note" name="note" maxlength="1000" rows="3" required></textarea>
+                <button type="submit" class="btn btn-outline-dark">Decline request</button>
+            </form>
+        </div>
+    }
+</div>
