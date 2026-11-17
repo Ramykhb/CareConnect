@@ -90,6 +90,27 @@ public sealed class LiveNotificationTests
             Assert.True(await feed.DismissAsync(owner.Id, id));
             Assert.Empty(await feed.FeedAsync(owner.Id, unreadOnly: false));
             Assert.DoesNotContain(hub.Sent, s => s.User == other.Id.ToString());
+
+            var sentBefore = hub.Sent.Count;
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                db.Notifications.Add(new() { UserId = owner.Id, Title = "Rolled back", Body = "Must not be pushed" });
+                await db.SaveChangesAsync();
+                Assert.Equal(sentBefore, hub.Sent.Count);
+                await tx.RollbackAsync();
+            }
+            db.ChangeTracker.Clear();
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                db.Notifications.Add(new() { UserId = owner.Id, Title = "Committed", Body = "Push only after commit" });
+                await db.SaveChangesAsync();
+                db.Notifications.Add(new() { UserId = owner.Id, Title = "Second save", Body = "Same transaction" });
+                await db.SaveChangesAsync();
+                Assert.Equal(sentBefore, hub.Sent.Count);
+                await tx.CommitAsync();
+            }
+            Assert.Equal(sentBefore + 2, hub.Sent.Count);
+            Assert.Equal(2, await db.Notifications.CountAsync(n => n.UserId == owner.Id));
         }
         finally
         {
