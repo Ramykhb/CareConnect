@@ -15,7 +15,7 @@ public static class ReportDownloads
         var content = new StringBuilder();
         void Rect(double x, double y, double w, double h, string color) => content.AppendLine($"{color} rg {x.ToString(Inv)} {y.ToString(Inv)} {w.ToString(Inv)} {h.ToString(Inv)} re f");
         void Text(double x, double y, string value, double size = 10, bool bold = false, string color = "0.10 0.11 0.11") => content.AppendLine($"BT /{(bold ? "F2" : "F1")} {size.ToString(Inv)} Tf {color} rg 1 0 0 1 {x.ToString(Inv)} {y.ToString(Inv)} Tm ({EscapePdf(value)}) Tj ET");
-        Rect(0, 825, 595, 17, "0.92 1 0.53"); Text(42, 787, "PawPal", 24, true); Text(42, 751, "Analytics & reports", 22); Text(42, 730, $"{model.From:dd MMM yyyy} - {model.To:dd MMM yyyy} | Currency: {model.Currency}", 10, false, "0.42 0.47 0.44");
+        Rect(0, 825, 595, 17, "0.92 1 0.53"); Text(42, 787, "CareConnect", 24, true); Text(42, 751, "Analytics & reports", 22); Text(42, 730, $"{model.From:dd MMM yyyy} - {model.To:dd MMM yyyy} | Currency: {model.Currency}", 10, false, "0.42 0.47 0.44");
         var metrics = new[] { ("Responses", model.PeriodOffers.Count().ToString(Inv)), ("Accepted", model.Accepted.ToString(Inv)), ("Completed", model.Completed.ToString(Inv)), ($"Earnings ({model.Currency})", model.Gross.ToString("#,0.00", Inv)) };
         for (var i = 0; i < metrics.Length; i++) { var x = 42 + i * 130; Rect(x, 645, 121, 61, i == 3 ? "0.92 1 0.53" : "0.94 0.96 0.94"); Text(x + 10, 686, metrics[i].Item1, 9); Text(x + 10, 658, metrics[i].Item2, metrics[i].Item2.Length > 12 ? 11 : 19, true); }
         Text(42, 608, "Monthly summary", 15, true);
@@ -36,12 +36,12 @@ public static class ReportDownloads
         for (var c = 0; c < totals.Length; c++) Text(columns[c], y, totals[c], 9, true);
         Text(42, y - 43, "Requests count your recorded responses; accepted/rejected are their current outcomes.", 8, false, "0.42 0.47 0.44");
         Text(42, y - 58, "Earnings are successful payment records in the selected currency. No exchange rates are applied.", 8, false, "0.42 0.47 0.44");
-        Text(42, 42, "PawPal by CareConnect | Generated " + DashboardViewModel.Local(model.Now).ToString("dd MMM yyyy HH:mm", Inv) + " Beirut", 8, false, "0.42 0.47 0.44"); Text(525, 42, "1 / 1", 8);
+        Text(42, 42, "CareConnect | Generated " + DashboardViewModel.Local(model.Now).ToString("dd MMM yyyy HH:mm", Inv) + " Beirut", 8, false, "0.42 0.47 0.44"); Text(525, 42, "1 / 1", 8);
         var streamBytes = Encoding.ASCII.GetBytes(content.ToString());
         using var output = new MemoryStream(); var offsets = new List<long> { 0 };
         void Write(string value) { var bytes = Encoding.ASCII.GetBytes(value); output.Write(bytes); }
         void Obj(int number, string value) { offsets.Add(output.Position); Write($"{number} 0 obj\n{value}\nendobj\n"); }
-        Write("%PDF-1.4\n%PawPal\n"); Obj(1, "<< /Type /Catalog /Pages 2 0 R >>"); Obj(2, "<< /Type /Pages /Count 1 /Kids [3 0 R] >>");
+        Write("%PDF-1.4\n%CareConnect\n"); Obj(1, "<< /Type /Catalog /Pages 2 0 R >>"); Obj(2, "<< /Type /Pages /Count 1 /Kids [3 0 R] >>");
         Obj(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>");
         offsets.Add(output.Position); Write($"4 0 obj\n<< /Length {streamBytes.Length} >>\nstream\n"); output.Write(streamBytes); Write("endstream\nendobj\n");
         Obj(5, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"); Obj(6, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
@@ -61,7 +61,7 @@ public static class ReportDownloads
             return cell;
         }
         var data = new XElement(s + "sheetData",
-            new XElement(s + "row", new XAttribute("r", 1), new XAttribute("ht", 34), new XAttribute("customHeight", 1), Cell("A1", "PawPal | Monthly summary", 1)),
+            new XElement(s + "row", new XAttribute("r", 1), new XAttribute("ht", 34), new XAttribute("customHeight", 1), Cell("A1", "CareConnect | Monthly summary", 1)),
             new XElement(s + "row", new XAttribute("r", 2), Cell("A2", $"{model.From:yyyy-MM-dd} to {model.To:yyyy-MM-dd} | Currency: {model.Currency}")),
             new XElement(s + "row", new XAttribute("r", 4), new XAttribute("ht", 25), new XAttribute("customHeight", 1), new[] { "Month", "Requests", "Accepted", "Rejected", "Completed", "Earnings (" + model.Currency + ")", "Avg rating" }.Select((v, i) => Cell(((char)('A' + i)).ToString() + "4", v, 2))));
         var rowNumber = 5;

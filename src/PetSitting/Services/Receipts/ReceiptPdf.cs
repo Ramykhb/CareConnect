@@ -22,7 +22,7 @@ public static class ReceiptPdf
         lock (typeof(GlobalFontSettings))
             GlobalFontSettings.FontResolver ??= new ReceiptFonts();
         var document = new Document();
-        document.Info.Title = "Receipt " + model.Item.Reference + " - PawPal";
+        document.Info.Title = "Receipt " + model.Item.Reference + " - CareConnect";
         document.Info.Author = "CareConnect";
         var normal = document.Styles[StyleNames.Normal]!;
         normal.Font.Name = "CareConnect Manrope";
@@ -38,7 +38,7 @@ public static class ReceiptPdf
         header.AddColumn(Unit.FromCentimeter(8.4));
         header.AddColumn(Unit.FromCentimeter(8.4));
         var head = header.AddRow();
-        var brand = head[0].AddParagraph("PawPal");
+        var brand = head[0].AddParagraph("CareConnect");
         brand.Format.Font.Size = 25;
         brand.Format.Font.Bold = true;
         var title = head[1].AddParagraph("Payment receipt");
@@ -109,7 +109,7 @@ public static class ReceiptPdf
             demo.Format.SpaceBefore = 8;
             demo.Format.SpaceAfter = 12;
         }
-        var footer = section.Footers.Primary.AddParagraph("Booking #" + model.Item.Reference + "  |  PawPal by CareConnect");
+        var footer = section.Footers.Primary.AddParagraph("Booking #" + model.Item.Reference + "  |  CareConnect");
         footer.Format.Font.Size = 8;
         footer.Format.Font.Color = Muted;
         footer.Format.Borders.Top.Color = Sage;

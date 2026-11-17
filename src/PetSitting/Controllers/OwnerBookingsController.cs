@@ -53,6 +53,6 @@ public sealed class OwnerBookingsController(OwnerBookingService bookings, UserMa
         var model = await bookings.DetailsAsync(OwnerId, id);
         if (model is null) return NotFound();
         if (!model.HasReceipt) return BadRequest("A receipt is available after a successful payment.");
-        return File(ReceiptPdf.Create(model), "application/pdf", $"PawPal-{model.Item.Reference}-receipt.pdf");
+        return File(ReceiptPdf.Create(model), "application/pdf", $"CareConnect-{model.Item.Reference}-receipt.pdf");
     }
 }

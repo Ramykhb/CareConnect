@@ -1,4 +1,4 @@
-/* Owner portal (dashboard pages): PawPal design — charcoal sidebar, rounded cards, lime accents.
+/* Owner portal (dashboard pages): CareConnect design — charcoal sidebar, rounded cards, lime accents.
    Fonts and colour tokens come from pet-auth.css. */
 :root { --card:#e9efea; --card-2:#f0f3f0; --sage:#aabbb0; --charcoal:#191a1d; --charcoal-2:#2a2c30; --danger:#c9372c; --danger-bg:#fde6e3; --success-bg:#e2f4e8; }
 body.pet-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-family:Manrope,Arial,sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; }

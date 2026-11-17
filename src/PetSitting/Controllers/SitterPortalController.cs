@@ -37,7 +37,7 @@ public sealed class SitterPortalController(ISitterReportingService reports, ISit
         var account = await users.GetUserAsync(User); if (account is null) return Challenge();
         var range = Range(from, to); if (range is null || !ValidCurrency(currency) || format is not ("pdf" or "xlsx")) return BadRequest("Choose a supported report period and format.");
         var model = await reports.LoadAsync(account, range.Value.From, range.Value.To, currency, ct);
-        return format == "pdf" ? File(ReportDownloads.Pdf(model), "application/pdf", "pawpal-monthly-report.pdf") : File(ReportDownloads.Xlsx(model), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "pawpal-monthly-report.xlsx");
+        return format == "pdf" ? File(ReportDownloads.Pdf(model), "application/pdf", "careconnect-monthly-report.pdf") : File(ReportDownloads.Xlsx(model), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "careconnect-monthly-report.xlsx");
     }
     [HttpGet("Earnings/Export")]
     public async Task<IActionResult> EarningsCsv(int? year, string? currency, CancellationToken ct)
@@ -48,7 +48,7 @@ public sealed class SitterPortalController(ISitterReportingService reports, ISit
         var model = await reports.LoadAsync(account, new(selected, 1, 1), selected == today.Year ? today : new(selected, 12, 31), currency, ct);
         var text = new StringBuilder("Owner,Booking,Service,Date (Beirut),Payment status,Amount,Currency\r\n");
         foreach (var p in model.PeriodPayments.OrderByDescending(p => p.PaidAtUtc ?? p.CreatedAtUtc)) text.AppendLine(string.Join(",", new[] { p.Booking.Customer.FirstName + " " + p.Booking.Customer.LastName, SitterBookingsViewModel.Reference(p.Booking), DashboardViewModel.Service(p.Booking.Request.ServiceType), DashboardViewModel.Local(p.PaidAtUtc ?? p.CreatedAtUtc).ToString("yyyy-MM-dd HH:mm"), p.Status.ToString(), p.Amount.ToString(CultureInfo.InvariantCulture), p.Currency }.Select(Csv)));
-        return File(Encoding.UTF8.GetBytes(text.ToString()), "text/csv; charset=utf-8", "pawpal-payments.csv");
+        return File(Encoding.UTF8.GetBytes(text.ToString()), "text/csv; charset=utf-8", "careconnect-payments.csv");
     }
     [HttpGet("Reviews")]
     public async Task<IActionResult> Reviews(int? stars, string? search, string? sort, bool unanswered, CancellationToken ct)

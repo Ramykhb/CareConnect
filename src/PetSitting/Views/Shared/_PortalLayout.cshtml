@@ -46,7 +46,7 @@
     <div class="portal-shell">
         <aside class="portal-sidebar" id="portal-navigation" aria-label="@(sitter ? "Sitter" : "Owner") navigation">
             <div>
-                <a class="portal-brand" asp-controller="Home" asp-action="Index" aria-label="PawPal · CareConnect home"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>PawPal</a>
+                <a class="portal-brand" asp-controller="Home" asp-action="Index" aria-label="CareConnect home"><span class="brand-icon"><svg><use href="#icon-paw" /></svg></span>CareConnect</a>
                 <p class="portal-menu-label">@(sitter ? "Workspace" : "Menu")</p>
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
@@ -111,7 +111,7 @@
                 @if (TempData["Error"] is string error) { <div class="portal-notice error" role="alert">@error</div> }
                 @RenderBody()
             </main>
-            <footer class="portal-footer"><span>A little care makes a big difference.</span><span>PawPal by CareConnect <svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span></footer>
+            <footer class="portal-footer"><span>A little care makes a big difference.</span><span>CareConnect <svg class="line-icon paw-icon"><use href="#icon-paw" /></svg></span></footer>
         </div>
     </div>
     <dialog id="feature-dialog" class="dashboard-dialog" aria-labelledby="feature-title"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-paw" /></svg></span><h2 id="feature-title">CareConnect help</h2><p id="feature-description">Use the navigation to manage your bookings, messages and account.</p><button class="btn btn-dark" type="button" data-close>Got it</button></dialog>

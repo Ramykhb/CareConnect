@@ -48,7 +48,7 @@ public sealed class SitterBookingsController(ISitterBookingService bookings, Use
         var model = await bookings.LoadAsync(account, ct: ct); model.Filter = SitterBookingsViewModel.Normalize(status); model.Search = search;
         var text = new StringBuilder("Booking,Service,Pets,Owner,Starts (Beirut),Ends (Beirut),Status,Amount,Currency\r\n");
         foreach (var b in model.Visible) text.AppendLine(string.Join(",", new[] { SitterBookingsViewModel.Reference(b), DashboardViewModel.Service(b.Request.ServiceType), SitterBookingsViewModel.PetNames(b), b.Customer.FirstName + " " + b.Customer.LastName, DashboardViewModel.Local(b.StartsAtUtc).ToString("yyyy-MM-dd HH:mm"), DashboardViewModel.Local(b.EndsAtUtc).ToString("yyyy-MM-dd HH:mm"), BookingRules.Label(b), b.TotalAmount.ToString(CultureInfo.InvariantCulture), b.Currency }.Select(Csv)));
-        return File(Encoding.UTF8.GetBytes(text.ToString()), "text/csv; charset=utf-8", "pawpal-bookings.csv");
+        return File(Encoding.UTF8.GetBytes(text.ToString()), "text/csv; charset=utf-8", "careconnect-bookings.csv");
     }
     private async Task<IActionResult> Result(Guid id, Func<Task<BookingWriteResult>> operation)
     {

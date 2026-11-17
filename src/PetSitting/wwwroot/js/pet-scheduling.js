@@ -16,8 +16,8 @@
     });
     document.querySelectorAll('[data-open-dialog]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.openDialog)?.showModal()));
     document.querySelectorAll('[data-care-toggle]').forEach(input => input.addEventListener('change', () => input.form.requestSubmit()));
-    document.querySelectorAll('[data-preserve-scroll]').forEach(form => form.addEventListener('submit', () => sessionStorage.setItem('pawpal-care-scroll', JSON.stringify({ path: location.pathname, y: window.scrollY }))));
-    try { const saved = JSON.parse(sessionStorage.getItem('pawpal-care-scroll')); if (saved?.path === location.pathname) { window.scrollTo(0, saved.y); sessionStorage.removeItem('pawpal-care-scroll'); } } catch { /* No saved scroll position. */ }
+    document.querySelectorAll('[data-preserve-scroll]').forEach(form => form.addEventListener('submit', () => sessionStorage.setItem('careconnect-care-scroll', JSON.stringify({ path: location.pathname, y: window.scrollY }))));
+    try { const saved = JSON.parse(sessionStorage.getItem('careconnect-care-scroll')); if (saved?.path === location.pathname) { window.scrollTo(0, saved.y); sessionStorage.removeItem('careconnect-care-scroll'); } } catch { /* No saved scroll position. */ }
     document.querySelectorAll('[data-update-form]').forEach(form => {
         const file = form.querySelector('[data-care-photo]'), preview = form.querySelector('[data-care-preview]'), error = form.querySelector('.photo-error');
         let url;

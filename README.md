@@ -266,7 +266,7 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 ### PetSitting dashboards
 
-`/Dashboard` redirects pet owners to `/Dashboard/Customer` and pet sitters to `/Dashboard/Sitter`. Both pages use the PawPal portal theme from the supplied dashboard designs, including responsive navigation, lime metric cards, charts, booking details, notifications, and empty states. Existing pet CRUD and account links remain available.
+`/Dashboard` redirects pet owners to `/Dashboard/Customer` and pet sitters to `/Dashboard/Sitter`. Both pages use the CareConnect portal theme from the supplied dashboard designs, including responsive navigation, lime metric cards, charts, booking details, notifications, and empty states. Existing pet CRUD and account links remain available.
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
