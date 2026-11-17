@@ -64,7 +64,7 @@ public sealed class LiveNotificationTests
         await using var factory = Factory();
         var connection = factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection");
         var hub = new FakeHub();
-        var live = new LiveNotifications(hub, NullLogger<LiveNotifications>.Instance);
+        var live = new LiveNotifications(hub, NullLogger<LiveNotifications>.Instance, factory.Services.GetRequiredService<IServiceScopeFactory>());
         var options = new DbContextOptionsBuilder<PetSittingDbContext>().UseSqlServer(connection).AddInterceptors(new NotificationBroadcastInterceptor(live)).Options;
         var owner = new ApplicationUser { Id = Guid.NewGuid(), FirstName = "Live", LastName = "Owner", UserName = "live-" + Guid.NewGuid().ToString("N") };
         var other = new ApplicationUser { Id = Guid.NewGuid(), FirstName = "Live", LastName = "Other", UserName = "live-" + Guid.NewGuid().ToString("N") };
@@ -90,10 +90,47 @@ public sealed class LiveNotificationTests
             Assert.True(await feed.DismissAsync(owner.Id, id));
             Assert.Empty(await feed.FeedAsync(owner.Id, unreadOnly: false));
             Assert.DoesNotContain(hub.Sent, s => s.User == other.Id.ToString());
+
+            var sentBefore = hub.Sent.Count;
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                db.Notifications.Add(new() { UserId = owner.Id, Title = "Rolled back", Body = "Must not be pushed" });
+                await db.SaveChangesAsync();
+                Assert.Equal(sentBefore, hub.Sent.Count);
+                await tx.RollbackAsync();
+            }
+            db.ChangeTracker.Clear();
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                db.Notifications.Add(new() { UserId = owner.Id, Category = NotificationCategory.Booking, Title = "Committed", Body = "Push only after commit" });
+                await db.SaveChangesAsync();
+                db.Notifications.Add(new() { UserId = owner.Id, Category = NotificationCategory.Booking, Title = "Second save", Body = "Same transaction" });
+                await db.SaveChangesAsync();
+                Assert.Equal(sentBefore, hub.Sent.Count);
+                await tx.CommitAsync();
+            }
+            Assert.Equal(sentBefore + 2, hub.Sent.Count);
+            Assert.Equal(2, await db.Notifications.CountAsync(n => n.UserId == owner.Id));
+
+            hub.Sent.Clear();
+            db.AlertPreferences.Add(new() { UserId = owner.Id, Requests = false, Bookings = false, Payments = false, Reviews = false });
+            await db.SaveChangesAsync();
+            foreach (var category in new[] { NotificationCategory.Request, NotificationCategory.Booking, NotificationCategory.Payment, NotificationCategory.Review })
+                db.Notifications.Add(new() { UserId = owner.Id, Category = category, Title = "Disabled alert", Body = "Retained but suppressed" });
+            db.Notifications.Add(new() { UserId = owner.Id, Category = NotificationCategory.General, Title = "Account notice", Body = "General notifications remain visible" });
+            await db.SaveChangesAsync();
+            Assert.Single(hub.Sent); // only the general notice is delivered live
+            Assert.Single(await feed.FeedAsync(owner.Id, false));
+            Assert.Equal(1, await feed.UnreadAsync(owner.Id));
+            Assert.Equal(new[] { "general" }, await feed.CategoriesAsync(owner.Id));
+            Assert.Equal(7, await db.Notifications.CountAsync(n => n.UserId == owner.Id)); // activity is retained
+            await db.AlertPreferences.Where(p => p.UserId == owner.Id).ExecuteDeleteAsync();
+            Assert.Equal(7, (await feed.FeedAsync(owner.Id, false)).Count); // defaults enable all categories again
         }
         finally
         {
             db.ChangeTracker.Clear();
+            await db.AlertPreferences.Where(p => p.UserId == owner.Id).ExecuteDeleteAsync();
             await db.Notifications.Where(n => n.UserId == owner.Id).ExecuteDeleteAsync();
             await db.Users.Where(u => u.Id == owner.Id || u.Id == other.Id).ExecuteDeleteAsync();
         }

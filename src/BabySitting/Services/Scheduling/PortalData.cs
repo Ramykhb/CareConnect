@@ -1,3 +1,4 @@
+using BabySitting.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using BabySitting.Data;
 using BabySitting.Models;
@@ -12,6 +13,6 @@ public sealed record PortalData(BabysitterProfile? Profile, int Unread, int Inco
         var city = profile?.City ?? account.City;
         var services = profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
         var incoming = await db.ChildcareRequests.CountAsync(r => r.Status == RequestStatus.Open && r.StartsAtUtc > now && r.CustomerId != null && r.CustomerId != account.Id && r.Customer!.IsActive && city != null && r.City == city && (services.Length == 0 || services.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id), ct);
-        return new(profile, await db.Notifications.CountAsync(n => n.UserId == account.Id && n.ReadAtUtc == null, ct), incoming);
+        return new(profile, await NotificationVisibility.ForUser(db, account.Id).CountAsync(n => n.ReadAtUtc == null, ct), incoming);
     }
 }

@@ -1,3 +1,4 @@
+using PetSitting.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
@@ -12,6 +13,6 @@ public sealed record PortalData(PetSitterProfile? Profile, int Unread, int Incom
         var city = profile?.City ?? account.City;
         var services = profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
         var incoming = await db.PetCareRequests.CountAsync(r => r.Status == RequestStatus.Open && r.StartsAtUtc > now && r.CustomerId != null && r.CustomerId != account.Id && r.Customer!.IsActive && city != null && r.City == city && (services.Length == 0 || services.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id), ct);
-        return new(profile, await db.Notifications.CountAsync(n => n.UserId == account.Id && n.ReadAtUtc == null, ct), incoming);
+        return new(profile, await NotificationVisibility.ForUser(db, account.Id).CountAsync(n => n.ReadAtUtc == null, ct), incoming);
     }
 }

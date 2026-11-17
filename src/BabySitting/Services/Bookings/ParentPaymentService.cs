@@ -1,3 +1,4 @@
+using BabySitting.Services.Notifications;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -76,12 +77,12 @@ public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider c
     }
 
     public async Task<IReadOnlyList<Notification>> NotificationsAsync(Guid userId, CancellationToken ct = default) =>
-        await db.Notifications.AsNoTracking().Where(n => n.UserId == userId).OrderByDescending(n => n.CreatedAtUtc).Take(100).ToListAsync(ct);
+        await NotificationVisibility.ForUser(db, userId).AsNoTracking().OrderByDescending(n => n.CreatedAtUtc).Take(100).ToListAsync(ct);
 
     // Marks one notification (or all, when id is null) as read; false if the id is not the user's.
     public async Task<bool> MarkReadAsync(Guid userId, Guid? id, CancellationToken ct = default)
     {
-        var mine = db.Notifications.Where(n => n.UserId == userId);
+        var mine = NotificationVisibility.ForUser(db, userId);
         if (id is not null && !await mine.AnyAsync(n => n.Id == id, ct)) return false;
         await mine.Where(n => n.ReadAtUtc == null && (id == null || n.Id == id)).ExecuteUpdateAsync(s => s.SetProperty(n => n.ReadAtUtc, clock.GetUtcNow()), ct);
         return true;

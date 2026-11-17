@@ -27,6 +27,9 @@ public sealed class NotificationsController(INotificationFeedService feed, UserM
     [HttpGet]
     public async Task<IActionResult> Count() => Json(new { unread = await feed.UnreadAsync(UserId) });
 
+    [HttpGet]
+    public async Task<IActionResult> Preferences() => Json(new { categories = await feed.CategoriesAsync(UserId) });
+
     // POST /Notifications/Open/{id} — marks it read and follows its link.
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = Roles.Customer)]
     public async Task<IActionResult> Open(Guid id)

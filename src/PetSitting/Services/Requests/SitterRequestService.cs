@@ -1,3 +1,4 @@
+using PetSitting.Services.Notifications;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +59,7 @@ public sealed class SitterRequestService(PetSittingDbContext db, TimeProvider cl
                 Pets = request.Pets.Select(p => new IncomingPetViewModel(p.Pet.Name, p.Pet.Species, p.Pet.Breed, p.Pet.AgeYears, p.Pet.MedicalNotes, p.Pet.FeedingInstructions, p.Pet.CareInstructions)).ToArray()
             };
         }).ToArray();
-        return new SitterRequestsViewModel { Account = account, Profile = profile, Now = now, Items = items, Unread = await db.Notifications.CountAsync(n => n.UserId == account.Id && n.ReadAtUtc == null, ct) };
+        return new SitterRequestsViewModel { Account = account, Profile = profile, Now = now, Items = items, Unread = await NotificationVisibility.ForUser(db, account.Id).CountAsync(n => n.ReadAtUtc == null, ct) };
     }
 
     public async Task<RequestDecisionResult> DecideAsync(ApplicationUser account, RequestDecisionForm form, CancellationToken ct = default)

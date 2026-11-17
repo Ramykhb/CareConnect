@@ -9,6 +9,7 @@ namespace BabySitting.Services.Notifications;
 public interface INotificationFeedService
 {
     Task<IReadOnlyList<Notification>> FeedAsync(Guid userId, bool unreadOnly, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> CategoriesAsync(Guid userId, CancellationToken ct = default);
     Task<int> UnreadAsync(Guid userId, CancellationToken ct = default);
     Task<Notification?> MarkReadAsync(Guid userId, Guid id, bool read, CancellationToken ct = default);
     Task<int> MarkAllReadAsync(Guid userId, CancellationToken ct = default);
@@ -20,15 +21,21 @@ public sealed class NotificationFeedService(BabySittingDbContext db, LiveNotific
     public const int FeedLimit = 100;
 
     public async Task<IReadOnlyList<Notification>> FeedAsync(Guid userId, bool unreadOnly, CancellationToken ct = default) =>
-        await db.Notifications.AsNoTracking().Where(n => n.UserId == userId && (!unreadOnly || n.ReadAtUtc == null))
+        await NotificationVisibility.ForUser(db, userId).AsNoTracking().Where(n => !unreadOnly || n.ReadAtUtc == null)
             .OrderByDescending(n => n.CreatedAtUtc).ThenByDescending(n => n.Id).Take(FeedLimit).ToListAsync(ct);
 
-    public Task<int> UnreadAsync(Guid userId, CancellationToken ct = default) => db.Notifications.CountAsync(n => n.UserId == userId && n.ReadAtUtc == null, ct);
+    public Task<int> UnreadAsync(Guid userId, CancellationToken ct = default) => NotificationVisibility.ForUser(db, userId).CountAsync(n => n.ReadAtUtc == null, ct);
+
+    public async Task<IReadOnlyList<string>> CategoriesAsync(Guid userId, CancellationToken ct = default)
+    {
+        var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == userId, ct) ?? new();
+        return Enum.GetValues<NotificationCategory>().Where(preferences.Allows).Select(c => c.ToString().ToLowerInvariant()).ToArray();
+    }
 
     // Writes go straight to the database (never through a possibly stale tracked copy), then announce the change.
     public async Task<Notification?> MarkReadAsync(Guid userId, Guid id, bool read, CancellationToken ct = default)
     {
-        var mine = db.Notifications.Where(x => x.Id == id && x.UserId == userId);
+        var mine = NotificationVisibility.ForUser(db, userId).Where(x => x.Id == id);
         var updated = await mine.Where(x => (x.ReadAtUtc != null) != read)
             .ExecuteUpdateAsync(set => set.SetProperty(x => x.ReadAtUtc, read ? clock.GetUtcNow() : null), ct);
         if (updated > 0) await live.ChangedAsync(userId);
@@ -37,7 +44,7 @@ public sealed class NotificationFeedService(BabySittingDbContext db, LiveNotific
 
     public async Task<int> MarkAllReadAsync(Guid userId, CancellationToken ct = default)
     {
-        var count = await db.Notifications.Where(n => n.UserId == userId && n.ReadAtUtc == null)
+        var count = await NotificationVisibility.ForUser(db, userId).Where(n => n.ReadAtUtc == null)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.ReadAtUtc, clock.GetUtcNow()), ct);
         if (count > 0) await live.ChangedAsync(userId); // bulk updates bypass SaveChanges
         return count;
@@ -45,7 +52,7 @@ public sealed class NotificationFeedService(BabySittingDbContext db, LiveNotific
 
     public async Task<bool> DismissAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        var removed = await db.Notifications.Where(x => x.Id == id && x.UserId == userId).ExecuteDeleteAsync(ct);
+        var removed = await NotificationVisibility.ForUser(db, userId).Where(x => x.Id == id).ExecuteDeleteAsync(ct);
         if (removed > 0) await live.ChangedAsync(userId);
         return removed > 0;
     }

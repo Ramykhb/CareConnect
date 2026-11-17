@@ -29,11 +29,38 @@
 
     const connection = new signalR.HubConnectionBuilder().withUrl('/hubs/chat')
         .withAutomaticReconnect({ nextRetryDelayInMilliseconds: ctx => Math.min(2000 * 2 ** ctx.previousRetryCount, 60000) }).build();
-    const markRead = () => { if (document.visibilityState === 'visible') connection.invoke('MarkRead', bookingId).catch(() => {}); };
-    connection.on('message.received', m => { if (m.bookingId !== bookingId) return; render(m); scroll(); if (m.senderId !== me) markRead(); });
-    connection.on('messages.read', messages => messages.forEach(render));
-    connection.onreconnected(() => connection.invoke('Join', bookingId).then(markRead));
-    document.addEventListener('visibilitychange', markRead);
+    const markRead = async () => {
+        if (document.visibilityState !== 'visible' || connection.state !== signalR.HubConnectionState.Connected) return;
+        // Acknowledge only messages already displayed, including when history is still loading.
+        const ids = [...list.querySelectorAll('[data-message]')].map(li => li.dataset.message);
+        for (let i = 0; i < ids.length; i += 200) await connection.invoke('MarkRead', bookingId, ids.slice(i, i + 200));
+    };
+    let syncing = false;
+    const sync = async () => {
+        if (syncing || connection.state !== signalR.HubConnectionState.Connected) return;
+        syncing = true;
+        try {
+            const messages = await connection.invoke('Sync', bookingId);
+            messages.forEach(render); // render merges by ID with live events received during the fetch
+            [...list.querySelectorAll('[data-message]')].sort((a, b) =>
+                new Date(a.querySelector('time').dateTime) - new Date(b.querySelector('time').dateTime)
+                || a.dataset.message.localeCompare(b.dataset.message)).forEach(li => list.append(li));
+            await markRead();
+            status.textContent = ''; scroll();
+        } catch {
+            status.textContent = 'Catching up on messages…';
+            setTimeout(sync, 2000);
+        } finally { syncing = false; }
+    };
+    connection.on('message.received', m => {
+        if (m.bookingId !== bookingId) return;
+        render(m); scroll(); if (m.senderId !== me) markRead().catch(() => {});
+    });
+    connection.on('messages.read', messages => messages.forEach(m => {
+        if (list.querySelector(`[data-message="${m.id}"]`)) render(m);
+    }));
+    connection.onreconnected(sync);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 
     form.addEventListener('submit', event => {
         if (connection.state !== signalR.HubConnectionState.Connected) return; // fall back to the normal form post
@@ -48,7 +75,7 @@
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
 
-    connection.start().then(() => connection.invoke('Join', bookingId)).then(markRead)
+    connection.start().then(sync)
         .catch(() => { status.textContent = 'Live chat is offline; messages still send.'; });
     scroll();
 })();

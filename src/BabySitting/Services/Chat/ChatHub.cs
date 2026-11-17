@@ -26,9 +26,18 @@ public sealed class ChatHub(IChatService chat) : Hub
         await Clients.Group(Group(bookingId)).SendAsync(Received, message);
     }
 
-    public async Task MarkRead(Guid bookingId)
+    // Join before reading history so concurrent messages also arrive over the socket.
+    public async Task<IReadOnlyList<ChatMessageDto>> Sync(Guid bookingId)
     {
-        var read = await chat.MarkReadAsync(UserId, bookingId);
+        await Join(bookingId);
+        var thread = await chat.ThreadAsync(UserId, bookingId);
+        return thread?.Messages ?? throw new HubException("You can't open this conversation.");
+    }
+
+    public async Task MarkRead(Guid bookingId, Guid[] messageIds)
+    {
+        if (messageIds is null || messageIds.Length > 200) throw new HubException("Send up to 200 displayed message IDs.");
+        var read = await chat.MarkReadAsync(UserId, bookingId, messageIds: messageIds);
         if (read.Count > 0) await Clients.Group(Group(bookingId)).SendAsync(Read, read);
     }
 }

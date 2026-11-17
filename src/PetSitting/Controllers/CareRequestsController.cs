@@ -92,9 +92,17 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
             {
                 var sitter = model.Sitters.Single(s => s.Id == sitterId);
                 db.PetCareOffers.Add(new PetCareOffer { RequestId = request.Id, SitterProfileId = sitter.Id, Amount = request.Budget, Currency = "USD" });
-                db.Notifications.Add(new Notification { UserId = sitter.UserId, Category = NotificationCategory.Request, SourceKey = "owner-request:" + request.Id,
-                    Title = "A pet owner sent you a sitting request", Body = request.Title + " · " + request.City,
-                    RelativeUrl = "/SitterRequests?id=" + request.Id });
+
+            }
+            // Persist every eligible sitter's alert with the request. The interceptor pushes
+            // these immediately after the save commits, without waiting for feed polling.
+            foreach (var sitter in model.Sitters)
+            {
+                var preferred = form.PreferredSitterId == sitter.Id;
+                db.Notifications.Add(new Notification { UserId = sitter.UserId, Category = NotificationCategory.Request,
+                    SourceKey = (preferred ? "owner-request:" : "request:") + request.Id,
+                    Title = preferred ? "A pet owner sent you a sitting request" : "New care request in " + request.City,
+                    Body = request.Title + " · " + request.City, RelativeUrl = "/SitterRequests?id=" + request.Id });
             }
         }
         try { await db.SaveChangesAsync(); }

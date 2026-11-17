@@ -7,16 +7,8 @@
     const sectionNames = new Set(['overview', 'requests', 'bookings', 'pets', 'payments', 'sitters', 'notifications', 'earnings', 'reports', 'availability', 'messages', 'reviews']);
     const cards = board ? [...board.children].filter(el => el.hasAttribute('data-sections')) : [];
     const isSitter = board?.dataset.dashboard === 'sitter';
-    // These are planned care workflows. Keep their status explicit; never simulate a payment or booking.
     const featureCopy = {
-        'Messages': 'Messaging is coming soon. Your existing bookings and care details are available on your dashboard.',
-        'Create a sitting request': 'Care request creation is coming soon. In the meantime, add your pets and their care instructions so everything is ready for their next stay.',
-        'Respond to a request': 'Request responses and booking confirmation are coming soon. This request is open; reviewing it does not accept or reserve it.',
-        'Manage request': 'Request editing and offer management are coming soon. Your existing request details are shown on the dashboard.',
-        'Update pricing': 'Sitter profile and pricing management are coming soon. Your current profile details have not been changed.',
-        'Request payout': 'Payouts are coming soon. Your earnings show recorded successful payments; no payout has been requested.',
-        'Complete payment': 'Payment processing is coming soon. Your booking is still awaiting payment, and no charge has been made.',
-        'Help center': 'For now, you can manage your profile in Settings, browse your dashboard, and keep your pet profiles up to date. More support tools are on the way.'
+        'Help center': 'Use Settings to manage your account, Bookings for care and payments, Messages to contact your sitter, and Notifications for updates.'
     };
     function showSection() {
         if (!board) return;
@@ -78,10 +70,8 @@
         const feature = event.target.closest('[data-feature]');
         if (feature && featureDialog) {
             const name = feature.dataset.feature;
-            if (name === 'Update pricing') { window.location.href = '/Sitter/Settings#services-settings'; return; }
-            if (name === 'Request payout') { window.location.href = '/Sitter/Earnings'; return; }
             document.getElementById('feature-title').textContent = name;
-            document.getElementById('feature-description').textContent = featureCopy[name] || 'This feature is coming soon. Your existing data has not been changed.';
+            document.getElementById('feature-description').textContent = featureCopy[name] || 'Choose a page from the navigation to manage your care.';
             featureDialog.showModal();
         }
         const trigger = event.target.closest('[data-dialog]');

@@ -52,6 +52,8 @@ public sealed class ChatTests
         var chat = new ChatService(db, clock);
         try
         {
+            Assert.Equal("/ParentBookings/Details/" + request.Id, (await chat.ThreadAsync(owner.Id, booking.Id))!.BookingUrl);
+            Assert.Equal("/SitterBookings/Details/" + booking.Id, (await chat.ThreadAsync(sitter.Id, booking.Id))!.BookingUrl);
             Assert.False(await chat.CanAccessAsync(stranger.Id, booking.Id));
             Assert.Null(await chat.SendAsync(stranger.Id, booking.Id, "Let me in"));
             Assert.Null(await chat.ThreadAsync(stranger.Id, booking.Id));
@@ -63,7 +65,11 @@ public sealed class ChatTests
             Assert.Equal(1, await chat.UnreadAsync(sitter.Id));
             Assert.Empty(await chat.MarkReadAsync(stranger.Id, booking.Id));                        // strangers can't mark anything
 
-            var read = Assert.Single(await chat.MarkReadAsync(sitter.Id, booking.Id));
+            var missed = await chat.SendAsync(owner.Id, booking.Id, "Sent while you were disconnected");
+            var read = Assert.Single(await chat.MarkReadAsync(sitter.Id, booking.Id, messageIds: new[] { sent!.Id }));
+            Assert.Equal(1, await chat.UnreadAsync(sitter.Id)); // undisplayed messages stay unread
+            Assert.Contains((await chat.ThreadAsync(sitter.Id, booking.Id))!.Messages, m => m.Id == missed!.Id);
+            await db.ChatMessages.Where(m => m.Id == missed!.Id).ExecuteDeleteAsync();
             Assert.Equal(sent!.Id, read.Id);
             Assert.Equal(read.ReadAtUtc!.Value.AddHours(24), read.ExpiresAtUtc);
             await chat.SendAsync(sitter.Id, booking.Id, "Got it, thanks!");                          // unread reply: never expires on its own

@@ -1,3 +1,4 @@
+using BabySitting.Services.Notifications;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +59,7 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                 Children = new(request.NumberOfChildren, request.YoungestChildAgeYears, request.OldestChildAgeYears, request.FamilyProfile?.HealthNotes, request.FamilyProfile?.Routines, request.CareInstructions)
             };
         }).ToArray();
-        return new SitterRequestsViewModel { Account = account, Profile = profile, Now = now, Items = items, Unread = await db.Notifications.CountAsync(n => n.UserId == account.Id && n.ReadAtUtc == null, ct) };
+        return new SitterRequestsViewModel { Account = account, Profile = profile, Now = now, Items = items, Unread = await NotificationVisibility.ForUser(db, account.Id).CountAsync(n => n.ReadAtUtc == null, ct) };
     }
 
     public async Task<RequestDecisionResult> DecideAsync(ApplicationUser account, RequestDecisionForm form, CancellationToken ct = default)

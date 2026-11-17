@@ -56,6 +56,7 @@ public sealed class OwnerRequestTests
         var ownerId = Guid.Empty; var otherId = Guid.Empty; var sitterId = Guid.Empty;
         var petId = Guid.NewGuid(); var foreignPetId = Guid.NewGuid(); var profileId = Guid.NewGuid();
         var draftId = Guid.Empty;
+        var eligibleSitterId = Guid.NewGuid();
         try
         {
             using (var scope = factory.Services.CreateScope())
@@ -75,6 +76,8 @@ public sealed class OwnerRequestTests
                 var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
                 db.Pets.AddRange(new Pet { Id = petId, OwnerId = ownerId, Name = "Wizard Max", Species = "Dog", MedicalNotes = "No allergies.", FeedingInstructions = "Twice daily." }, new Pet { Id = foreignPetId, OwnerId = otherId, Name = "Private pet", Species = "Cat" });
                 db.PetSitterProfiles.Add(new PetSitterProfile { Id = profileId, UserId = sitterId, City = city, Bio = "Test sitter", IsAvailable = true });
+                db.Users.Add(new ApplicationUser { Id = eligibleSitterId, FirstName = "Eligible", LastName = "Sitter", UserName = "eligible-" + suffix });
+                db.PetSitterProfiles.Add(new PetSitterProfile { UserId = eligibleSitterId, City = city, Bio = "Another eligible sitter", IsAvailable = true });
                 await db.SaveChangesAsync();
             }
             await Login(client, ownerEmail);
@@ -137,6 +140,12 @@ public sealed class OwnerRequestTests
             Assert.Contains("Submitted", sent.Headers.Location!.ToString());
             var repeated = await WizardPost(client, fields, "submit");
             Assert.Equal(sent.Headers.Location, repeated.Headers.Location);
+            using (var alerts = factory.Services.CreateScope())
+            {
+                var store = alerts.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+                Assert.Single(await store.Notifications.Where(n => n.UserId == eligibleSitterId && n.SourceKey == "request:" + draftId).ToListAsync());
+                Assert.Single(await store.Notifications.Where(n => n.UserId == sitterId && n.SourceKey == "owner-request:" + draftId).ToListAsync());
+            }
             var submitted = await client.GetStringAsync(sent.Headers.Location);
             Assert.Contains("Your request is on its way", submitted);
             Assert.Contains("Awaiting a sitter", submitted);
@@ -170,14 +179,15 @@ public sealed class OwnerRequestTests
         {
             using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
-            await db.Notifications.Where(n => n.UserId == sitterId || n.UserId == ownerId).ExecuteDeleteAsync();
+            await db.Notifications.Where(n => n.UserId == sitterId || n.UserId == ownerId || n.UserId == eligibleSitterId).ExecuteDeleteAsync();
             await db.OwnerRequestDrafts.Where(d => d.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.PetBookings.Where(b => b.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.PetCareOffers.Where(o => o.Request.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.PetCareRequestPets.Where(p => p.PetCareRequest.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.PetCareRequests.Where(r => r.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.Pets.Where(p => p.OwnerId == ownerId || p.OwnerId == otherId).ExecuteDeleteAsync();
-            await db.PetSitterProfiles.Where(p => p.UserId == sitterId).ExecuteDeleteAsync();
+            await db.PetSitterProfiles.Where(p => p.UserId == sitterId || p.UserId == eligibleSitterId).ExecuteDeleteAsync();
+            await db.Users.Where(u => u.Id == eligibleSitterId).ExecuteDeleteAsync();
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             foreach (var email in new[] { ownerEmail, otherEmail, sitterEmail })
             {

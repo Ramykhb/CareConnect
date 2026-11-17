@@ -1,3 +1,4 @@
+using PetSitting.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
@@ -32,15 +33,7 @@ public sealed class DashboardService(PetSittingDbContext db, TimeProvider clock)
                 (services.Length == 0 || services.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id))
             : requests.Where(r => r.CustomerId == account.Id);
         var offers = db.PetCareOffers.Where(o => o.SitterProfile.UserId == account.Id);
-        var notifications = db.Notifications.AsNoTracking().Where(n => n.UserId == account.Id);
-        if (!sitter)
-        {
-            var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == account.Id, ct) ?? new();
-            notifications = notifications.Where(n => (n.Category != NotificationCategory.Request || preferences.Requests)
-                && (n.Category != NotificationCategory.Booking || preferences.Bookings)
-                && (n.Category != NotificationCategory.Payment || preferences.Payments)
-                && (n.Category != NotificationCategory.Review || preferences.Reviews));
-        }
+        var notifications = NotificationVisibility.ForUser(db, account.Id).AsNoTracking();
         return new DashboardViewModel
         {
             Account = account, IsSitter = sitter, Profile = profile, Now = now, Bookings = bookings,

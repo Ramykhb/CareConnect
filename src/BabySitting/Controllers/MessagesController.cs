@@ -23,7 +23,7 @@ public sealed class MessagesController(IChatService chat, IHubContext<ChatHub> h
     {
         var thread = await chat.ThreadAsync(UserId, id);
         if (thread is null) return NotFound();
-        var read = await chat.MarkReadAsync(UserId, id);
+        var read = await chat.MarkReadAsync(UserId, id, messageIds: thread.Messages.Select(m => m.Id).ToArray());
         if (read.Count > 0) await hub.Clients.Group(ChatHub.Group(id)).SendAsync(ChatHub.Read, read);
         return View(thread with { Messages = thread.Messages.Select(m => read.FirstOrDefault(r => r.Id == m.Id) ?? m).ToList() });
     }

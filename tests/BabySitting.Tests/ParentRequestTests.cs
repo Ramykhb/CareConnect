@@ -54,6 +54,7 @@ public sealed class ParentRequestTests
         var ownerId = Guid.Empty; var otherId = Guid.Empty; var sitterId = Guid.Empty;
         var profileId = Guid.NewGuid();
         var draftId = Guid.Empty;
+        var eligibleSitterId = Guid.NewGuid();
         try
         {
             using (var scope = factory.Services.CreateScope())
@@ -73,6 +74,8 @@ public sealed class ParentRequestTests
                 var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
                 db.FamilyProfiles.Add(new FamilyProfile { UserId = ownerId, City = city, NumberOfChildren = 2, YoungestChildAgeYears = 3, OldestChildAgeYears = 7, HealthNotes = "No allergies." });
                 db.BabysitterProfiles.Add(new BabysitterProfile { Id = profileId, UserId = sitterId, City = city, Bio = "Test sitter", IsAvailable = true });
+                db.Users.Add(new ApplicationUser { Id = eligibleSitterId, FirstName = "Eligible", LastName = "Sitter", UserName = "eligible-" + suffix });
+                db.BabysitterProfiles.Add(new BabysitterProfile { UserId = eligibleSitterId, City = city, Bio = "Another eligible sitter", IsAvailable = true });
                 await db.SaveChangesAsync();
             }
             await Login(client, ownerEmail);
@@ -136,6 +139,12 @@ public sealed class ParentRequestTests
             Assert.Contains("Submitted", sent.Headers.Location!.ToString());
             var repeated = await WizardPost(client, fields, "submit");
             Assert.Equal(sent.Headers.Location, repeated.Headers.Location);
+            using (var alerts = factory.Services.CreateScope())
+            {
+                var store = alerts.ServiceProvider.GetRequiredService<BabySittingDbContext>();
+                Assert.Single(await store.Notifications.Where(n => n.UserId == eligibleSitterId && n.SourceKey == "request:" + draftId).ToListAsync());
+                Assert.Single(await store.Notifications.Where(n => n.UserId == sitterId && n.SourceKey == "owner-request:" + draftId).ToListAsync());
+            }
             var submitted = await client.GetStringAsync(sent.Headers.Location);
             Assert.Contains("Your request is on its way", submitted);
             Assert.Contains("Awaiting a sitter", submitted);
@@ -171,13 +180,14 @@ public sealed class ParentRequestTests
         {
             using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
-            await db.Notifications.Where(n => n.UserId == sitterId || n.UserId == ownerId).ExecuteDeleteAsync();
+            await db.Notifications.Where(n => n.UserId == sitterId || n.UserId == ownerId || n.UserId == eligibleSitterId).ExecuteDeleteAsync();
             await db.ParentRequestDrafts.Where(d => d.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.BabysittingBookings.Where(b => b.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.BabysittingOffers.Where(o => o.Request.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.ChildcareRequests.Where(r => r.CustomerId == ownerId).ExecuteDeleteAsync();
             await db.FamilyProfiles.Where(f => f.UserId == ownerId || f.UserId == otherId).ExecuteDeleteAsync();
-            await db.BabysitterProfiles.Where(p => p.UserId == sitterId).ExecuteDeleteAsync();
+            await db.BabysitterProfiles.Where(p => p.UserId == sitterId || p.UserId == eligibleSitterId).ExecuteDeleteAsync();
+            await db.Users.Where(u => u.Id == eligibleSitterId).ExecuteDeleteAsync();
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             foreach (var email in new[] { ownerEmail, otherEmail, sitterEmail })
             {

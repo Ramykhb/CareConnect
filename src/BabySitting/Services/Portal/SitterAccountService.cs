@@ -1,3 +1,4 @@
+using BabySitting.Services.Notifications;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +22,7 @@ public interface ISitterAccountService
     Task<PortalWriteResult> SaveAlertsAsync(Guid userId, AlertPreferencesForm form, CancellationToken ct = default);
 }
 
-public sealed class SitterAccountService(BabySittingDbContext db, UserManager<ApplicationUser> users, TimeProvider clock) : ISitterAccountService
+public sealed class SitterAccountService(BabySittingDbContext db, UserManager<ApplicationUser> users, TimeProvider clock, LiveNotifications live) : ISitterAccountService
 {
     public async Task<SitterReviewsViewModel> ReviewsAsync(ApplicationUser account, CancellationToken ct = default)
     {
@@ -79,15 +80,16 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
         if (p is null) { if (!string.IsNullOrEmpty(form.Version)) return new(false, "Refresh your alert preferences before saving."); p = new() { UserId = userId }; db.AlertPreferences.Add(p); }
         else if (!Matches(p.RowVersion, form.Version)) return new(false, "Your alert preferences changed. Refresh before saving.");
         p.Requests = form.Requests; p.Bookings = form.Bookings; p.Payments = form.Payments; p.Reviews = form.Reviews; p.RequestSound = form.RequestSound;
-        try { await db.SaveChangesAsync(ct); return new(true, "Your in-app alert preferences have been saved."); }
+        try { await db.SaveChangesAsync(ct); await live.ChangedAsync(userId, preferencesChanged: true); return new(true, "Your in-app alert preferences have been saved."); }
         catch (DbUpdateConcurrencyException) { return new(false, "Your preferences changed. Refresh and try again."); }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 }) { return new(false, "Preferences already exist. Refresh and try again."); }
     }
     public async Task<PortalWriteResult> ReadAsync(Guid userId, Guid? id, CancellationToken ct = default)
     {
-        var query = db.Notifications.Where(n => n.UserId == userId);
+        var query = NotificationVisibility.ForUser(db, userId);
         if (id is not null && !await query.AnyAsync(n => n.Id == id, ct)) return new(false, "Notification not found.", true);
         await query.Where(n => n.ReadAtUtc == null && (id == null || n.Id == id)).ExecuteUpdateAsync(setters => setters.SetProperty(n => n.ReadAtUtc, clock.GetUtcNow()), ct);
+        await live.ChangedAsync(userId);
         return new(true, id is null ? "All notifications marked as read." : "Notification marked as read.");
     }
     public async Task<SitterNotificationsViewModel> NotificationsAsync(ApplicationUser account, CancellationToken ct = default)
@@ -95,7 +97,7 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
         await SynchronizeAsync(account, ct);
         var now = clock.GetUtcNow(); var portal = await PortalData.LoadAsync(db, account, now, ct);
         return new() { Account = account, Profile = portal.Profile, Now = now, Unread = portal.Unread, IncomingRequestCount = portal.Incoming,
-            Items = await db.Notifications.AsNoTracking().Where(n => n.UserId == account.Id).OrderByDescending(n => n.CreatedAtUtc).ThenByDescending(n => n.Id).ToListAsync(ct), Preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == account.Id, ct) ?? new() };
+            Items = await NotificationVisibility.ForUser(db, account.Id).AsNoTracking().OrderByDescending(n => n.CreatedAtUtc).ThenByDescending(n => n.Id).ToListAsync(ct), Preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == account.Id, ct) ?? new() };
     }
     private async Task SynchronizeAsync(ApplicationUser account, CancellationToken ct)
     {
@@ -105,10 +107,11 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
             var now = clock.GetUtcNow(); var portal = await PortalData.LoadAsync(db, account, now, ct); var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == account.Id, ct) ?? new();
             var candidates = new List<Notification>();
             var city = portal.Profile?.City ?? account.City; var types = portal.Profile?.Services.Select(s => s.ServiceType).ToArray() ?? [];
-            if (preferences.Requests && portal.Profile?.IsAvailable != false && city is not null)
+            if (preferences.Requests && portal.Profile?.IsAvailable == true && city is not null)
             {
                 var requests = await db.ChildcareRequests.AsNoTracking().Where(r => r.CustomerId != null && r.CustomerId != account.Id && r.Customer!.IsActive && r.Status == RequestStatus.Open && r.StartsAtUtc > now && r.City == city && (types.Length == 0 || types.Contains(r.ServiceType)) && !r.Offers.Any(o => o.SitterProfile.UserId == account.Id)).Include(r => r.Customer).ToListAsync(ct);
-                foreach (var r in requests) candidates.Add(new() { Category = NotificationCategory.Request, SourceKey = "request:" + r.Id, Title = "New request from " + r.Customer!.FirstName + " " + r.Customer.LastName, Body = DashboardViewModel.Service(r.ServiceType) + " · " + DashboardViewModel.Money(r.Budget, r.Currency) + " offered · " + r.City, RelativeUrl = "/SitterRequests?id=" + r.Id, CreatedAtUtc = r.CreatedAtUtc });
+                var bookings = await db.BabysittingBookings.AsNoTracking().Where(b => b.SitterProfileId == portal.Profile!.Id).ToListAsync(ct);
+                foreach (var r in requests.Where(r => BabySitting.Services.Requests.SitterRequestPolicy.AcceptanceBlock(r, portal.Profile, bookings, now) is null)) candidates.Add(new() { Category = NotificationCategory.Request, SourceKey = "request:" + r.Id, Title = "New request from " + r.Customer!.FirstName + " " + r.Customer.LastName, Body = DashboardViewModel.Service(r.ServiceType) + " · " + DashboardViewModel.Money(r.Budget, r.Currency) + " offered · " + r.City, RelativeUrl = "/SitterRequests?id=" + r.Id, CreatedAtUtc = r.CreatedAtUtc });
             }
             if (preferences.Payments)
             {
