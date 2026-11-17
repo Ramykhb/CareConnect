@@ -107,7 +107,8 @@ public sealed class AccountClosureService(PetSittingDbContext db, UserManager<Ap
                 if (!update.Succeeded) return new(false, string.Join(" ", update.Errors.Select(e => e.Description)));
                 await users.UpdateSecurityStampAsync(user); // signs the person out everywhere
                 await db.AccountPhotos.Where(p => p.UserId == user.Id).ExecuteDeleteAsync(ct);
-                await db.PetCareRequests.Where(r => r.CustomerId == user.Id && r.Status == RequestStatus.Open).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, RequestStatus.Cancelled), ct);
+                var openRequests = await db.PetCareRequests.Where(r => r.CustomerId == user.Id && r.Status == RequestStatus.Open).ToListAsync(ct);
+                foreach (var openRequest in openRequests) openRequest.Status = RequestStatus.Cancelled;
                 await db.PetSitterProfiles.Where(p => p.UserId == user.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.IsAvailable, false), ct);
 
                 request.Status = ClosureStatus.Approved; request.DecidedAtUtc = now; request.DecidedById = managerId; request.ManagerNote = note;

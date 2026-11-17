@@ -5,6 +5,7 @@ using PetSitting.Data;
 using PetSitting.Repositories;
 using PetSitting.Services.Auth;
 using PetSitting.Services.Messaging;
+using CareConnect.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
@@ -31,8 +32,15 @@ builder.Services.AddDbContext<PetSittingDbContext>((services, options) =>
 // Scoped (one per HTTP request) because it uses the scoped DbContext.
 builder.Services.AddScoped<IPetRepository, PetRepository>();
 builder.Services.AddScoped<PetCareRequestRepository>();
-builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
-builder.Services.AddHealthChecks();
+builder.Services.AddOptions<BrokerOptions>().Bind(builder.Configuration.GetSection("RabbitMq"))
+    .PostConfigure(o => { o.Platform = "PetSitting"; o.Queue = "petsitting.events"; })
+    .Validate(o => !o.Enabled || (!string.IsNullOrWhiteSpace(o.HostName) && o.Port is > 0 and <= 65535 &&
+        !string.IsNullOrWhiteSpace(o.UserName) && !string.IsNullOrWhiteSpace(o.Password) && !string.IsNullOrWhiteSpace(o.Exchange)),
+        "Enabled RabbitMQ requires host, port, exchange and credentials.").ValidateOnStart();
+builder.Services.AddScoped<IIntegrationStore, IntegrationStore>();
+builder.Services.AddHostedService<RabbitMqWorker>();
+builder.Services.AddSingleton<BrokerHealth>();
+builder.Services.AddHealthChecks().AddCheck<BrokerHealth>("rabbitmq", tags: ["ready"]);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -45,6 +53,12 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddCareConnectIdentity(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
+if (args.Contains("--replay-dead-letters"))
+{
+    var count = await DeadLetterReplay.RunAsync(app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<BrokerOptions>>().Value);
+    Console.WriteLine($"Replayed {count} dead-letter message(s).");
+    return;
+}
 if (args.Contains("--initialize-identity"))
 {
     await IdentitySetup.InitializeAsync(app.Services, app.Configuration);
@@ -76,7 +90,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
 app.MapStaticAssets();
-app.MapHealthChecks("/health/live");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.MapHub<PetSitting.Services.Chat.ChatHub>(PetSitting.Services.Chat.ChatHub.Path);
 app.MapHub<PetSitting.Services.Notifications.NotificationHub>(PetSitting.Services.Notifications.NotificationHub.Path);
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}")

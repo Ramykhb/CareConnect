@@ -4,6 +4,7 @@
     <UserSecretsId>careconnect-babysitting-development</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../CareConnect.Messaging/CareConnect.Messaging.csproj" />
     <ProjectReference Include="../CareConnect.Contracts/CareConnect.Contracts.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />

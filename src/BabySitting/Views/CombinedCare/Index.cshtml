@@ -1,0 +1,44 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@model BabySitting.ViewModels.CombinedCareViewModel
+@{
+    ViewData["Title"] = "Combined care";
+    var configured = Configuration["CombinedCare:PeerOrigin"];
+    var peerUrl = Uri.TryCreate(configured, UriKind.Absolute, out var origin) && origin.Scheme is "http" or "https"
+        ? origin.GetLeftPart(UriPartial.Authority) + "/CombinedCare" : null;
+}
+<header class="request-page-heading"><div><h1>Combined pet and baby care</h1><p>Link a request in each app to follow both services together. Each has its own sitter, booking and payment.</p></div></header>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+@if (!Model.Enabled)
+{
+    <p>Combined care is unavailable until RabbitMQ is enabled by the application administrator.</p>
+}
+else
+{
+    @if (Model.NewCode is not null)
+    {
+        <section class="request-success-card"><h2>Your one-time link code</h2><p>Copy this code. You can recover it by selecting this request and generating its code again. Sign in to your customer account in PetSitting, create the matching care request with the dates you need, then open Combined care there and paste this code. It expires in 24 hours. Keep it private: anyone with it can link a request.</p><code style="overflow-wrap:anywhere;user-select:all">@Model.NewCode</code><p>The invitation may take a few seconds to arrive in the other app.</p></section>
+    }
+    <div class="request-columns">
+        <section class="request-success-card"><h2>Start a combined request</h2><p>Select your request here, then generate a code to link it with your request in PetSitting.</p>
+        <form asp-action="Invite" method="post"><label for="invite-request">Your care request</label><select id="invite-request" name="RequestId" class="form-select" required><option value="">Choose request</option>@foreach(var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select><button class="btn btn-dark mt-3" type="submit">Generate link code</button></form></section>
+        <section class="request-success-card"><h2>Use a code from PetSitting</h2><form asp-action="Join" method="post"><label for="join-request">Your care request here</label><select id="join-request" name="RequestId" class="form-select" required><option value="">Choose request</option>@foreach(var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select><label for="link-code">One-time code</label><input id="link-code" name="Code" class="form-control" maxlength="160" autocomplete="off" required /><p>Linking shares request and booking statuses. Cancelling either customer request also cancels the other service when care has not started.</p><button class="btn btn-dark" type="submit">Link requests</button></form></section>
+    </div>
+    @if (peerUrl is not null) { <p><a href="@peerUrl" target="_blank" rel="noopener noreferrer">Open PetSitting combined care</a></p> }
+    <p><a asp-controller="CareRequests" asp-action="Create" asp-route-fresh="true">Create a care request</a> · <a asp-action="Index">Refresh status</a></p>
+}
+@foreach (var item in Model.Items)
+{
+    <section class="request-success-card mb-3"><h2>@item.Title</h2>
+    @if (item.Status == "Completed" && item.Link.PeerRequestStatus == "Completed") { <p><strong>Both services are complete.</strong></p> }
+    else if (item.Status == "Booked" && item.Link.PeerRequestStatus == "Booked") { <p><strong>Both services have a sitter.</strong></p> }
+    else if (item.Status == "Cancelled" && item.Link.PeerRequestStatus == "Cancelled") { <p><strong>Both services are cancelled.</strong></p> }
+    else if (item.Status == "Cancelled" || item.Link.PeerRequestStatus == "Cancelled") { <p><strong>One service is cancelled. Check both states below.</strong></p> }
+    else if (item.Status == "Booked" || item.Link.PeerRequestStatus == "Booked") { <p><strong>One service has a sitter; the other is still pending.</strong></p> }<p><strong>Here:</strong> @item.Status @(item.BookingStatus is null ? "" : " / " + item.BookingStatus)</p><p><strong>PetSitting:</strong> @(item.Link.PeerRequestStatus ?? "Waiting for connection") @(item.Link.PeerBookingStatus is null ? "" : " / " + item.Link.PeerBookingStatus)</p>
+    @if(item.Link.PeerRequestId is null || item.Link.LocalRevision == 0) { <p>Waiting for the other request to be linked. Invitation expires @item.Link.InvitationExpiresAtUtc.ToString("u").</p> }
+    @if(item.PendingMessages > 0) { <p role="status">@item.PendingMessages update(s) queued for delivery. Delivery resumes automatically when the broker is available.</p> }
+    @if(item.Link.LastPeerUpdateAtUtc is { } updated) { <small>Last update received: @updated.ToString("u")</small> }
+    @if(item.Link.CancellationIssue is not null) { <p role="alert" class="text-danger">@item.Link.CancellationIssue</p> }
+    <p><a asp-controller="ParentBookings" asp-action="Details" asp-route-id="@item.Link.LocalRequestId">View local request and booking</a></p></section>
+}
+
+@section Styles { <link rel="stylesheet" href="~/css/parent-requests.css" asp-append-version="true" /> }

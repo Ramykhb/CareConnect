@@ -32,9 +32,27 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
     public DbSet<PayoutAllocation> PayoutAllocations => Set<PayoutAllocation>();
     public DbSet<AlertPreferences> AlertPreferences => Set<AlertPreferences>();
 
+    public DbSet<CombinedCareLink> CombinedCareLinks => Set<CombinedCareLink>();
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        await Services.Messaging.CombinedCareOutbox.CaptureAsync(this, cancellationToken);
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        Services.Messaging.CombinedCareOutbox.CaptureAsync(this, CancellationToken.None).GetAwaiter().GetResult();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.LocalRequestId).IsUnique().HasFilter("[LocalRequestId] IS NOT NULL");
+        modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.InvitationHash).IsUnique();
+        modelBuilder.Entity<CombinedCareLink>().HasOne<ChildcareRequest>().WithOne().HasForeignKey<CombinedCareLink>(l => l.LocalRequestId);
+
         // An account has one platform role: customer, sitter, or manager.
         // The unique index also prevents conflicting assignments under concurrent writes.
         modelBuilder.Entity<IdentityUserRole<Guid>>().HasIndex(x => x.UserId)

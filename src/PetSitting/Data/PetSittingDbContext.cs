@@ -33,9 +33,27 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<OwnerRequestDraft> OwnerRequestDrafts => Set<OwnerRequestDraft>();
     public DbSet<AccountPhoto> AccountPhotos => Set<AccountPhoto>();
 
+    public DbSet<CombinedCareLink> CombinedCareLinks => Set<CombinedCareLink>();
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        await Services.Messaging.CombinedCareOutbox.CaptureAsync(this, cancellationToken);
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        Services.Messaging.CombinedCareOutbox.CaptureAsync(this, CancellationToken.None).GetAwaiter().GetResult();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.LocalRequestId).IsUnique().HasFilter("[LocalRequestId] IS NOT NULL");
+        modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.InvitationHash).IsUnique();
+        modelBuilder.Entity<CombinedCareLink>().HasOne<PetCareRequest>().WithOne().HasForeignKey<CombinedCareLink>(l => l.LocalRequestId);
+
         modelBuilder.Entity<ApplicationUser>().Property(u => u.PreferredLanguage).HasDefaultValue("en");
         // An account has one platform role: customer, sitter, or manager.
         // The unique index also prevents conflicting assignments under concurrent writes.

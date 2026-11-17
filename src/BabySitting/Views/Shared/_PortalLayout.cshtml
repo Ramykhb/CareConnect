@@ -59,6 +59,7 @@
                         </a>
                     }
                     <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" class="@(controller == "SitterPortal" && action == "Settings" || controller == "ParentSettings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
+                @if (!sitter) { <a class="@(controller == "CombinedCare" ? "active" : "")" asp-controller="CombinedCare" asp-action="Index"><svg class="line-icon"><use href="#icon-calendar" /></svg><span>Combined care</span></a> }
                 </nav>
             </div>
             <div class="sidebar-bottom">

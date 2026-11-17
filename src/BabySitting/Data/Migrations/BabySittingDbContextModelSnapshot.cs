@@ -746,6 +746,77 @@ namespace BabySitting.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BabySitting.Models.CombinedCareLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CancellationIssue")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("InvitationExpiresAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("InvitationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("LastPeerUpdateAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("LocalRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("LocalRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginPlatform")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PeerBookingStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid?>("PeerRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PeerRequestStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("PeerRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProtectedInvitationCode")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitationHash")
+                        .IsUnique();
+
+                    b.HasIndex("LocalRequestId")
+                        .IsUnique()
+                        .HasFilter("[LocalRequestId] IS NOT NULL");
+
+                    b.ToTable("CombinedCareLinks");
+                });
+
             modelBuilder.Entity("BabySitting.Models.FamilyProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1619,6 +1690,14 @@ namespace BabySitting.Data.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("FamilyProfile");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.CombinedCareLink", b =>
+                {
+                    b.HasOne("BabySitting.Models.ChildcareRequest", null)
+                        .WithOne()
+                        .HasForeignKey("BabySitting.Models.CombinedCareLink", "LocalRequestId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("BabySitting.Models.FamilyProfile", b =>

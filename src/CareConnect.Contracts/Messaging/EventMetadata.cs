@@ -1,6 +1,6 @@
 namespace CareConnect.Contracts.Messaging;
 
-/// <summary>Common envelope metadata; payloads are versioned separately in Phase 5.</summary>
+/// <summary>Common envelope metadata for versioned cross-application events.</summary>
 public sealed record EventMetadata(
     Guid EventId,
     Guid CorrelationId,

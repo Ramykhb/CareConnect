@@ -100,7 +100,7 @@ Requests belong to customers and receive sitter offers; bookings reference the r
 
 Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit foreign keys, fixed monetary precision, indexes, and database check constraints for core amounts, dates, status ranges, and ratings. Unique constraints protect payment idempotency, processed event IDs per consumer, external request links, one offer per sitter/request, and one active booking per request. Deletes require deliberate handling of dependent records rather than cascading through booking/payment history.
 
-Incoming linked requests can have no local customer initially, but must carry a valid source, external request ID, and correlation ID. Attaching them to a verified local account is a later application workflow. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
+Combined care uses explicit one-time invitation codes to link customer-owned requests in the two apps. Each customer signs in separately and supplies local pet or family details; the broker exchanges coordination state only. Invitations waiting to be claimed do not create actionable, ownerless requests. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
 Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally; bank transfers and administrative payout processing are not connected.
 
@@ -112,7 +112,7 @@ The main Docker Compose file manages RabbitMQ, reusing your existing SQL Server.
 docker compose up -d rabbitmq
 ```
 
-AMQP uses port 5672; management is at http://localhost:15672. Set `RabbitMq:UserName` and `RabbitMq:Password` in each project's user secrets before implementing messaging. `.env` is read by Compose, not automatically by `dotnet run`.
+AMQP uses port 5672; management is at http://localhost:15672. Set `RabbitMq:UserName`, `RabbitMq:Password` and `RabbitMq:Enabled` in both projects as shown below. `.env` is read by Compose, not automatically by `dotnet run`.
 
 ## Architecture and phased development
 
@@ -120,7 +120,58 @@ Each MVC app owns its users, database, migrations, services, and repositories. C
 
 Implemented local relationships: users own pets or family profiles and care requests; sitters submit offers on requests; an accepted offer creates a booking; bookings own payments and reviews. Availability belongs to a sitter. Outbox and processed-message records belong to the local application. Cross-platform links use external request IDs and correlation IDs, never cross-database foreign keys. Child information is restricted to essential local data.
 
-Planned topic exchange: `careconnect.events`, with durable `petsitting.events` and `babysitting.events` queues. Combined-care events carry event ID, correlation ID, source, version, timestamp, external request IDs, and minimal service details. The planned consumers will receive relevant events from the other platform and update their own database. Publishers, consumers, retries, dead-letter queues, idempotency, outbox processing, and cancellation synchronization are Phase 5–6 work; configuring the broker does not implement these features.
+Implemented topic exchange: `careconnect.events`. Durable quorum queues `petsitting.events` and `babysitting.events` receive the other platform's `*.combined.#` events. Both queues are declared by either app, so starting one app while the other is offline does not lose messages. Each queue has `.retry` (10-second delay with at-least-once dead lettering) and `.dead` queues. Quorum queues have delivery limits disabled on the main queues because the application handles retry limits explicitly.
+
+A shared transport library has no persistence or business entities. Each app implements its own integration store. A lifecycle change and its outgoing event are saved in the same database transaction. The hosted worker uses persistent messages, mandatory routing and publisher confirms; it marks an outbox row published only after confirmation. Failed outgoing delivery backs off up to five minutes and keeps retrying. Consumers acknowledge only after the local transaction commits; processed event IDs make redelivery harmless. Per-link revisions prevent older events from overwriting newer states. Transient incoming failures retry five times before dead-lettering; invalid JSON, versions, sources or contracts go directly to `.dead`. Broker outages never undo a saved local request.
+
+### Enable messaging
+
+Use the same credentials as `.env` (replace the example values; do not include angle brackets):
+
+```sh
+dotnet user-secrets set "RabbitMq:UserName" "careconnect" --project src/PetSitting
+dotnet user-secrets set "RabbitMq:Password" "your-rabbitmq-password" --project src/PetSitting
+dotnet user-secrets set "RabbitMq:Enabled" "true" --project src/PetSitting
+dotnet user-secrets set "RabbitMq:UserName" "careconnect" --project src/BabySitting
+dotnet user-secrets set "RabbitMq:Password" "your-rabbitmq-password" --project src/BabySitting
+dotnet user-secrets set "RabbitMq:Enabled" "true" --project src/BabySitting
+dotnet ef database update --project src/PetSitting
+dotnet ef database update --project src/BabySitting
+```
+
+Set `CombinedCare:PeerOrigin` to the other app’s public origin when deploying (local defaults use ports 5101/5102); this is a browser navigation link, not an API call. Restart both apps. `RabbitMq:Enabled` defaults to false so ordinary local workflows still start without a broker. Invalid enabled configurations fail startup. `RabbitMq:UseTls=true` enables certificate-validated TLS with the configured hostname and port. `/health/live` reports process liveness; `/health/ready` returns 503 while enabled messaging is disconnected. The Combined care page displays queued outgoing updates and the timestamp of the last received peer update.
+
+Existing manually created classic queues with these names must be drained and migrated before deploying the quorum topology; RabbitMQ will reject a queue type mismatch. Broker management remains bound to localhost in Compose. In production use private networking, TLS, persistent broker volumes, protected user secrets and persistent ASP.NET Data Protection keys. Invitation codes are stored encrypted locally; only their SHA-256 hash travels through the broker. Broker messages contain request IDs, correlation IDs, revisions and statuses, with no email, child/pet records, care notes or addresses.
+
+### Use combined care
+
+1. Submit your pet or baby request normally. Choose **Add baby/pet care** on its confirmation page, or **Combined care** in the customer sidebar.
+2. Select the request and generate a one-time code. Sign in as a customer in the other app, create the other care request, open **Combined care** there and paste the code while selecting that request. You choose each service's dates and budget separately. An invitation may take a few seconds to arrive.
+3. Each app continues its own sitter selection, chat, payment and care workflow. The Combined care page shows both request and booking states; refresh it to see updates. One service can be booked while the other is still seeking a sitter. No booking or payment is implied for the other app.
+4. Cancelling a customer request synchronizes cancellation to the other request and any booking that has not started, withdraws pending offers, notifies the local customer/sitter, and updates dummy refund records. If the other service is already in progress or completed, it stays intact and displays a resolution notice. A sitter withdrawing reopens only that service's request. Account closure also publishes cancellation of open linked requests.
+
+Codes expire after 24 hours and can be used for only one request pair. The originating customer can select the same request and generate again to recover the existing code, extending it if it expired. Keep the code private: possession authorizes linking, without requiring accounts in the two apps to share an email address. Replaying an already accepted invitation cannot reassign its request. Local request ownership and customer-role authorization apply to both actions, with antiforgery protection.
+
+### Recover dead letters and verify
+
+Inspect `.dead` in RabbitMQ management after correcting the underlying problem. Replay up to 100 messages per invocation with confirmed publication before removal from the dead-letter queue:
+
+```sh
+dotnet run --project src/PetSitting -- --replay-dead-letters
+dotnet run --project src/BabySitting -- --replay-dead-letters
+```
+
+Replays preserve event IDs and correlation IDs; duplicate effects are suppressed by the inbox. Retain outbox/inbox records until an explicit retention policy accounts for the maximum replay window. A single-node development broker has durable storage but no node-level high availability; production quorum replication requires a broker cluster.
+
+The focused end-to-end test uses both real SQL databases and an **isolated** RabbitMQ instance (it declares the normal queue names). It inserts and cleans up its own records, and covers committed delivery, rolled-back outbox writes, invitation/linking, booking status, cancellation/refund, and duplicate/stale replay:
+
+```sh
+CARECONNECT_MESSAGING_TESTS=1 \
+CARECONNECT_RABBITMQ_USER=careconnect \
+CARECONNECT_RABBITMQ_PASSWORD='your-test-broker-password' \
+CARECONNECT_RABBITMQ_PORT=5673 \
+dotnet test tests/CareConnect.Messaging.Tests
+```
 
 1. Foundation: solution, default MVC folders, layouts, EF Core configuration, infrastructure configuration, independent startup checks.
 2. Identity: registration/login, roles, authorization, and profile management using the migrated Identity tables.
@@ -139,7 +190,7 @@ Run route/configuration checks with `dotnet test`. To include the actual SQL Ser
 CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln
 ```
 
-RabbitMQ publishing/consuming, reliable cross-application messaging, combined-care synchronization, external AI integration and manager operations remain future work. Local care workflows run independently in each app.
+RabbitMQ delivery and combined-care coordination are implemented. External AI integration and manager operations remain future work. Local care workflows continue independently when messaging is disabled or unavailable.
 
 ## Authentication
 
@@ -229,7 +280,7 @@ Open **Requests** in the sitter sidebar or visit `/SitterRequests`. The page imp
 
 Requests are discovered using the sitter’s profile/account city and configured services; this application currently has a city-based request marketplace rather than individually addressed invitations. An existing sitter profile is required to respond. New and pending requests can be accepted or declined, while previous decisions remain visible in their status tabs. Pending rows correspond to existing pending offer records. Exact service addresses are only included in the response after that sitter has accepted; medical, feeding, and special-care notes are available for review beforehand. Fit checks use actual bookings, saved availability intervals, city, and hourly rate; no distance, pet-type preference, owner rating, or response deadline is invented.
 
-`POST /SitterRequests/Decide` requires the sitter role, an antiforgery token, and the displayed request/offer version. Acceptance records an accepted offer, marks the request booked, creates an awaiting-payment booking (confirmed immediately for zero-cost care), and saves an owner notification in one serializable transaction. Notifications are persisted locally; this does not send email or publish RabbitMQ events. Decline records the sitter’s rejected offer and notifies the owner while leaving the request open for other sitters. Stale details, expired requests, unavailable sitters, dates outside saved availability, and overlapping bookings cannot be accepted. Retries return the existing decision without creating duplicate bookings or notifications. The saved state includes an Open booking link to the dedicated sitter booking details page.
+`POST /SitterRequests/Decide` requires the sitter role, an antiforgery token, and the displayed request/offer version. Acceptance records an accepted offer, marks the request booked, creates an awaiting-payment booking (confirmed immediately for zero-cost care), and saves an owner notification in one serializable transaction. Notifications are persisted locally; linked requests also enqueue a RabbitMQ state event in the booking transaction. This does not send email. Decline records the sitter’s rejected offer and notifies the owner while leaving the request open for other sitters. Stale details, expired requests, unavailable sitters, dates outside saved availability, and overlapping bookings cannot be accepted. Retries return the existing decision without creating duplicate bookings or notifications. The saved state includes an Open booking link to the dedicated sitter booking details page.
 
 No new schema migration is required. Ensure the existing `AddPetCareDetails` migration is applied so medical and feeding notes can be read. SQL integration tests create uniquely identified temporary records and clean them up. Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/PetSitting.Tests` to verify persistence, stale confirmations, private address access, rollback after a write failure, simultaneous acceptance by different sitters, and simultaneous overlapping bookings for one sitter.
 
@@ -241,7 +292,7 @@ Care can start only at or after the scheduled start and after successful payment
 
 The availability page supports month and week navigation, Today, date selection, private reasons, all-day/hour ranges, yearly recurrence, and a global accepting-requests preference. In week view, drag within a day to choose hours and review them in the editor before saving; day headings and keyboard Enter/Space provide alternatives. Monthly calendars include every date, including the sixth row when required. Dates and hours use `Asia/Beirut`; week totals include overnight care. A new rule overrides older rules for its selected interval, so a single date can be reopened without deleting a recurring block. Yearly ranges cannot start or end on February 29. Future recurring hours that fall in a DST gap begin at the next valid local minute.
 
-Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages, reports, and owner notifications are local application records; these actions do not send email, RabbitMQ messages, real payment charges or bank transfers. Booking conversations use a separate implemented SignalR chat flow.
+Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages, reports, and owner notifications are local application records; these actions do not send email, real payment charges or bank transfers. Linked booking lifecycle transitions enqueue RabbitMQ state events; care notes and photos stay local. Booking conversations use a separate implemented SignalR chat flow.
 
 Apply the additive migration before running the updated application:
 
