@@ -1,44 +1,63 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
-@model BabySitting.ViewModels.CombinedCareViewModel
+@using BabySitting.ViewModels
+@model CombinedCareViewModel
 @{
     ViewData["Title"] = "Combined care";
+    ViewData["Breadcrumb"] = "Combined care";
     var configured = Configuration["CombinedCare:PeerOrigin"];
     var peerUrl = Uri.TryCreate(configured, UriKind.Absolute, out var origin) && origin.Scheme is "http" or "https"
         ? origin.GetLeftPart(UriPartial.Authority) + "/CombinedCare" : null;
+    var hasChoices = Model.Choices.Count > 0;
+    string StatusLabel(string? status) => status switch {
+        "AwaitingPayment" => "Awaiting payment", "InProgress" => "Care in progress",
+        "Open" => "Looking for a sitter", "Booked" => "Sitter found", null => "Not linked yet", _ => status };
 }
-<header class="request-page-heading"><div><h1>Combined pet and baby care</h1><p>Link a request in each app to follow both services together. Each has its own sitter, booking and payment.</p></div></header>
-<div asp-validation-summary="All" class="text-danger" role="alert"></div>
-@if (!Model.Enabled)
-{
-    <p>Combined care is unavailable until RabbitMQ is enabled by the application administrator.</p>
-}
-else
-{
-    @if (Model.NewCode is not null)
+<div class="cc-page">
+    <header class="cc-heading"><div><p class="cc-eyebrow">A LITTLE MORE PEACE OF MIND</p><h1>Combined care</h1><p>For every member of your family, paws included.</p></div><a class="btn btn-dark" asp-controller="CareRequests" asp-action="Create" asp-route-fresh="true"><svg class="line-icon"><use href="#icon-plus" /></svg>New request</a></header>
+    <section class="cc-hero" aria-labelledby="cc-hero-title">
+        <div><span class="cc-hero-tag">Pet care + baby care</span><h2 id="cc-hero-title">Two kinds of care.<br />One less thing to juggle.</h2><p>Connect a request in each app and follow both from here. Each service has its own sitter, booking and payment.</p>@if (peerUrl is not null) { <a class="cc-peer-link" href="@peerUrl" target="_blank" rel="noopener noreferrer">Open PetSitting<svg class="line-icon"><use href="#icon-diagonal" /></svg><span class="sr-only"> (opens in a new tab)</span></a> }</div>
+        <div class="cc-hero-art" aria-hidden="true"><span class="cc-art-orbit"></span><span class="cc-art-icon cc-art-pet"><svg class="line-icon"><use href="#icon-paw" /></svg></span><span class="cc-art-icon cc-art-baby"><svg class="line-icon"><use href="#icon-heart" /></svg></span><span class="cc-art-check"><svg class="line-icon"><use href="#icon-check" /></svg></span><span class="cc-art-caption">A happy little team.</span></div>
+    </section>
+    <div asp-validation-summary="All" class="cc-validation" role="alert"></div>
+    @if (!Model.Enabled)
     {
-        <section class="request-success-card"><h2>Your one-time link code</h2><p>Copy this code. You can recover it by selecting this request and generating its code again. Sign in to your customer account in PetSitting, create the matching care request with the dates you need, then open Combined care there and paste this code. It expires in 24 hours. Keep it private: anyone with it can link a request.</p><code style="overflow-wrap:anywhere;user-select:all">@Model.NewCode</code><p>The invitation may take a few seconds to arrive in the other app.</p></section>
+        <section class="cc-empty"><span class="cc-icon"><svg class="line-icon"><use href="#icon-clock" /></svg></span><h2>Combined care is taking a short break</h2><p>You can still create and manage your requests in each app. Please try linking them again later.</p></section>
     }
-    <div class="request-columns">
-        <section class="request-success-card"><h2>Start a combined request</h2><p>Select your request here, then generate a code to link it with your request in PetSitting.</p>
-        <form asp-action="Invite" method="post"><label for="invite-request">Your care request</label><select id="invite-request" name="RequestId" class="form-select" required><option value="">Choose request</option>@foreach(var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select><button class="btn btn-dark mt-3" type="submit">Generate link code</button></form></section>
-        <section class="request-success-card"><h2>Use a code from PetSitting</h2><form asp-action="Join" method="post"><label for="join-request">Your care request here</label><select id="join-request" name="RequestId" class="form-select" required><option value="">Choose request</option>@foreach(var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select><label for="link-code">One-time code</label><input id="link-code" name="Code" class="form-control" maxlength="160" autocomplete="off" required /><p>Linking shares request and booking statuses. Cancelling either customer request also cancels the other service when care has not started.</p><button class="btn btn-dark" type="submit">Link requests</button></form></section>
-    </div>
-    @if (peerUrl is not null) { <p><a href="@peerUrl" target="_blank" rel="noopener noreferrer">Open PetSitting combined care</a></p> }
-    <p><a asp-controller="CareRequests" asp-action="Create" asp-route-fresh="true">Create a care request</a> · <a asp-action="Index">Refresh status</a></p>
-}
-@foreach (var item in Model.Items)
-{
-    <section class="request-success-card mb-3"><h2>@item.Title</h2>
-    @if (item.Status == "Completed" && item.Link.PeerRequestStatus == "Completed") { <p><strong>Both services are complete.</strong></p> }
-    else if (item.Status == "Booked" && item.Link.PeerRequestStatus == "Booked") { <p><strong>Both services have a sitter.</strong></p> }
-    else if (item.Status == "Cancelled" && item.Link.PeerRequestStatus == "Cancelled") { <p><strong>Both services are cancelled.</strong></p> }
-    else if (item.Status == "Cancelled" || item.Link.PeerRequestStatus == "Cancelled") { <p><strong>One service is cancelled. Check both states below.</strong></p> }
-    else if (item.Status == "Booked" || item.Link.PeerRequestStatus == "Booked") { <p><strong>One service has a sitter; the other is still pending.</strong></p> }<p><strong>Here:</strong> @item.Status @(item.BookingStatus is null ? "" : " / " + item.BookingStatus)</p><p><strong>PetSitting:</strong> @(item.Link.PeerRequestStatus ?? "Waiting for connection") @(item.Link.PeerBookingStatus is null ? "" : " / " + item.Link.PeerBookingStatus)</p>
-    @if(item.Link.PeerRequestId is null || item.Link.LocalRevision == 0) { <p>Waiting for the other request to be linked. Invitation expires @item.Link.InvitationExpiresAtUtc.ToString("u").</p> }
-    @if(item.PendingMessages > 0) { <p role="status">@item.PendingMessages update(s) queued for delivery. Delivery resumes automatically when the broker is available.</p> }
-    @if(item.Link.LastPeerUpdateAtUtc is { } updated) { <small>Last update received: @updated.ToString("u")</small> }
-    @if(item.Link.CancellationIssue is not null) { <p role="alert" class="text-danger">@item.Link.CancellationIssue</p> }
-    <p><a asp-controller="ParentBookings" asp-action="Details" asp-route-id="@item.Link.LocalRequestId">View local request and booking</a></p></section>
-}
-
-@section Styles { <link rel="stylesheet" href="~/css/parent-requests.css" asp-append-version="true" /> }
+    else
+    {
+        <ol class="cc-steps" aria-label="How combined care works"><li><span>1</span><div><strong>Choose your request</strong><small>Start with your baby care request.</small></div></li><li><span>2</span><div><strong>Connect the other service</strong><small>Use your code in PetSitting.</small></div></li><li><span>3</span><div><strong>Follow both together</strong><small>Stay up to date as care takes shape.</small></div></li></ol>
+        @if (Model.NewCode is not null)
+        {
+            <section class="cc-code-card" aria-labelledby="cc-code-heading"><div class="cc-card-heading"><span class="cc-icon"><svg class="line-icon"><use href="#icon-check" /></svg></span><div><p class="cc-eyebrow">READY FOR THE NEXT STEP</p><h2 id="cc-code-heading">Your link code is ready</h2></div><span class="cc-pill">Valid for 24 hours</span></div><p>In PetSitting, select your request under Combined care and paste this code.</p><label class="sr-only" for="cc-link-code">Your private one-time link code</label><div class="cc-copy-row"><textarea id="cc-link-code" readonly rows="2" spellcheck="false">@Model.NewCode</textarea><button type="button" class="btn btn-dark" data-copy-care-code>Copy code<svg class="line-icon"><use href="#icon-copy-care" /></svg></button></div><div class="cc-code-footer"><small><svg class="line-icon"><use href="#icon-shield" /></svg>Keep this code private. It can link one pair of requests.</small><span data-copy-care-status role="status" aria-live="polite"></span></div><details class="cc-code-help"><summary>Need this code again later?</summary><p>Select the same request below and generate again to recover your code. Expired invitations are renewed.</p></details></section>
+        }
+        <div class="cc-setup-grid">
+            <section class="cc-setup-card" aria-labelledby="cc-start-heading"><div class="cc-card-heading"><span class="cc-step-icon">01</span><span class="cc-pill">Start here</span></div><h2 id="cc-start-heading">Bring your care together</h2><p>Choose a baby care request and generate a code for the other app.</p><form asp-action="Invite" method="post"><div class="cc-field"><label for="invite-request">Your baby care request</label><select id="invite-request" name="RequestId" required disabled="@(!hasChoices)"><option value="">Choose a request</option>@foreach (var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select></div><p class="cc-field-help">@(hasChoices ? "Use the code in PetSitting to connect your requests." : "Create an upcoming request to get started.")</p><button class="btn btn-dark" type="submit" disabled="@(!hasChoices)">Generate link code<svg class="line-icon"><use href="#icon-arrow" /></svg></button></form></section>
+            <section class="cc-setup-card" aria-labelledby="cc-join-heading"><div class="cc-card-heading"><span class="cc-step-icon cc-step-soft">02</span><span class="cc-muted-label">Already have a code?</span></div><h2 id="cc-join-heading">Make the connection</h2><p>Have a code from PetSitting? Link it to your request here.</p><form asp-action="Join" method="post"><div class="cc-field"><label for="join-request">Your baby care request</label><select id="join-request" name="RequestId" required disabled="@(!hasChoices)"><option value="">Choose a request</option>@foreach (var r in Model.Choices) { <option value="@r.Id" selected="@(Model.RequestId == r.Id)">@r.Title</option> }</select></div><div class="cc-field"><label for="link-code">One-time link code</label><input id="link-code" name="Code" placeholder="Paste your code from the other app" maxlength="160" autocomplete="off" spellcheck="false" required disabled="@(!hasChoices)" /></div><button class="btn btn-light" type="submit" disabled="@(!hasChoices)">Link my requests<svg class="line-icon"><use href="#icon-arrow" /></svg></button></form></section>
+        </div>
+        <p class="cc-care-note"><svg class="line-icon"><use href="#icon-shield" /></svg><span>Plans change. Cancelling a linked customer request also cancels the other service if care hasn’t started.</span></p>
+    }
+    <section class="cc-linked" aria-labelledby="cc-linked-heading"><header class="cc-section-heading"><div><h2 id="cc-linked-heading">Your care, connected <span>@Model.Items.Count</span></h2><p>Two services, with every step in view.</p></div><a class="cc-refresh" asp-action="Index"><svg class="line-icon"><use href="#icon-refresh-care" /></svg>Refresh status</a></header>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="cc-empty"><span class="cc-empty-symbols" aria-hidden="true"><svg class="line-icon"><use href="#icon-paw" /></svg><svg class="line-icon"><use href="#icon-heart" /></svg></span><h3>Your first connection starts here</h3><p>Link a pet-care and baby-care request to see their progress side by side.</p>@if (!hasChoices && Model.Enabled) { <a class="cc-text-link" asp-controller="CareRequests" asp-action="Create" asp-route-fresh="true">Create your first request <span aria-hidden="true">→</span></a> }</div>
+    }
+    @foreach (var item in Model.Items)
+    {
+        var linked = item.Link.PeerRequestId is not null;
+        var summary = item.Status == "Completed" && item.Link.PeerRequestStatus == "Completed" ? "Both services are complete."
+            : item.Status == "Booked" && item.Link.PeerRequestStatus == "Booked" ? "Both services have a sitter."
+            : item.Status == "Cancelled" && item.Link.PeerRequestStatus == "Cancelled" ? "Both services are cancelled."
+            : item.Status == "Cancelled" || item.Link.PeerRequestStatus == "Cancelled" ? "One service is cancelled. Check both states below."
+            : item.Status == "Booked" || item.Link.PeerRequestStatus == "Booked" ? "One sitter found. The other service is still taking shape."
+            : linked ? "Your requests are connected. We’ll keep their progress together." : "One more step: use your code in PetSitting to connect the other request.";
+        <article class="cc-pair"><header class="cc-pair-heading"><div><h3>@item.Title</h3><p>@summary</p></div><span class="cc-pill @(linked ? "cc-pill-linked" : "cc-pill-pending")"><span class="cc-status-dot"></span>@(linked ? "Connected" : "Awaiting link")</span></header><div class="cc-service-grid"><div class="cc-service"><span class="cc-service-icon"><svg class="line-icon"><use href="#icon-heart" /></svg></span><div><small>THIS APP</small><h4>Baby care</h4><p>@StatusLabel(item.BookingStatus ?? item.Status)</p></div></div><span class="cc-service-bridge" aria-hidden="true">↔</span><div class="cc-service cc-service-peer"><span class="cc-service-icon"><svg class="line-icon"><use href="#icon-paw" /></svg></span><div><small>PetSitting</small><h4>Pet care</h4><p>@(linked ? StatusLabel(item.Link.PeerBookingStatus ?? item.Link.PeerRequestStatus) : "Waiting for your request")</p></div></div></div>
+        @if (!linked) { <p class="cc-inline-note"><svg class="line-icon"><use href="#icon-clock" /></svg>Invitation expires @DashboardViewModel.Local(item.Link.InvitationExpiresAtUtc).ToString("d MMM, h:mm tt").</p> }
+        @if (item.PendingMessages > 0) { <p class="cc-inline-note" role="status"><svg class="line-icon"><use href="#icon-clock" /></svg>Updating the other service. Your changes are saved and will sync automatically.</p> }
+        @if (item.Link.CancellationIssue is not null) { <p class="cc-cancellation" role="alert"><svg class="line-icon"><use href="#icon-alert" /></svg>@item.Link.CancellationIssue</p> }
+        <footer class="cc-pair-footer"><small>@if (item.Link.LastPeerUpdateAtUtc is { } updated) { <text>Last update · @DashboardViewModel.Local(updated).ToString("d MMM, h:mm tt")</text> } else { <text>Waiting for the other service’s first update</text> }</small><a class="cc-text-link" asp-controller="ParentBookings" asp-action="Details" asp-route-id="@item.Link.LocalRequestId">View your request<svg class="line-icon"><use href="#icon-arrow" /></svg></a></footer></article>
+    }
+    </section>
+</div>
+<svg class="auth-symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-paw" viewBox="0 0 24 24"><ellipse cx="12" cy="16" rx="6" ry="5"/><ellipse cx="5" cy="8" rx="2" ry="3"/><ellipse cx="11" cy="5" rx="2" ry="3"/><ellipse cx="17" cy="7" rx="2" ry="3"/><ellipse cx="20" cy="13" rx="2" ry="3"/></symbol><symbol id="icon-copy-care" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V3H3v13h5" /></symbol><symbol id="icon-refresh-care" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7" /></symbol></svg>
+@section Styles { <link rel="stylesheet" href="~/css/combined-care.css" asp-append-version="true" /> }
+@section Scripts { <script src="~/js/combined-care.js" asp-append-version="true"></script> }
