@@ -128,6 +128,8 @@ public sealed class SitterAccountService(PetSittingDbContext db, UserManager<App
                 var cancelled = await db.PetBookings.AsNoTracking().Where(b => b.SitterProfile.UserId == account.Id && b.Status == BookingStatus.Cancelled).ToListAsync(ct);
                 foreach (var b in cancelled) candidates.Add(new() { Category = NotificationCategory.Booking, SourceKey = "booking-cancelled:" + b.Id, Title = "Booking cancelled", Body = b.CancellationReason ?? "The booking is no longer active.", RelativeUrl = "/SitterBookings/Details/" + b.Id, CreatedAtUtc = b.CancelledAtUtc ?? b.CreatedAtUtc });
             }
+            // History older than the cleanup window is never re-created after it was deleted.
+            candidates.RemoveAll(c => c.CreatedAtUtc < now - Services.Notifications.NotificationCleanupService.Retention);
             var keys = candidates.Select(c => c.SourceKey).ToArray();
             var existing = (await db.Notifications.Where(n => n.UserId == account.Id && keys.Contains(n.SourceKey)).Select(n => n.SourceKey).ToListAsync(ct)).ToHashSet();
             foreach (var item in candidates.Where(n => !existing.Contains(n.SourceKey))) { item.UserId = account.Id; item.Title = item.Title[..Math.Min(150, item.Title.Length)]; item.Body = item.Body[..Math.Min(2000, item.Body.Length)]; db.Notifications.Add(item); }

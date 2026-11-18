@@ -47,7 +47,7 @@ public sealed class DashboardService(BabySittingDbContext db, TimeProvider clock
             DeclinedOffers = sitter ? await offers.CountAsync(o => o.Status == OfferStatus.Rejected, ct) : 0,
             Sitters = sitter ? [] : await db.BabysitterProfiles.AsNoTracking().Include(p => p.User)
                 .Where(p => p.IsAvailable && p.User.IsActive && p.UserId != account.Id && city != null && p.City == city)
-                .OrderByDescending(p => p.VerificationStatus == VerificationStatus.Verified).ThenByDescending(p => p.YearsOfExperience).Take(3).ToListAsync(ct)
+                .OrderByDescending(p => p.VerificationStatus == VerificationStatus.Verified).ThenByDescending(p => p.HasFirstAidTraining).ThenByDescending(p => p.YearsOfExperience).Take(3).ToListAsync(ct)
         };
     }
 }

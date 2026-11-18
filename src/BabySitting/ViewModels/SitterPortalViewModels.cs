@@ -115,6 +115,8 @@ public sealed class SitterSettingsForm : IValidatableObject
     [Required, StringLength(150), RegularExpression(@".*\S.*")] public string City { get; set; } = "";
     [Required, StringLength(2000), RegularExpression(@"[\s\S]*\S[\s\S]*")] public string Bio { get; set; } = "";
     [Range(0, 80)] public int Experience { get; set; }
+    [StringLength(2000)] public string? Qualifications { get; set; }
+    public bool FirstAid { get; set; }
     [Range(typeof(decimal), "0", "99999999")] public decimal HourlyRate { get; set; }
     [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; set; } = "USD";
     public bool Available { get; set; } = true;

@@ -14,6 +14,7 @@ builder.Services.AddSignalR();
 builder.Services.AddScoped<BabySitting.Services.Accounts.IAccountClosureService, BabySitting.Services.Accounts.AccountClosureService>();
 builder.Services.AddScoped<BabySitting.Services.Chat.IChatService, BabySitting.Services.Chat.ChatService>();
 builder.Services.AddHostedService<BabySitting.Services.Chat.MessageCleanupService>();
+builder.Services.AddHostedService<BabySitting.Services.Notifications.NotificationCleanupService>();
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationEmailQueue>();

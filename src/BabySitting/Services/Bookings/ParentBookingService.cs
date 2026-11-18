@@ -50,7 +50,7 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
         var ratings = item.Sitter is null ? [] : await db.Reviews.AsNoTracking().Where(r => r.Booking.SitterProfileId == item.Sitter.Id && r.ReviewerId == r.Booking.CustomerId && r.Booking.Status == BookingStatus.Completed).Select(r => r.Rating).ToArrayAsync();
         return new() { Item = item, Draft = draft, ReviewCount = ratings.Length, AverageRating = ratings.Length == 0 ? null : ratings.Average() };
     }
-    public static bool CanPay(BabysittingBooking booking) => booking.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(booking);
+    public static bool CanPay(BabysittingBooking booking) => ParentPaymentService.CanPay(booking);
     public static bool CanCancel(ChildcareRequest request, BabysittingBooking? booking, DateTimeOffset now) =>
         booking is null ? request.Status == RequestStatus.Open && request.StartsAtUtc > now
         : request.Status is not (RequestStatus.Cancelled or RequestStatus.Completed) && booking.Status is BookingStatus.Pending or BookingStatus.AwaitingPayment or BookingStatus.Confirmed
@@ -90,41 +90,11 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
             return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any recorded demo payments were marked refunded.");
         });
     }
-    public async Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version)
-    {
-        if (token == Guid.Empty) return new(false, "Reload this page before recording payment.");
-        return await Write(async () =>
-        {
-            var booking = await db.BabysittingBookings.Include(b => b.Payments).Include(b => b.SitterProfile).Include(b => b.Request).SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner);
-            if (booking is null) return new(false, "Booking not found.", true);
-            if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(true, "This demo payment was already recorded.");
-            if (!CanPay(booking)) return new(false, "Only an accepted booking awaiting payment can be paid.");
-            if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details before recording payment.");
-            var amount = booking.TotalAmount - BookingRules.Paid(booking);
-            var payment = new Payment { BookingId = booking.Id, PayerId = owner, Amount = amount, Currency = booking.Currency,
-                Status = PaymentStatus.Succeeded, Provider = "Dummy", ProviderTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant(), IdempotencyKey = token, PaidAtUtc = clock.GetUtcNow() };
-            db.Payments.Add(payment); booking.Status = BookingStatus.Confirmed;
-            db.Notifications.Add(new() { Category = NotificationCategory.Payment, SourceKey = $"payment:{payment.Id}:{PaymentStatus.Succeeded}", UserId = booking.SitterProfile.UserId,
-                Title = "Demo payment recorded", Body = booking.Request.Title + " is paid and confirmed (demo).", RelativeUrl = "/SitterBookings/Details/" + booking.Id });
-            return new(true, "Demo payment recorded. No card was charged. Your booking is confirmed.");
-        });
-    }
-    public async Task<BookingWriteResult> ReviewAsync(Guid owner, Guid bookingId, int rating, string? comment)
-    {
-        if (rating is < 1 or > 5 || comment?.Length > 2000) return new(false, "Choose 1–5 stars and a review of up to 2,000 characters.");
-        return await Write(async () =>
-        {
-            var booking = await db.BabysittingBookings.Include(b => b.Review).Include(b => b.SitterProfile).SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner);
-            if (booking is null) return new(false, "Booking not found.", true);
-            if (booking.Status != BookingStatus.Completed) return new(false, "Reviews are available after care is completed.");
-            if (booking.Review is not null) return new(false, "You already reviewed this booking.");
-            var review = new Review { BookingId = booking.Id, ReviewerId = owner, Rating = rating, Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim(), CreatedAtUtc = clock.GetUtcNow() };
-            db.Reviews.Add(review);
-            db.Notifications.Add(new() { Category = NotificationCategory.Review, SourceKey = "review:" + review.Id, UserId = booking.SitterProfile.UserId,
-                Title = $"New {rating}-star review", Body = review.Comment ?? "A family rated your care.", RelativeUrl = "/Sitter/Reviews#review-" + review.Id });
-            return new(true, "Thank you! Your review was published.");
-        });
-    }
+    // Paying and reviewing live in ParentPaymentService only, so both pages follow the same rules.
+    public Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version) =>
+        new ParentPaymentService(db, clock).PayAsync(owner, bookingId, token, version);
+    public Task<BookingWriteResult> ReviewAsync(Guid owner, Guid bookingId, int rating, string? comment) =>
+        new ParentPaymentService(db, clock).ReviewAsync(owner, bookingId, rating, comment);
     public async Task<Guid?> AgainAsync(Guid owner, Guid id)
     {
         var model = await DetailsAsync(owner, id); if (model is null) return null;

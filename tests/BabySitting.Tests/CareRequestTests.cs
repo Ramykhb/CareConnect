@@ -286,6 +286,21 @@ public sealed class CareRequestTests
     });
 
     [SqlServerFact]
+    public async Task The_bookings_page_and_the_request_page_share_one_payment_path()
+    {
+        await using var d = await Data.CreateAsync(booked: true, BookingStatus.AwaitingPayment, paid: false);
+        var token = Guid.NewGuid();
+        var viaBookings = await d.GetAsync(async db =>
+        {
+            var v = Convert.ToBase64String((await db.BabysittingBookings.AsNoTracking().SingleAsync(b => b.Id == d.BookingId)).RowVersion);
+            return await new ParentBookingService(db, TimeProvider.System).PayAsync(d.Parent.Id, d.BookingId, token, v);
+        });
+        Assert.True(viaBookings.Succeeded);
+        Assert.Equal("This payment was already recorded.", (await Pay(d, d.Parent.Id, token)).Message); // same idempotency rules
+        Assert.Equal(1, await d.GetAsync(db => db.Payments.CountAsync(p => p.BookingId == d.BookingId)));
+    }
+
+    [SqlServerFact]
     public async Task Demo_payment_confirms_the_booking_once_and_notifies_the_sitter()
     {
         await using var d = await Data.CreateAsync(booked: true, BookingStatus.AwaitingPayment, paid: false);

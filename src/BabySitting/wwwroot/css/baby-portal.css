@@ -235,3 +235,8 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 .help-contact form { display:grid; gap:10px; }
 .help-contact input, .help-contact textarea { width:100%; border-radius:12px; border:1px solid var(--card, #e9efea); padding:10px; box-sizing:border-box; }
 @media (max-width:900px) { .help-layout { grid-template-columns:1fr; } }
+
+/* Babysitter qualifications */
+.settings-check { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.settings-check input { width: 18px; height: 18px; }
+.sitter-choice .sitter-qualifications { display: block; max-width: 46ch; color: var(--muted, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

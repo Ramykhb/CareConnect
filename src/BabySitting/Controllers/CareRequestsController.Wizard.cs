@@ -151,7 +151,7 @@ public sealed partial class CareRequestsController
         var bookings = await Db.BabysittingBookings.AsNoTracking().Where(b => ids.Contains(b.SitterProfileId) && b.StartsAtUtc < times.Value.End && b.EndsAtUtc > times.Value.Start).ToListAsync();
         var preview = new ChildcareRequest { CustomerId = UserId, City = form.City!.Trim(), ServiceType = form.ServiceType.Value, StartsAtUtc = times.Value.Start, EndsAtUtc = times.Value.End };
         return candidates.Where(p => SitterRequestPolicy.AcceptanceBlock(preview, p, bookings.Where(b => b.SitterProfileId == p.Id), Clock.GetUtcNow()) is null)
-            .OrderByDescending(p => p.VerificationStatus == VerificationStatus.Verified).ThenByDescending(p => p.YearsOfExperience).ThenBy(p => p.User.FirstName).ToArray();
+            .OrderByDescending(p => p.VerificationStatus == VerificationStatus.Verified).ThenByDescending(p => p.HasFirstAidTraining).ThenByDescending(p => p.YearsOfExperience).ThenBy(p => p.User.FirstName).ToArray();
     }
 
     private Task ValidateStep(ParentRequestWizard model, int step)

@@ -45,7 +45,7 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
         var now = clock.GetUtcNow(); var portal = await PortalData.LoadAsync(db, account, now, ct); var p = portal.Profile;
         var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(a => a.UserId == account.Id, ct) ?? new();
         return new() { Account = account, Profile = p, Now = now, Unread = portal.Unread, IncomingRequestCount = portal.Incoming,
-            Form = new() { FirstName = account.FirstName, LastName = account.LastName, Phone = account.PhoneNumber, City = p?.City ?? account.City ?? "", Bio = p?.Bio ?? "", Experience = p?.YearsOfExperience ?? 0, HourlyRate = p?.HourlyRate ?? 0, Currency = p?.Currency ?? "USD", Available = p?.IsAvailable ?? true, Services = p is null || p.Services.Count == 0 ? Enum.GetValues<ServiceType>() : p.Services.Select(s => s.ServiceType).ToArray(), UserVersion = account.ConcurrencyStamp, ProfileVersion = p is null ? "" : Convert.ToBase64String(p.RowVersion) },
+            Form = new() { FirstName = account.FirstName, LastName = account.LastName, Phone = account.PhoneNumber, City = p?.City ?? account.City ?? "", Bio = p?.Bio ?? "", Experience = p?.YearsOfExperience ?? 0, Qualifications = p?.Qualifications, FirstAid = p?.HasFirstAidTraining ?? false, HourlyRate = p?.HourlyRate ?? 0, Currency = p?.Currency ?? "USD", Available = p?.IsAvailable ?? true, Services = p is null || p.Services.Count == 0 ? Enum.GetValues<ServiceType>() : p.Services.Select(s => s.ServiceType).ToArray(), UserVersion = account.ConcurrencyStamp, ProfileVersion = p is null ? "" : Convert.ToBase64String(p.RowVersion) },
             Alerts = new() { Version = preferences.RowVersion.Length == 0 ? "" : Convert.ToBase64String(preferences.RowVersion), Requests = preferences.Requests, Bookings = preferences.Bookings, Payments = preferences.Payments, Reviews = preferences.Reviews, RequestSound = preferences.RequestSound, EmailRequests = preferences.EmailRequests, EmailBookings = preferences.EmailBookings, EmailPayments = preferences.EmailPayments, EmailReviews = preferences.EmailReviews } };
     }
     public async Task<PortalWriteResult> SaveSettingsAsync(Guid userId, SitterSettingsForm form, CancellationToken ct = default)
@@ -63,7 +63,7 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
                 if (account.PhoneNumber != form.Phone?.Trim()) account.PhoneNumberConfirmed = false;
                 account.PhoneNumber = string.IsNullOrWhiteSpace(form.Phone) ? null : form.Phone.Trim();
                 if (profile is null) { profile = new() { UserId = userId }; db.BabysitterProfiles.Add(profile); }
-                profile.City = form.City.Trim(); profile.Bio = form.Bio.Trim(); profile.HourlyRate = form.HourlyRate; profile.Currency = form.Currency; profile.YearsOfExperience = form.Experience; profile.IsAvailable = form.Available;
+                profile.City = form.City.Trim(); profile.Bio = form.Bio.Trim(); profile.HourlyRate = form.HourlyRate; profile.Currency = form.Currency; profile.YearsOfExperience = form.Experience; profile.Qualifications = string.IsNullOrWhiteSpace(form.Qualifications) ? null : form.Qualifications.Trim(); profile.HasFirstAidTraining = form.FirstAid; profile.IsAvailable = form.Available;
                 var chosen = form.Services.Distinct().ToHashSet();
                 db.SitterServices.RemoveRange(profile.Services.Where(s => !chosen.Contains(s.ServiceType)));
                 foreach (var type in chosen.Where(t => !profile.Services.Any(s => s.ServiceType == t))) db.SitterServices.Add(new() { SitterProfileId = profile.Id, ServiceType = type });
@@ -128,6 +128,8 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
                 var cancelled = await db.BabysittingBookings.AsNoTracking().Where(b => b.SitterProfile.UserId == account.Id && b.Status == BookingStatus.Cancelled).ToListAsync(ct);
                 foreach (var b in cancelled) candidates.Add(new() { Category = NotificationCategory.Booking, SourceKey = "booking-cancelled:" + b.Id, Title = "Booking cancelled", Body = b.CancellationReason ?? "The booking is no longer active.", RelativeUrl = "/SitterBookings/Details/" + b.Id, CreatedAtUtc = b.CancelledAtUtc ?? b.CreatedAtUtc });
             }
+            // History older than the cleanup window is never re-created after it was deleted.
+            candidates.RemoveAll(c => c.CreatedAtUtc < now - Services.Notifications.NotificationCleanupService.Retention);
             var keys = candidates.Select(c => c.SourceKey).ToArray();
             var existing = (await db.Notifications.Where(n => n.UserId == account.Id && keys.Contains(n.SourceKey)).Select(n => n.SourceKey).ToListAsync(ct)).ToHashSet();
             foreach (var item in candidates.Where(n => !existing.Contains(n.SourceKey))) { item.UserId = account.Id; item.Title = item.Title[..Math.Min(150, item.Title.Length)]; item.Body = item.Body[..Math.Min(2000, item.Body.Length)]; db.Notifications.Add(item); }
