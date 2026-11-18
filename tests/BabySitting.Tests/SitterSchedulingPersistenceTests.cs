@@ -61,7 +61,8 @@ public sealed class SitterSchedulingPersistenceTests
         var model = await Booking(s, b => b.LoadAsync(s.Sitter, id)); var key = BookingRules.Tasks(model.Booking!).First().Key;
         Assert.True((await Booking(s, b => b.TaskAsync(s.Sitter.Id, new() { Id = id, Key = key, Completed = true }))).Succeeded);
         Assert.True((await Booking(s, b => b.TaskAsync(s.Sitter.Id, new() { Id = id, Key = key, Completed = true }))).Succeeded);
-        Assert.Equal(1, await s.QueryAsync(db => db.BookingCareTasks.CountAsync(t => t.BookingId == id)));
+        // Starting care copied every note-based item into the booking; ticking one twice adds no rows.
+        Assert.Equal(BookingRules.Tasks(model.Booking!).Count(), await s.QueryAsync(db => db.BookingCareTasks.CountAsync(t => t.BookingId == id)));
         Assert.False((await Booking(s, b => b.TaskAsync(s.OtherSitter.Id, new() { Id = id, Key = key, Completed = false }))).Succeeded);
         Assert.True((await Booking(s, b => b.AddTaskAsync(s.Sitter.Id, new() { Id = id, Label = "Refresh water" }))).Succeeded);
         Assert.Equal(4, BookingRules.Tasks((await Booking(s, b => b.LoadAsync(s.Sitter, id))).Booking!).Count());

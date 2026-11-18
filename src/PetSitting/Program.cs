@@ -15,6 +15,7 @@ builder.Services.AddScoped<PetSitting.Services.Accounts.IAccountClosureService, 
 builder.Services.AddScoped<PetSitting.Services.Chat.IChatService, PetSitting.Services.Chat.ChatService>();
 builder.Services.AddHostedService<PetSitting.Services.Chat.MessageCleanupService>();
 builder.Services.AddHostedService<PetSitting.Services.Notifications.NotificationCleanupService>();
+builder.Services.AddHostedService<PetSitting.Services.Bookings.BookingExpiryService>();
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<PetSitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<PetSitting.Services.Portal.IPayoutReviewService, PetSitting.Services.Portal.PayoutReviewService>();

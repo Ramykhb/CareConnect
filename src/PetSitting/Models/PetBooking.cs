@@ -18,6 +18,8 @@ public class PetBooking : Entity
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
     public DateTimeOffset? StartedAtUtc { get; set; }
+    // When care started the checklist was copied into CareTasks; later note edits no longer change it.
+    public DateTimeOffset? ChecklistSavedAtUtc { get; set; }
     public ICollection<BookingCareTask> CareTasks { get; set; } = new List<BookingCareTask>();
     public ICollection<BookingUpdate> Updates { get; set; } = new List<BookingUpdate>();
     public DateTimeOffset? CompletedAtUtc { get; set; }
