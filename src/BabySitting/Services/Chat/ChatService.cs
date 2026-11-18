@@ -67,6 +67,16 @@ public sealed class ChatService(BabySittingDbContext db, TimeProvider clock) : I
         var message = new ChatMessage { BookingId = bookingId, SenderId = userId, Body = body, CreatedAtUtc = clock.GetUtcNow(),
             RecipientId = booking.CustomerId == userId ? booking.SitterProfile.UserId : booking.CustomerId };
         db.ChatMessages.Add(message);
+        // One unread alert per conversation: further messages don't stack up while the first is unread.
+        var key = ChatKey(bookingId);
+        if (!await db.Notifications.AnyAsync(n => n.UserId == message.RecipientId && n.ReadAtUtc == null && n.SourceKey != null && n.SourceKey.StartsWith(key), ct))
+        {
+            var sender = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.FirstName).SingleAsync(ct);
+            var title = "New message from " + sender;
+            db.Notifications.Add(new Notification { UserId = message.RecipientId, Category = NotificationCategory.Booking, SourceKey = key + message.Id,
+                Title = title[..Math.Min(150, title.Length)], Body = body.Length > 140 ? body[..140] + "…" : body,
+                RelativeUrl = "/Messages/Chat/" + bookingId, CreatedAtUtc = message.CreatedAtUtc });
+        }
         await db.SaveChangesAsync(ct);
         return ChatMessageDto.From(message);
     }
@@ -77,10 +87,16 @@ public sealed class ChatService(BabySittingDbContext db, TimeProvider clock) : I
         if (!await CanAccessAsync(userId, bookingId, ct)) return [];
         var now = clock.GetUtcNow();
         var ids = await db.ChatMessages.Where(m => m.BookingId == bookingId && m.RecipientId == userId && m.ReadAtUtc == null && (messageIds == null || messageIds.Contains(m.Id))).Select(m => m.Id).ToListAsync(ct);
+        // Opening the conversation also clears its "new message" alert (tracked, so open tabs update their counts).
+        var key = ChatKey(bookingId);
+        var alerts = await db.Notifications.Where(n => n.UserId == userId && n.ReadAtUtc == null && n.SourceKey != null && n.SourceKey.StartsWith(key)).ToListAsync(ct);
+        if (alerts.Count > 0) { foreach (var alert in alerts) alert.ReadAtUtc = now; await db.SaveChangesAsync(ct); }
         if (ids.Count == 0) return [];
         await db.ChatMessages.Where(m => ids.Contains(m.Id)).ExecuteUpdateAsync(s => s.SetProperty(m => m.ReadAtUtc, now), ct);
         return await db.ChatMessages.AsNoTracking().Where(m => ids.Contains(m.Id)).Select(m => new ChatMessageDto(m.Id, m.BookingId, m.SenderId, m.Body, m.CreatedAtUtc, m.ReadAtUtc)).ToListAsync(ct);
     }
+
+    public static string ChatKey(Guid bookingId) => "chat:" + bookingId + ":";
 
     public Task<int> UnreadAsync(Guid userId, CancellationToken ct = default) =>
         db.ChatMessages.CountAsync(m => m.RecipientId == userId && m.ReadAtUtc == null, ct);

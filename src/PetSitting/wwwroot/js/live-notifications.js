@@ -23,6 +23,21 @@
     const refreshCount = () => fetch('/Notifications/Count', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
         .then(r => r.ok ? r.json() : null).then(data => data && setUnread(data.unread)).catch(() => {});
 
+    const messages = document.querySelector('.topbar-message');
+    const setMessages = count => {
+        let dot = messages?.querySelector('i');
+        if (count > 0 && messages && !dot) { dot = document.createElement('i'); messages.append(dot); }
+        if (count <= 0) dot?.remove();
+        if (messages) messages.setAttribute('aria-label', `Messages, ${count} unread`);
+        document.querySelectorAll('[data-nav-section="messages"]').forEach(link => {
+            let badge = link.querySelector('.nav-count');
+            if (count > 0 && !badge) { badge = document.createElement('span'); badge.className = 'nav-count'; link.append(badge); }
+            if (badge) { badge.textContent = count; badge.hidden = count <= 0; }
+        });
+    };
+    const refreshMessages = () => fetch('/Messages/Unread', { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null).then(data => data && setMessages(data.unread)).catch(() => {});
+
     const toast = n => {
         const item = document.createElement(n.url ? 'a' : 'div');
         item.className = 'live-toast';
@@ -62,7 +77,9 @@
         document.dispatchEvent(new CustomEvent('careconnect:notification', { detail: notification }));
         if (allowedCategories && !allowedCategories.has(notification.category)) return;
         prepend(notification);
-        if (!silent) toast(notification);
+        const here = (notification.url || '').toLowerCase() === location.pathname.toLowerCase();
+        if (!silent && !here) toast(notification);
+        if ((notification.url || '').toLowerCase().startsWith('/messages')) refreshMessages();
         refreshCount();
     });
     let allowedCategories;
@@ -76,9 +93,10 @@
         }).catch(() => {});
     connection.on('notifications.changed', data => {
         refreshCount();
+        refreshMessages();
         if (data?.preferencesChanged) refreshPreferences();
     });
-    connection.onreconnected(() => { refreshCount(); refreshPreferences(); });
+    connection.onreconnected(() => { refreshCount(); refreshMessages(); refreshPreferences(); });
     const start = (delay = 2000) => connection.start().then(refreshCount).catch(() => setTimeout(() => start(Math.min(delay * 2, 60000)), delay));
     start();
 })();

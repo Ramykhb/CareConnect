@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Identity
 @using BabySitting.ViewModels
 @inject UserManager<ApplicationUser> UserManager
+@inject BabySitting.Services.Chat.IChatService Chat
 @{
     var portal = Model as IPortalViewModel;
     var user = portal?.Account ?? await UserManager.GetUserAsync(User);
@@ -12,6 +13,7 @@
     var portalRoutes = new Dictionary<string, string> { ["earnings"] = "Earnings", ["reports"] = "Analytics", ["reviews"] = "Reviews", ["notifications"] = "Notifications" };
     var home = Url.Action(sitter ? "Sitter" : "Customer", "Dashboard");
     var unread = portal?.Unread ?? 0;
+    var unreadMessages = user is null ? 0 : await Chat.UnreadAsync(user.Id);
     var menu = sitter
         ? new[] { ("overview", "Dashboard", "grid"), ("requests", "Requests", "inbox"), ("bookings", "Bookings", "calendar"), ("availability", "Availability", "clock"), ("earnings", "Earnings", "wallet"), ("reports", "Analytics", "chart"), ("reviews", "Reviews", "star"), ("messages", "Messages", "chat"), ("notifications", "Notifications", "bell") }
         : new[] { ("overview", "Dashboard", "grid"), ("family", "My Family", "family"), ("requests", "My Requests", "inbox"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
@@ -56,6 +58,7 @@
                         <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@L[label]</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
+                            @if (key == "messages" && unreadMessages > 0) { <span class="nav-count">@unreadMessages</span> }
                         </a>
                     }
                     <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" class="@(controller == "SitterPortal" && action == "Settings" || controller == "ParentSettings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>@L["Settings"]</span></a>
@@ -90,7 +93,7 @@
                         <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@L[sitter ? "Search requests, children…" : "Search children, bookings…"]" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }
                     <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : Url.Action("Index", "Notifications"))" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
-                    <a href="@Url.Action("Index", "Messages")" class="round-icon topbar-message" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></a>
+                    <a href="@Url.Action("Index", "Messages")" class="round-icon topbar-message" aria-label="Messages, @unreadMessages unread"><svg class="line-icon"><use href="#icon-chat" /></svg>@if (unreadMessages > 0) { <i></i> }</a>
                     <details class="account-menu"><summary><span class="portal-avatar">@if (!sitter && user?.ProfilePhotoVersion is { } topPhoto) { <img src="@Url.Action("Photo", "ParentSettings", new { v = topPhoto })" alt="" /> } else { @initial }</span><span><strong>@displayName</strong><small>@L[sitter ? "Babysitter" : "Parent"]</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))">@L["Manage your account ↗"]</a><a href="@Url.Action("Index", "Help")">@L["Help Center"]</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">@L["Log out"]</button></form></div></details>
                 </div>
             </header>
@@ -107,7 +110,7 @@
     <script src="~/js/baby-dashboard.js" asp-append-version="true"></script>
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="~/lib/microsoft-signalr/signalr.min.js" asp-append-version="true"></script>
         <script src="~/js/live-notifications.js" asp-append-version="true"></script>
     }
     @await RenderSectionAsync("Scripts", required: false)
