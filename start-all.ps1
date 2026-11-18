@@ -25,9 +25,15 @@ if (Test-Path (Join-Path $root ".env")) {
     Write-Warning "RabbitMQ not started: copy .env.example to .env and set RABBITMQ_PASSWORD (see README, 'Local setup')."
 }
 
+# Build once first: two apps building at the same time fight over the shared Messaging project.
+foreach ($app in "PetSitting", "BabySitting") {
+    dotnet build (Join-Path $root "src/$app") -v q --nologo
+    if ($LASTEXITCODE -ne 0) { Write-Error "$app build failed - fix the errors above, then run this script again."; exit 1 }
+}
+
 # One window per app.
 foreach ($app in "PetSitting", "BabySitting") {
-    Start-Process powershell -WorkingDirectory $root -ArgumentList "-NoExit", "-Command", "`$host.UI.RawUI.WindowTitle = '$app'; dotnet run --project src/$app"
+    Start-Process powershell -WorkingDirectory $root -ArgumentList "-NoExit", "-Command", "`$host.UI.RawUI.WindowTitle = '$app'; dotnet run --project src/$app --no-build"
 }
 
 Write-Host ""
