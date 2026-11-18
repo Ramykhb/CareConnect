@@ -81,12 +81,14 @@
         });
         form.addEventListener('submit', async event => {
             if (navigating) return;
-            event.preventDefault();
             clearTimeout(timer);
+            // No autosave in flight: let this click submit normally. (Browsers ignore a requestSubmit()
+            // made while the form's submit event is still running, which made every button need two clicks.)
+            if (!pending) { navigating = true; return; }
+            // An autosave is still running: wait for it so the POST carries its updated version, then submit.
+            event.preventDefault();
             const button = event.submitter || form.querySelector('[value="next"], [value="submit"]');
-            if (pending) await pending;
-            // The regular POST saves every current field and runs step validation.
-            // Keep the updated version from any completed autosave.
+            await pending;
             navigating = true;
             form.requestSubmit(button);
         });
