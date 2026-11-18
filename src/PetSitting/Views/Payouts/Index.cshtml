@@ -1,0 +1,48 @@
+@using PetSitting.Models
+@using PetSitting.Services.Portal
+@using PetSitting.ViewModels
+@model IReadOnlyList<PayoutItem>
+@{
+    ViewData["Title"] = "Sitter payouts";
+    var filter = (string)ViewBag.Filter;
+}
+<div class="py-4">
+    <partial name="_ManagerNav" />
+    <h1>Sitter payouts</h1>
+    <p class="text-secondary">Sitters request payouts from their earnings. No bank is connected: send the money yourself, then mark the request as paid so the sitter sees it.</p>
+    @if (TempData["Success"] is string ok) { <div class="alert alert-success" role="status">@ok</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    <nav class="nav nav-pills mb-3" aria-label="Filter payouts">
+        @foreach (var (key, label) in new[] { ("requested", "Waiting"), ("paid", "Paid"), ("cancelled", "Cancelled"), ("all", "All") })
+        {
+            <a class="nav-link @(filter == key ? "active" : "")" asp-action="Index" asp-route-status="@key" aria-current="@(filter == key ? "page" : null)">@label</a>
+        }
+    </nav>
+    @if (Model.Count == 0)
+    {
+        <p class="text-secondary">No payouts here.</p>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table align-middle">
+            <thead><tr><th scope="col">Sitter</th><th scope="col">Amount</th><th scope="col">Requested</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+            <tbody>
+            @foreach (var i in Model)
+            {
+                var p = i.Payout;
+                var badge = p.Status switch { PayoutStatus.Requested => "text-bg-warning", PayoutStatus.Paid => "text-bg-success", _ => "text-bg-secondary" };
+                <tr>
+                    <td><strong>@i.SitterName</strong><br /><small class="text-secondary">@i.SitterEmail</small></td>
+                    <td>@DashboardViewModel.Money(p.Amount, p.Currency)</td>
+                    <td>@p.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
+                    <td><span class="badge @badge">@(p.Status == PayoutStatus.Requested ? "Waiting" : p.Status.ToString())</span>@if (p.PaidAtUtc is { } paid) { <br /><small class="text-secondary">@paid.ToLocalTime().ToString("d MMM yyyy")</small> }</td>
+                    <td>@if (p.Status == PayoutStatus.Requested)
+                        {
+                            <form asp-action="MarkPaid" method="post" class="m-0"><input type="hidden" name="id" value="@p.Id" /><input type="hidden" name="version" value="@Convert.ToBase64String(p.RowVersion)" /><button type="submit" class="btn btn-sm btn-dark">Mark as paid</button></form>
+                        }</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</div>

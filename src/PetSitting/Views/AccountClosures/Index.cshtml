@@ -6,6 +6,7 @@
     var filter = (string)ViewBag.Filter;
 }
 <div class="py-4">
+    <partial name="_ManagerNav" />
     <h1>Account closure requests</h1>
     <p class="text-secondary">Accounts with care records can't be deleted directly. Closing one deactivates it and removes personal details while bookings, payments and reviews are kept.</p>
     <partial name="_Notice" />
