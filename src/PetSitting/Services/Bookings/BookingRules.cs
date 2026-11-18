@@ -11,7 +11,7 @@ public static class BookingRules
     public static bool FullyPaid(PetBooking booking) => booking.TotalAmount == 0 || Paid(booking) >= booking.TotalAmount;
     public static string Label(PetBooking booking) => booking.Status == BookingStatus.AwaitingPayment ? "Accepted" : DashboardViewModel.Status(booking.Status);
     public static string Css(PetBooking booking) => booking.Status == BookingStatus.AwaitingPayment ? "green" : DashboardViewModel.StatusClass(booking.Status);
-    public static string? StartBlock(PetBooking booking, DateTimeOffset now) => booking.Status is not (BookingStatus.Confirmed or BookingStatus.AwaitingPayment) ? "Only an accepted booking can be started." : !FullyPaid(booking) ? "Payment must succeed in full before care can start." : now < booking.StartsAtUtc ? "Care can start at the scheduled start time." : null;
+    public static string? StartBlock(PetBooking booking, DateTimeOffset now) => booking.Status is not (BookingStatus.Confirmed or BookingStatus.AwaitingPayment) ? "Only an accepted booking can be started." : !FullyPaid(booking) ? "Payment must succeed in full before care can start." : now < booking.StartsAtUtc ? "Care can start at the scheduled start time." : now >= booking.EndsAtUtc ? "This booking's end time has passed, so care can no longer start." : null;
     public static bool CanUpdateCare(PetBooking booking) => booking.Status == BookingStatus.InProgress;
     // Before care starts the checklist follows the current notes. When care starts it is copied into the booking
     // (SaveChecklist), so editing a note afterwards can't change, untick or remove items on that booking.
