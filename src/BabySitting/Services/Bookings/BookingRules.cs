@@ -25,18 +25,21 @@ public static class BookingRules
     }
 
     // Copies the current note-based items into the booking. Safe to call more than once.
-    public static void SaveChecklist(BabysittingBooking booking, DateTimeOffset now)
+    // Returns the new rows; the caller must add them to the DbContext (their keys are preset, so EF would otherwise treat them as existing rows).
+    public static IReadOnlyList<BookingCareTask> SaveChecklist(BabysittingBooking booking, DateTimeOffset now)
     {
-        if (booking.ChecklistSavedAtUtc is not null) return;
+        var added = new List<BookingCareTask>();
+        if (booking.ChecklistSavedAtUtc is not null) return added;
         foreach (var item in LiveTasks(booking).Where(t => !t.Key.StartsWith("custom:", StringComparison.Ordinal)))
         {
             var note = item.Note is null ? "" : item.Note.Length > 2000 ? item.Note[..2000] : item.Note;
             var label = item.Label.Length > 200 ? item.Label[..200] : item.Label;
             var row = booking.CareTasks.SingleOrDefault(t => t.Key == item.Key);
-            if (row is null) booking.CareTasks.Add(new BookingCareTask { BookingId = booking.Id, Key = item.Key, Label = label, Note = note, CreatedAtUtc = now });
+            if (row is null) { row = new BookingCareTask { BookingId = booking.Id, Key = item.Key, Label = label, Note = note, CreatedAtUtc = now }; booking.CareTasks.Add(row); added.Add(row); }
             else { row.Label = label; row.Note = note; }
         }
         booking.ChecklistSavedAtUtc = now;
+        return added;
     }
 
     private static IEnumerable<CareTaskViewModel> CustomTasks(BabysittingBooking booking) =>

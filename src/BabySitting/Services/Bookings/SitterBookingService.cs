@@ -42,7 +42,7 @@ public sealed class SitterBookingService(BabySittingDbContext db, TimeProvider c
         {
             var block = BookingRules.StartBlock(booking, now);
             if (block is not null) return new(false, block);
-            BookingRules.SaveChecklist(booking, now);
+            db.BookingCareTasks.AddRange(BookingRules.SaveChecklist(booking, now));
             booking.Status = BookingStatus.InProgress; booking.StartedAtUtc = now;
         }
         else
@@ -56,7 +56,7 @@ public sealed class SitterBookingService(BabySittingDbContext db, TimeProvider c
     public Task<BookingWriteResult> TaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default) => WriteAsync(userId, form.Id, (booking, now) =>
     {
         if (!BookingRules.CanUpdateCare(booking)) return new(false, "Checklist updates are available while care is in progress.");
-        BookingRules.SaveChecklist(booking, now); // bookings started before checklists were saved get their copy now
+        db.BookingCareTasks.AddRange(BookingRules.SaveChecklist(booking, now)); // bookings started before checklists were saved get their copy now
         var template = BookingRules.Tasks(booking).SingleOrDefault(t => t.Key == form.Key);
         if (template is null) return new(false, "That checklist item is no longer available.", true);
         var task = booking.CareTasks.SingleOrDefault(t => t.Key == form.Key);

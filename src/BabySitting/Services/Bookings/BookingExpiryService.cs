@@ -13,10 +13,11 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
 {
     public static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
 
-    public static async Task<int> RunAsync(BabySittingDbContext db, DateTimeOffset now, CancellationToken ct = default)
+    // customerId limits the sweep to one customer's records (used by tests); the background job passes null.
+    public static async Task<int> RunAsync(BabySittingDbContext db, DateTimeOffset now, CancellationToken ct = default, Guid? customerId = null)
     {
         var changed = 0;
-        var expired = await db.ChildcareRequests.Include(r => r.Offers).Where(r => r.Status == RequestStatus.Open && r.StartsAtUtc <= now).Take(200).ToListAsync(ct);
+        var expired = await db.ChildcareRequests.Include(r => r.Offers).Where(r => r.Status == RequestStatus.Open && r.StartsAtUtc <= now && (customerId == null || r.CustomerId == customerId)).Take(200).ToListAsync(ct);
         foreach (var request in expired)
         {
             request.Status = RequestStatus.Expired;
@@ -28,7 +29,7 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
         }
 
         var overdue = await db.BabysittingBookings.Include(b => b.Request).Include(b => b.Offer).Include(b => b.Payments).Include(b => b.SitterProfile)
-            .Where(b => (b.Status == BookingStatus.AwaitingPayment && b.StartsAtUtc <= now) || (b.Status == BookingStatus.Confirmed && b.EndsAtUtc <= now))
+            .Where(b => ((b.Status == BookingStatus.AwaitingPayment && b.StartsAtUtc <= now) || (b.Status == BookingStatus.Confirmed && b.EndsAtUtc <= now)) && (customerId == null || b.CustomerId == customerId))
             .AsSplitQuery().Take(200).ToListAsync(ct);
         foreach (var booking in overdue)
         {
