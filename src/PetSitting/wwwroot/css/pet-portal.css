@@ -185,3 +185,21 @@ body.pet-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-fa
 .chat-conversation.unread { border-left:4px solid var(--lime); }
 .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 @media (max-width:640px) { .chat-bubble { max-width:90%; } .chat-form { flex-direction:column; align-items:stretch; } }
+
+/* Saved availability rules and removable checklist tasks */
+.saved-rules { margin-top:18px; display:grid; gap:8px; }
+.saved-rules h3 { font-size:13px; margin:0; }
+.saved-rule { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; background:var(--card-2, #f0f3f0); font-size:12px; }
+.saved-rule span { display:grid; gap:2px; } .saved-rule small { color:#6b7770; }
+.saved-rule form { margin:0; }
+.saved-rule-delete, .care-task-remove { border:0; background:none; color:#a33; font-size:12px; font-weight:600; cursor:pointer; padding:4px 6px; border-radius:8px; }
+.saved-rule-delete:hover, .care-task-remove:hover { background:#fde6e3; }
+/* Help Center */
+.help-layout { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr); gap:18px; align-items:start; }
+.help-faq, .help-contact { padding:22px; display:grid; gap:10px; }
+.help-item { border-radius:14px; background:var(--card-2, #f0f3f0); padding:12px 14px; }
+.help-item summary { cursor:pointer; font-weight:600; }
+.help-item p { margin:8px 0 0; }
+.help-contact form { display:grid; gap:10px; }
+.help-contact input, .help-contact textarea { width:100%; border-radius:12px; border:1px solid var(--card, #e9efea); padding:10px; box-sizing:border-box; }
+@media (max-width:900px) { .help-layout { grid-template-columns:1fr; } }

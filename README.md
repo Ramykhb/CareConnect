@@ -50,6 +50,31 @@ PetSitting: http://localhost:5101. BabySitting: http://localhost:5102.
 Both provide `/health/live`. This endpoint checks application liveness only.
 The landing and privacy pages work without SQL Server or RabbitMQ running.
 
+### Local setup (one time per computer)
+
+1. Install Docker Desktop. SQL Server must be running on `localhost:1433` with each app's connection string in its user secrets (see "SQL Server and migrations").
+2. Create the RabbitMQ login: copy `.env.example` to `.env` and set `RABBITMQ_PASSWORD` to a password of your choice. `.env` is git-ignored.
+3. Give both applications the same login and switch messaging on:
+
+   ```sh
+   dotnet user-secrets set "RabbitMq:Enabled" "true" --project src/PetSitting
+   dotnet user-secrets set "RabbitMq:UserName" "careconnect" --project src/PetSitting
+   dotnet user-secrets set "RabbitMq:Password" "<the RABBITMQ_PASSWORD from .env>" --project src/PetSitting
+   ```
+
+   Repeat the three commands with `--project src/BabySitting`.
+4. Apply the database migrations for both applications (see "SQL Server and migrations").
+
+### Start everything with one command
+
+On Windows, from the solution directory:
+
+```powershell
+.\start-all.ps1
+```
+
+It starts Docker Desktop if needed, Mailpit (http://localhost:8025), RabbitMQ (http://localhost:15672, when `.env` exists), and opens one window per application. Close a window or press Ctrl+C in it to stop that application. If scripts are blocked, run `powershell -ExecutionPolicy Bypass -File .\start-all.ps1`.
+
 ## SQL Server and migrations
 
 Both applications use the existing SQL Server at `localhost:1433`, with independent databases and Identity tables:

@@ -32,6 +32,8 @@ public sealed class SitterBookingsController(ISitterBookingService bookings, Use
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Task(CareTaskForm form, CancellationToken ct) => await Result(form.Id, () => bookings.TaskAsync(Guid.Parse(users.GetUserId(User)!), form, ct));
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveTask(CareTaskForm form, CancellationToken ct) => await Result(form.Id, () => bookings.RemoveTaskAsync(Guid.Parse(users.GetUserId(User)!), form, ct));
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddTask(AddCareTaskForm form, CancellationToken ct) => await Result(form.Id, () => bookings.AddTaskAsync(Guid.Parse(users.GetUserId(User)!), form, ct));
     [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(6291456)]
     public async Task<IActionResult> SendUpdate(BookingUpdateForm form, CancellationToken ct) => await Result(form.Id, () => bookings.UpdateAsync(Guid.Parse(users.GetUserId(User)!), form, false, ct));

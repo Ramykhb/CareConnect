@@ -17,5 +17,18 @@
         <div class="schedule-warning" data-affected-message role="status"><svg class="line-icon"><use href="#icon-alert" /></svg><span>Booking conflicts are checked before saving.</span></div>
         <button type="submit" class="btn btn-dark btn-sm full-width" disabled="@(Model.Profile is null)" data-save-schedule><svg class="line-icon"><use href="#icon-check" /></svg>Save changes</button>
     </form>
+    @{ var today = DateOnly.FromDateTime(DateTime.Today); var rules = Model.Profile?.ScheduleExceptions.Where(r => r.RepeatYearly || r.EndsOn >= today).OrderBy(r => r.StartsOn).Take(20).ToList() ?? []; }
+    @if (rules.Count > 0)
+    {
+        <div class="saved-rules"><h3>Saved rules</h3>
+            @foreach (var rule in rules)
+            {
+                <div class="saved-rule">
+                    <span><strong>@(rule.IsAvailable ? "Available" : "Unavailable")</strong> · @rule.StartsOn.ToString("d MMM yyyy")@(rule.EndsOn != rule.StartsOn ? " – " + rule.EndsOn.ToString("d MMM yyyy") : "")@(rule.AllDay ? " · all day" : " · " + rule.StartTime.ToString("HH:mm") + "–" + rule.EndTime.ToString("HH:mm"))@(rule.RepeatYearly ? " · every year" : "")@if (!string.IsNullOrWhiteSpace(rule.Reason)) { <small>@rule.Reason</small> }</span>
+                    <form asp-action="DeleteRule" asp-route-id="@rule.Id" method="post"><input type="hidden" name="version" value="@Model.Editor.Version" /><input type="hidden" name="date" value="@Model.SelectedDate.ToString("yyyy-MM-dd")" /><input type="hidden" name="view" value="@Model.View" /><button type="submit" class="saved-rule-delete" aria-label="Delete this rule">Delete</button></form>
+                </div>
+            }
+        </div>
+    }
     @if (Model.On(Model.SelectedDate).Any()) { <div class="selected-day-bookings"><h3>On this date</h3>@foreach (var entry in Model.On(Model.SelectedDate)) { <a href="@(entry.IsRequest ? Url.Action("Index", "SitterRequests", new { id = entry.Id }) : Url.Action("Details", "SitterBookings", new { id = entry.Id }))" class="calendar-event @entry.State">@entry.Title ↗</a> }</div> }
 </aside>

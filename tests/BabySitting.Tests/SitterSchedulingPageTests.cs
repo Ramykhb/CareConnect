@@ -37,11 +37,13 @@ public sealed class SitterSchedulingPageTests
         public Task<BookingWriteResult> TransitionAsync(Guid userId, BookingTransitionForm form, CancellationToken ct = default) => Task.FromResult(new BookingWriteResult(true, "Saved"));
         public Task<BookingWriteResult> TaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default) => Task.FromResult(new BookingWriteResult(true, "Saved"));
         public Task<BookingWriteResult> AddTaskAsync(Guid userId, AddCareTaskForm form, CancellationToken ct = default) => Task.FromResult(new BookingWriteResult(true, "Saved"));
+        public Task<BookingWriteResult> RemoveTaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default) => Task.FromResult(new BookingWriteResult(true, "Removed"));
         public Task<BookingWriteResult> UpdateAsync(Guid userId, BookingUpdateForm form, bool issue, CancellationToken ct = default) => Task.FromResult(new BookingWriteResult(true, "Saved"));
         public Task<BookingUpdatePhoto?> PhotoAsync(Guid userId, Guid updateId, CancellationToken ct = default) => Task.FromResult<BookingUpdatePhoto?>(null);
         public Task<ScheduleWriteResult> SaveAsync(Guid userId, AvailabilityEditForm form, CancellationToken ct = default) => Task.FromResult(new ScheduleWriteResult(true, "Saved"));
         public Task<ScheduleWriteResult> ToggleAsync(Guid userId, bool accepting, string version, CancellationToken ct = default) => Task.FromResult(new ScheduleWriteResult(true, "Saved"));
         public Task<int> AffectedAsync(Guid userId, AvailabilityEditForm form, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<ScheduleWriteResult> DeleteRuleAsync(Guid userId, Guid ruleId, string version, CancellationToken ct = default) => Task.FromResult(new ScheduleWriteResult(true, "Removed"));
     }
     private static WebApplicationFactory<Program> Factory() => new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development").ConfigureServices(services =>
     {

@@ -13,6 +13,7 @@ public interface ISitterAvailabilityService
     Task<ScheduleWriteResult> SaveAsync(Guid userId, AvailabilityEditForm form, CancellationToken ct = default);
     Task<ScheduleWriteResult> ToggleAsync(Guid userId, bool accepting, string version, CancellationToken ct = default);
     Task<int> AffectedAsync(Guid userId, AvailabilityEditForm form, CancellationToken ct = default);
+    Task<ScheduleWriteResult> DeleteRuleAsync(Guid userId, Guid ruleId, string version, CancellationToken ct = default);
 }
 
 public sealed class SitterAvailabilityService(BabySittingDbContext db, TimeProvider clock) : ISitterAvailabilityService
@@ -81,6 +82,34 @@ public sealed class SitterAvailabilityService(BabySittingDbContext db, TimeProvi
         if (!Matches(profile.RowVersion, version)) return new(false, "Your schedule changed. Refresh before changing your availability.");
         profile.IsAvailable = accepting; profile.ScheduleRevision = Guid.NewGuid();
         try { await db.SaveChangesAsync(ct); return new(true, accepting ? "You’re now accepting requests." : "New requests are paused. Existing bookings are unchanged."); }
+        catch (DbUpdateConcurrencyException) { return new(false, "Your schedule changed. Refresh and try again."); }
+    }
+    // Removes one saved rule. Removing an "available" rule is refused when an active booking relies on it.
+    public async Task<ScheduleWriteResult> DeleteRuleAsync(Guid userId, Guid ruleId, string version, CancellationToken ct = default)
+    {
+        try
+        {
+            return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                db.ChangeTracker.Clear(); await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+                var profile = await db.BabysitterProfiles.Include(p => p.Availability).Include(p => p.ScheduleExceptions).AsSplitQuery().SingleOrDefaultAsync(p => p.UserId == userId, ct);
+                if (profile is null) return new ScheduleWriteResult(false, "A sitter profile is required before changing availability.");
+                if (!Matches(profile.RowVersion, version)) return new(false, "Your schedule changed. Review the latest calendar before deleting.");
+                var rule = profile.ScheduleExceptions.SingleOrDefault(e => e.Id == ruleId);
+                if (rule is null) return new(false, "That rule was already removed.");
+                if (rule.IsAvailable)
+                {
+                    var remaining = profile.ScheduleExceptions.Where(e => e.Id != ruleId).ToList();
+                    var bookings = await db.BabysittingBookings.Where(b => b.SitterProfileId == profile.Id && (b.Status == BookingStatus.Pending || b.Status == BookingStatus.AwaitingPayment || b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.InProgress)).ToListAsync(ct);
+                    if (bookings.Any(b => ScheduleMath.Occurrences(rule, b.StartsAtUtc, b.EndsAtUtc).Any() && !ScheduleMath.Covered(profile.Availability, remaining, b.StartsAtUtc, b.EndsAtUtc)))
+                        return new(false, "An active booking relies on this availability. Resolve the booking before removing it.");
+                }
+                db.SitterScheduleExceptions.Remove(rule);
+                profile.ScheduleRevision = Guid.NewGuid();
+                await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+                return new(true, "Availability rule removed.");
+            });
+        }
         catch (DbUpdateConcurrencyException) { return new(false, "Your schedule changed. Refresh and try again."); }
     }
     private static bool Matches(byte[] actual, string version) { try { return actual.Length == 8 && actual.SequenceEqual(Convert.FromBase64String(version ?? "")); } catch (FormatException) { return false; } }

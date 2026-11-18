@@ -15,6 +15,7 @@ public interface ISitterBookingService
     Task<BookingWriteResult> TransitionAsync(Guid userId, BookingTransitionForm form, CancellationToken ct = default);
     Task<BookingWriteResult> TaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default);
     Task<BookingWriteResult> AddTaskAsync(Guid userId, AddCareTaskForm form, CancellationToken ct = default);
+    Task<BookingWriteResult> RemoveTaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default);
     Task<BookingWriteResult> UpdateAsync(Guid userId, BookingUpdateForm form, bool issue, CancellationToken ct = default);
     Task<BookingUpdatePhoto?> PhotoAsync(Guid userId, Guid updateId, CancellationToken ct = default);
 }
@@ -74,6 +75,15 @@ public sealed class SitterBookingService(BabySittingDbContext db, TimeProvider c
         }
         db.BookingCareTasks.Add(new() { BookingId = booking.Id, Key = "custom:" + Guid.NewGuid().ToString("N"), Label = form.Label.Trim(), DueAtUtc = due, CreatedAtUtc = now });
         return new(true, "Task added to the care checklist.");
+    }, ct);
+    // Only tasks the sitter added can be removed; tasks from the parent's care notes stay.
+    public Task<BookingWriteResult> RemoveTaskAsync(Guid userId, CareTaskForm form, CancellationToken ct = default) => WriteAsync(userId, form.Id, (booking, now) =>
+    {
+        if (booking.Status is not (BookingStatus.InProgress or BookingStatus.Confirmed or BookingStatus.AwaitingPayment)) return new(false, "Tasks can only be removed from an active booking.");
+        var task = booking.CareTasks.SingleOrDefault(t => t.Key == form.Key);
+        if (task is null || !task.Key.StartsWith("custom:", StringComparison.Ordinal)) return new(false, "Only tasks you added can be removed.");
+        db.BookingCareTasks.Remove(task);
+        return new(true, "Task removed from the checklist.");
     }, ct);
     public async Task<BookingWriteResult> UpdateAsync(Guid userId, BookingUpdateForm form, bool issue, CancellationToken ct = default)
     {

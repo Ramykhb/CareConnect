@@ -1,0 +1,47 @@
+@using BabySitting.ViewModels
+@model SupportRequestForm
+@{
+    ViewData["Title"] = "Help Center";
+    var sitter = User.IsInRole(Roles.Sitter);
+    var faq = sitter
+        ? new (string Q, string A)[] {
+            ("How do I start receiving requests?", "Open Settings, add your city, rate and the services you offer, then switch on Accepting requests. Requests in your city for those services appear under Requests."),
+            ("How do I block days I'm not available?", "Open Availability, pick a date or a range, choose Unavailable and save. Saved rules are listed under the editor; delete one to undo it."),
+            ("When can I start care?", "On the booking page, once the parent has paid and the start time has arrived, press Start care. Tick the checklist and send updates while you're there."),
+            ("Can I cancel a booking?", "Yes, until care starts. Give a reason: the parent is notified and the request reopens for other sitters."),
+            ("How do payouts work?", "Earnings from completed, paid bookings can be requested under Earnings. This is a demo: no bank transfer is made."),
+            ("How do I talk to the parent?", "Open Messages. Each booking has its own chat; messages disappear 24 hours after they're read.") }
+        : new (string Q, string A)[] {
+            ("How do I find a sitter?", "Create a request from New request on the dashboard. Sitters in your city who offer that service see it and can accept."),
+            ("When do I pay?", "After a sitter accepts. Open the booking and use Pay (demo); no card is charged. The sitter can start care once it's paid."),
+            ("Can I change or cancel a request?", "Until a sitter accepts, you can change or delete it. After that, cancel the booking from its page and give a reason."),
+            ("How do I talk to my sitter?", "Open Messages. Each booking has its own chat; messages disappear 24 hours after they're read."),
+            ("How do I leave a review?", "When care is completed, open the booking and choose a star rating. Your sitter can reply."),
+            ("How do I close my account?", "Go to Settings, then Delete account. If you have bookings, you can ask a platform manager to close it instead.") };
+}
+<div class="page-header">
+    <div>
+        <h1>Help Center</h1>
+        <p>Answers to common questions about babysitting on CareConnect.</p>
+    </div>
+</div>
+<div class="help-layout">
+    <section class="card help-faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">Frequently asked questions</h2>
+        @foreach (var item in faq)
+        {
+            <details class="help-item"><summary>@item.Q</summary><p>@item.A</p></details>
+        }
+    </section>
+    <section class="card help-contact" aria-labelledby="contact-title">
+        <h2 id="contact-title">Contact support</h2>
+        <p class="pet-meta">Didn't find your answer? Send us a message and we'll reply by email.</p>
+        <form asp-action="Contact" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            <div class="field"><label asp-for="Subject">Subject</label><input asp-for="Subject" maxlength="120" /><span asp-validation-for="Subject" class="field-error"></span></div>
+            <div class="field"><label asp-for="Message">Message</label><textarea asp-for="Message" maxlength="1500" rows="6"></textarea><span asp-validation-for="Message" class="field-error"></span></div>
+            <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-send" /></svg>Send message</button>
+        </form>
+    </section>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

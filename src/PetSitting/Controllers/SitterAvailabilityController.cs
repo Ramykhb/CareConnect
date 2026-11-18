@@ -37,6 +37,13 @@ public sealed class SitterAvailabilityController(ISitterAvailabilityService avai
         catch (ArgumentException) { return BadRequest("Choose valid local times."); }
     }
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteRule(Guid id, string version, DateOnly? date, string? view, CancellationToken ct)
+    {
+        var result = await availability.DeleteRuleAsync(Guid.Parse(users.GetUserId(User)!), id, version, ct);
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Index), new { date = date?.ToString("yyyy-MM-dd"), view = view == "week" ? "week" : "month" });
+    }
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Toggle(bool accepting, string version, CancellationToken ct)
     {
         var result = await availability.ToggleAsync(Guid.Parse(users.GetUserId(User)!), accepting, version, ct);
