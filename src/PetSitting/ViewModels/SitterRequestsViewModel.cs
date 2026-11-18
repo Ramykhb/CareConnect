@@ -12,7 +12,7 @@ public interface IPortalViewModel
     int IncomingRequestCount { get; }
 }
 
-public enum IncomingRequestState { New, Pending, Accepted, Declined, Expired }
+public enum IncomingRequestState { New, Pending, Accepted, Declined, Expired, OfferSent }
 
 public sealed class SitterRequestsViewModel : IPortalViewModel
 {
@@ -29,7 +29,7 @@ public sealed class SitterRequestsViewModel : IPortalViewModel
     public IEnumerable<IncomingRequestViewModel> VisibleItems => Items.Where(i => i.Bucket == Filter && (string.IsNullOrWhiteSpace(Search) || i.SearchText.Contains(Search.Trim(), StringComparison.OrdinalIgnoreCase)));
     public IncomingRequestViewModel? Selected => VisibleItems.FirstOrDefault(i => i.Id == SelectedId) ?? VisibleItems.FirstOrDefault();
     public int Count(IncomingRequestState state) => Items.Count(i => i.State == state);
-    public static string NormalizeFilter(string? filter) => filter is "pending" or "accepted" or "declined" or "expired" ? filter : "new";
+    public static string NormalizeFilter(string? filter) => filter is "pending" or "offersent" or "accepted" or "declined" or "expired" ? filter : "new";
     public string RelativeTime(DateTimeOffset value)
     {
         var elapsed = Now - value;
@@ -76,11 +76,12 @@ public sealed class IncomingRequestViewModel
     public DateTimeOffset CreatedAtUtc { get; init; }
     public IncomingRequestState State { get; init; }
     public string Bucket => State.ToString().ToLowerInvariant();
-    public string StateLabel => State == IncomingRequestState.Pending ? "Pending decision" : State.ToString();
-    public string StateClass => State switch { IncomingRequestState.Accepted => "green", IncomingRequestState.New => "purple", IncomingRequestState.Pending => "yellow", _ => "gray" };
+    public string StateLabel => State switch { IncomingRequestState.Pending => "Pending decision", IncomingRequestState.OfferSent => "Offer sent", _ => State.ToString() };
+    public string StateClass => State switch { IncomingRequestState.Accepted => "green", IncomingRequestState.New => "purple", IncomingRequestState.Pending or IncomingRequestState.OfferSent => "yellow", _ => "gray" };
     public IReadOnlyList<IncomingPetViewModel> Pets { get; init; } = [];
     public IReadOnlyList<RequestFitCheck> FitChecks { get; init; } = [];
     public bool CanAccept { get; init; }
+    public bool CustomerChoosesSitter { get; init; }
     public bool CanDecline { get; init; }
     public string? BlockReason { get; init; }
     public Guid? BookingId { get; init; }

@@ -68,7 +68,7 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                 Address = state == IncomingRequestState.Accepted ? request.ServiceAddress : null,
                 Note = request.Description, Amount = amount, Currency = currency, StartsAtUtc = request.StartsAtUtc, EndsAtUtc = request.EndsAtUtc, CreatedAtUtc = request.CreatedAtUtc,
                 State = state, BookingId = booking?.Id, BookingStatus = booking?.Status == BookingStatus.AwaitingPayment && BabySitting.Services.Bookings.BookingRules.FullyPaid(booking) ? BookingStatus.Confirmed : booking?.Status, AcceptedAtUtc = state == IncomingRequestState.Accepted ? booking?.CreatedAtUtc : null,
-                CanAccept = open && block is null, CanDecline = open && profile is not null, BlockReason = open ? block : null, FitChecks = checks,
+                CanAccept = open && block is null, CanDecline = (open || state == IncomingRequestState.OfferSent) && profile is not null, CustomerChoosesSitter = request.CustomerChoosesSitter, BlockReason = open ? block : null, FitChecks = checks,
                 Children = new(request.NumberOfChildren, request.YoungestChildAgeYears, request.OldestChildAgeYears, request.FamilyProfile?.HealthNotes, request.FamilyProfile?.Routines, request.CareInstructions)
             };
         }).ToArray();
@@ -100,6 +100,7 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                 var booking = await db.BabysittingBookings.FirstOrDefaultAsync(b => b.RequestId == request.Id && b.SitterProfileId == profile.Id && b.Status != BookingStatus.Cancelled && b.Status != BookingStatus.Rejected, ct);
                 if (form.Decision == "accept" && offer?.Status == OfferStatus.Accepted && booking is not null) return new(true, "This request has already been accepted.", "accepted", booking.Id);
                 if (form.Decision == "decline" && offer?.Status == OfferStatus.Rejected) return new(true, "This request has already been declined.", "declined");
+                if (form.Decision == "accept" && offer?.Status == OfferStatus.Pending && offer.SubmittedAtUtc is not null) return new(true, "Your offer was already sent.", "offersent");
                 if (offer is not null && offer.Status != OfferStatus.Pending) return new(false, "A decision has already been saved for this request. Refresh to see its current status.");
                 if (!request.Customer!.IsActive || request.Status != RequestStatus.Open || request.StartsAtUtc <= now) return new(false, "This request is no longer available. Your inbox has been refreshed.");
                 if (!request.RowVersion.SequenceEqual(version[..8]) || !(offer?.RowVersion ?? new byte[8]).SequenceEqual(version[8..])) return new(false, "The parent updated this request. Review the latest details before responding.");
@@ -117,9 +118,11 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                     db.BabysittingOffers.Add(offer);
                 }
                 var accept = form.Decision == "accept";
-                offer.Status = accept ? OfferStatus.Accepted : OfferStatus.Rejected;
-                offer.DecidedAtUtc = now;
-                if (accept)
+                // When the customer compares offers, accepting sends an offer; the customer then chooses one.
+                var offerOnly = accept && request.CustomerChoosesSitter;
+                if (offerOnly) offer.SubmittedAtUtc = now;
+                else { offer.Status = accept ? OfferStatus.Accepted : OfferStatus.Rejected; offer.DecidedAtUtc = now; }
+                if (accept && !offerOnly)
                 {
                     request.Status = RequestStatus.Booked;
                     booking = new BabysittingBooking { RequestId = request.Id, OfferId = offer.Id, CustomerId = request.CustomerId.Value, SitterProfileId = profile.Id,
@@ -128,11 +131,12 @@ public sealed class SitterRequestService(BabySittingDbContext db, TimeProvider c
                     db.BabysittingBookings.Add(booking);
                 }
                 db.Notifications.Add(new Notification { Category = NotificationCategory.Request, UserId = request.CustomerId.Value,
-                    Title = $"{account.FirstName} {(accept ? "accepted" : "declined")} your request",
-                    Body = $"{request.Title} · {DashboardViewModel.Service(request.ServiceType)} · {(accept ? "Your booking is accepted." : "Your request is still open to other sitters.")}",
+                    Title = offerOnly ? $"{account.FirstName} sent you an offer" : $"{account.FirstName} {(accept ? "accepted" : "declined")} your request",
+                    Body = $"{request.Title} · {DashboardViewModel.Service(request.ServiceType)} · {(offerOnly ? "Compare the offers and choose your sitter." : accept ? "Your booking is accepted." : "Your request is still open to other sitters.")}",
                     RelativeUrl = "/ParentBookings/Details/" + request.Id, CreatedAtUtc = now });
                 await db.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
+                if (offerOnly) return new(true, $"Offer sent — {request.Customer.FirstName} will compare offers and choose a sitter.", "offersent");
                 return new(true, accept ? $"Decision sent — {request.Customer.FirstName} was notified and the booking moved to Accepted." : $"Decision sent — {request.Customer.FirstName} was notified that you declined this request.", accept ? "accepted" : "declined", booking?.Id);
             });
         }
