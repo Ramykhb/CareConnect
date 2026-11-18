@@ -17,6 +17,8 @@ public class PetCareRequest : Entity
     [Range(typeof(decimal), "0", "99999999")] public decimal Budget { get; set; }
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     public RequestStatus Status { get; set; } = RequestStatus.Open;
+    // When true, sitters send offers and the customer chooses one; otherwise the first sitter to accept is booked.
+    public bool CustomerChoosesSitter { get; set; }
     public Guid? CorrelationId { get; set; }
     public Guid? ExternalRequestId { get; set; }
     [MaxLength(20)] public string? ExternalPlatform { get; set; }

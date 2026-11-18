@@ -25,6 +25,8 @@ public sealed class ParentRequestForm
     // Keep the stored JSON name so existing drafts retain their agreed initial price.
     [JsonPropertyName("BudgetMin"), Range(typeof(decimal), "1", "99999")] public decimal? Budget { get; set; }
     public Guid? PreferredSitterId { get; set; }
+    // Sitters send offers and the customer chooses one, instead of the first sitter to accept being booked.
+    public bool CompareOffers { get; set; } = true;
     public bool CareConfirmed { get; set; }
 
     public (DateTimeOffset Start, DateTimeOffset End)? Times()

@@ -51,6 +51,7 @@ public sealed class ParentBookingsViewModel
 
 public sealed class ParentBookingDetails
 {
+    public IReadOnlyList<BabySitting.Services.Requests.OfferOption> Offers { get; set; } = [];
     public ParentBookingItem Item { get; init; } = null!;
     public ChildcareRequest Request => Item.Request;
     public BabysittingBooking? Booking => Item.Booking;

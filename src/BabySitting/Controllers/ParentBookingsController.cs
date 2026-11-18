@@ -10,7 +10,7 @@ namespace BabySitting.Controllers;
 
 [Authorize(Roles = Roles.Customer)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class ParentBookingsController(ParentBookingService bookings, UserManager<ApplicationUser> users) : Controller
+public sealed class ParentBookingsController(ParentBookingService bookings, UserManager<ApplicationUser> users, BabySitting.Services.Requests.IOfferChoiceService offers) : Controller
 {
     private Guid OwnerId => Guid.Parse(users.GetUserId(User)!);
     [HttpGet]
@@ -22,12 +22,16 @@ public sealed class ParentBookingsController(ParentBookingService bookings, User
     [HttpGet]
     public async Task<IActionResult> Details(Guid id)
     {
-        var model = await bookings.DetailsAsync(OwnerId, id); return model is null ? NotFound() : View(model);
+        var model = await bookings.DetailsAsync(OwnerId, id); if (model is null) return NotFound();
+        if (model.Request.Status == RequestStatus.Open && model.Request.CustomerChoosesSitter) model.Offers = await offers.OffersAsync(OwnerId, model.Request.Id);
+        return View(model);
     }
     [HttpGet]
     public async Task<IActionResult> DetailUpdates(Guid id)
     {
-        var model = await bookings.DetailsAsync(OwnerId, id); return model is null ? NotFound() : PartialView("_DetailBody", model);
+        var model = await bookings.DetailsAsync(OwnerId, id); if (model is null) return NotFound();
+        if (model.Request.Status == RequestStatus.Open && model.Request.CustomerChoosesSitter) model.Offers = await offers.OffersAsync(OwnerId, model.Request.Id);
+        return PartialView("_DetailBody", model);
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(Guid id, string? version, string? reason) => Finish(await bookings.CancelAsync(OwnerId, id, version, reason), id);
@@ -35,6 +39,8 @@ public sealed class ParentBookingsController(ParentBookingService bookings, User
     public async Task<IActionResult> Pay(Guid id, Guid clientToken, string? version) => Finish(await bookings.PayAsync(OwnerId, id, clientToken, version), id);
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(Guid id, int rating, string? comment) => Finish(await bookings.ReviewAsync(OwnerId, id, rating, comment), id);
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChooseOffer(Guid id, Guid offerId, string? version) => Finish(await offers.ChooseAsync(OwnerId, id, offerId, version), id);
     private IActionResult Finish(BookingWriteResult result, Guid id)
     {
         if (result.NotFound) return NotFound();

@@ -203,3 +203,6 @@ body.pet-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-fa
 .help-contact form { display:grid; gap:10px; }
 .help-contact input, .help-contact textarea { width:100%; border-radius:12px; border:1px solid var(--card, #e9efea); padding:10px; box-sizing:border-box; }
 @media (max-width:900px) { .help-layout { grid-template-columns:1fr; } }
+
+/* Last payout sent */
+.payout-last-paid { margin: 0 0 12px; font-size: .85rem; opacity: .85; }

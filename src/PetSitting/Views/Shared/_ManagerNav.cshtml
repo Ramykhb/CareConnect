@@ -1,0 +1,5 @@
+@* Links between the platform manager pages. *@
+<nav class="nav nav-tabs mb-3" aria-label="Manager pages">
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AccountClosures" ? "active" : "")" asp-controller="AccountClosures" asp-action="Index">Account closures</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payouts" ? "active" : "")" asp-controller="Payouts" asp-action="Index">Payouts</a>
+</nav>

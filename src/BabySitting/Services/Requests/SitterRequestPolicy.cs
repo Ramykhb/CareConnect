@@ -14,6 +14,7 @@ public static class SitterRequestPolicy
         if (offer?.Status is OfferStatus.Rejected or OfferStatus.Withdrawn) return IncomingRequestState.Declined;
         if (offer?.Status == OfferStatus.Accepted && booking is not null && booking.Status is not (BookingStatus.Cancelled or BookingStatus.Rejected)) return IncomingRequestState.Accepted;
         if (request.Status != RequestStatus.Open || request.StartsAtUtc <= now || offer?.Status == OfferStatus.Expired) return IncomingRequestState.Expired;
+        if (offer?.Status == OfferStatus.Pending && offer.SubmittedAtUtc is not null) return IncomingRequestState.OfferSent;
         return offer?.Status == OfferStatus.Pending ? IncomingRequestState.Pending : IncomingRequestState.New;
     }
 

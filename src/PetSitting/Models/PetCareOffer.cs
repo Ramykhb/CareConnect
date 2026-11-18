@@ -12,5 +12,7 @@ public class PetCareOffer : Entity
     [Required, StringLength(3, MinimumLength = 3)] public string Currency { get; set; } = "USD";
     [MaxLength(2000)] public string? Message { get; set; }
     public DateTimeOffset? DecidedAtUtc { get; set; }
+    // Set when the sitter has sent this offer for the customer to compare (null for a not-yet-answered invitation).
+    public DateTimeOffset? SubmittedAtUtc { get; set; }
     public OfferStatus Status { get; set; } = OfferStatus.Pending;
 }

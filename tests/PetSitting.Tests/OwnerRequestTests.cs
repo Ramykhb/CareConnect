@@ -144,6 +144,7 @@ public sealed class OwnerRequestTests
             await Next(client, fields, 6);
             Assert.Equal(HttpStatusCode.OK, (await WizardPost(client, fields, "submit")).StatusCode);
             fields["Form.CareConfirmed"] = "true";
+            fields["Form.CompareOffers"] = "false"; // this flow checks the direct booking path
             var sent = await WizardPost(client, fields, "submit");
             Assert.Equal(HttpStatusCode.Redirect, sent.StatusCode);
             Assert.Contains("Submitted", sent.Headers.Location!.ToString());

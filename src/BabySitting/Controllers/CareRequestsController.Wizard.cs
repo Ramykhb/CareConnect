@@ -73,7 +73,7 @@ public sealed partial class CareRequestsController
                 Description = string.IsNullOrWhiteSpace(form.Instructions) ? "Please follow our family’s health notes and routines." : form.Instructions.Trim(),
                 ServiceType = form.ServiceType!.Value, StartsAtUtc = times.Start, EndsAtUtc = times.End,
                 City = form.City!.Trim(), ServiceAddress = string.IsNullOrWhiteSpace(form.Address) ? null : form.Address,
-                Budget = form.Budget!.Value, Currency = "USD", Status = RequestStatus.Open, CreatedAtUtc = Clock.GetUtcNow(),
+                Budget = form.Budget!.Value, Currency = "USD", Status = RequestStatus.Open, CustomerChoosesSitter = form.CompareOffers, CreatedAtUtc = Clock.GetUtcNow(),
                 FamilyProfileId = model.Family!.Id, CorrelationId = Guid.NewGuid(), NumberOfChildren = form.NumberOfChildren,
                 YoungestChildAgeYears = form.YoungestChildAgeYears, OldestChildAgeYears = form.OldestChildAgeYears
             };

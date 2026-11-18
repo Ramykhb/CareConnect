@@ -1089,6 +1089,9 @@ namespace PetSitting.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SitterProfileId");
@@ -1129,6 +1132,9 @@ namespace PetSitting.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
+
+                    b.Property<bool>("CustomerChoosesSitter")
+                        .HasColumnType("bit");
 
                     b.Property<Guid?>("CustomerId")
                         .HasColumnType("uniqueidentifier");

@@ -105,3 +105,15 @@
     .parent-bookings-page .portal-main { padding-top:0; }.ob-heading { align-items:flex-start; flex-wrap:wrap; gap:13px; }.ob-heading h1 { font-size:29px; }.ob-heading p { font-size:11px; }.ob-heading>.btn { margin-left:auto; }.ob-tabs>a { padding:11px 14px; font-size:10px; }.ob-tabs { gap:6px; margin-bottom:10px; }.ob-search { flex-basis:100%; min-width:0; }.ob-search input { font-size:14px; }.ob-filter select { font-size:11px; max-width:130px; }.ob-table-card { border-radius:24px; padding:8px; }.ob-table { font-size:10px; }.ob-table td { padding-block:16px; }.ob-table th { font-size:9px; }.ob-row-link { min-width:185px; }.ob-row-link small { font-size:9px; }.ob-amount a>.line-icon { display:none; }.ob-pagination { align-items:flex-start; flex-wrap:wrap; }.ob-pagination nav { margin-left:auto; }.ob-detail-columns { grid-template-columns:1fr; }.ob-heading-actions { gap:7px; }.parent-bookings-page .btn { height:40px; padding-inline:15px; font-size:10px; }.ob-title-with-back { gap:10px; }.ob-title-with-back>a { width:32px; height:32px; }.ob-detail-heading h1 { font-size:28px; }.ob-detail-facts { grid-template-columns:1fr 1fr; gap:14px; }.ob-detail-facts dd { font-size:10px; }.ob-card { border-radius:25px; padding:21px; }.ob-card h2 { font-size:16px; }.ob-sitter-rate { flex-wrap:nowrap; }.ob-review-form textarea,.ob-cancel-form textarea { font-size:16px; }.ob-review-banner { padding:14px; }.ob-review-banner>span { font-size:10px; }.ob-detail-heading .ob-status { font-size:8px; }.ob-toolbar { margin-block:14px 18px; }
 }
 @media(max-width:400px) { .ob-detail-facts { grid-template-columns:1fr; }.ob-card-heading { flex-wrap:wrap; }.ob-sitter-rate { flex-wrap:wrap; } }
+
+/* Offers to compare (#7) */
+.ob-offers h2 span { font-size: .8em; padding: 2px 8px; border-radius: 999px; background: #eef1e6; margin-left: 6px; }
+.ob-offers-intro, .ob-offers-empty { color: #6b7280; margin: 4px 0 12px; }
+.ob-offer-list { display: grid; gap: 10px; }
+.ob-offer { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; padding: 12px; border: 1px solid #e5e7eb; border-radius: 14px; }
+.ob-offer-who { display: flex; gap: 10px; align-items: center; }
+.ob-offer-who small { display: block; color: #6b7280; }
+.ob-offer-message { grid-column: 1 / -1; margin: 0; font-size: .9rem; }
+.ob-offer-choose { display: flex; gap: 10px; align-items: center; }
+.ob-offer-choose form { margin: 0; }
+@media (max-width: 640px) { .ob-offer { grid-template-columns: 1fr; } }

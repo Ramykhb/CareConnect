@@ -211,3 +211,8 @@
 .request-pet-picker { border:1px solid var(--border); border-radius:16px; padding:16px; display:grid; gap:12px; }
 .request-pet-picker label { display:flex; align-items:center; gap:10px; }
 .request-pet-picker input { width:18px; height:18px; accent-color:var(--ink); }
+
+/* Compare offers option (#7) */
+.compare-offers-option { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; }
+.compare-offers-option input { width: 18px; height: 18px; margin-top: 3px; }
+.compare-offers-option small { display: block; color: #6b7280; }
