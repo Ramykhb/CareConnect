@@ -19,6 +19,27 @@
     @if (Model.CanCancel) { <a class="btn btn-danger" href="#cancel-booking"><svg class="line-icon"><use href="#icon-close" /></svg>Cancel @(b is null ? "request" : "booking")</a> }
 </div></header>
 <div class="ob-detail-columns"><div class="ob-detail-main">
+    @if (Model.Request.Status == RequestStatus.Open && Model.Request.CustomerChoosesSitter)
+    {
+        <section class="ob-card ob-offers" aria-labelledby="offers-heading"><h2 id="offers-heading">Offers <span>@Model.Offers.Count</span></h2>
+        @if (Model.Offers.Count == 0) { <p class="ob-offers-empty">No offers yet. Sitters who can take these dates will send offers here, and you'll get a notification for each one.</p> }
+        else
+        {
+            <p class="ob-offers-intro">Compare the sitters and choose one. The others are told you chose someone else.</p>
+            <div class="ob-offer-list">
+            @foreach (var o in Model.Offers)
+            {
+                <article class="ob-offer"><div class="ob-offer-who"><span class="portal-avatar">@o.SitterName.FirstOrDefault()</span><div><strong>@o.SitterName</strong>
+                    <small>@o.YearsOfExperience yrs experience · @o.City@(o.Verified ? " · Verified" : "")@(o.Extra is null ? "" : " · " + o.Extra)</small>
+                    <small>@(o.Rating is { } r ? $"★ {r:0.0} ({o.ReviewCount} review{(o.ReviewCount == 1 ? "" : "s")})" : "No reviews yet")</small></div></div>
+                    @if (!string.IsNullOrWhiteSpace(o.Message)) { <p class="ob-offer-message">@o.Message</p> }
+                    <div class="ob-offer-choose"><strong>@DashboardViewModel.Money(o.Amount, o.Currency)</strong>
+                    <form asp-action="ChooseOffer" method="post"><input type="hidden" name="id" value="@Model.Request.Id" /><input type="hidden" name="offerId" value="@o.OfferId" /><input type="hidden" name="version" value="@Convert.ToBase64String(Model.Request.RowVersion)" /><button type="submit" class="btn btn-dark btn-sm">Choose @o.SitterName.Split(' ')[0]</button></form></div></article>
+            }
+            </div>
+        }
+        </section>
+    }
     @if (completed)
     {
         <div class="ob-review-banner"><svg class="line-icon"><use href="#icon-star" /></svg><span>@(b?.Review is null ? $"How was your children’s time with {sitterFirst}? Your review helps other owners." : "Thanks for sharing a little love. Your review is published.")</span>@if (Model.CanReview) { <a class="btn btn-lime" href="#leave-review"><svg class="line-icon"><use href="#icon-star" /></svg>Leave a review</a> }</div>

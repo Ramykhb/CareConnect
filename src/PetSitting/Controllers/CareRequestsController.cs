@@ -83,7 +83,7 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
                 Description = string.IsNullOrWhiteSpace(form.Instructions) ? "Please follow the selected pets’ medical notes, feeding instructions and care routines." : form.Instructions.Trim(),
                 ServiceType = form.ServiceType!.Value, StartsAtUtc = times.Start, EndsAtUtc = times.End,
                 City = form.City!.Trim(), ServiceAddress = form.ServiceType == ServiceType.Boarding ? null : form.Address,
-                Budget = form.Budget!.Value, Currency = "USD", Status = RequestStatus.Open, CreatedAtUtc = clock.GetUtcNow(),
+                Budget = form.Budget!.Value, Currency = "USD", Status = RequestStatus.Open, CustomerChoosesSitter = form.CompareOffers, CreatedAtUtc = clock.GetUtcNow(),
                 Pets = form.PetIds.Distinct().Select(id => new PetCareRequestPet { PetId = id }).ToList()
             };
             db.PetCareRequests.Add(request);

@@ -210,3 +210,8 @@
 
 .request-children-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
 @media (max-width:760px) { .request-children-grid { grid-template-columns:1fr; } }
+
+/* Compare offers option (#7) */
+.compare-offers-option { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; }
+.compare-offers-option input { width: 18px; height: 18px; margin-top: 3px; }
+.compare-offers-option small { display: block; color: #6b7280; }

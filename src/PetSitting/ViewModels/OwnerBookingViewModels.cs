@@ -51,6 +51,7 @@ public sealed class OwnerBookingsViewModel
 
 public sealed class OwnerBookingDetails
 {
+    public IReadOnlyList<PetSitting.Services.Requests.OfferOption> Offers { get; set; } = [];
     public OwnerBookingItem Item { get; init; } = null!;
     public PetCareRequest Request => Item.Request;
     public PetBooking? Booking => Item.Booking;
