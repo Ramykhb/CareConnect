@@ -17,7 +17,7 @@
         : new[] { ("overview", "Dashboard", "grid"), ("family", "My Family", "family"), ("requests", "My Requests", "inbox"), ("sitters", "Find Sitters", "search"), ("bookings", "Bookings", "calendar"), ("messages", "Messages", "chat"), ("payments", "Payments", "card"), ("reviews", "Reviews", "star"), ("notifications", "Notifications", "bell") };
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -47,19 +47,19 @@
         <aside class="portal-sidebar" id="portal-navigation" aria-label="@(sitter ? "Sitter" : "Parent") navigation">
             <div>
                 <a class="portal-brand" asp-controller="Home" asp-action="Index" aria-label="CareConnect Babysitting home"><span class="brand-icon"><svg><use href="#icon-heart" /></svg></span>CareConnect</a>
-                <p class="portal-menu-label">@(sitter ? "Workspace" : "Menu")</p>
+                <p class="portal-menu-label">@L[sitter ? "Workspace" : "Menu"]</p>
                 <nav class="portal-nav">
                     @foreach (var (key, label, icon) in menu)
                     {
                         var active = controller == "Messages" && key == "messages" || controller == "Dashboard" && key == "overview" || controller == "Family" && key == "family" || controller == "CareRequests" && key == "requests" || controller == "ParentBookings" && key == "bookings" || controller == "Notifications" && key == "notifications" || controller == "SitterRequests" && key == "requests" || controller == "SitterBookings" && key == "bookings" || controller == "SitterAvailability" && key == "availability" || controller == "SitterPortal" && portalRoutes.GetValueOrDefault(key) == action;
                         var href = key == "messages" ? Url.Action("Index", "Messages") : !sitter && key == "bookings" ? Url.Action("Index", "ParentBookings") : key == "family" ? Url.Action("Index", "Family") : !sitter && key == "requests" ? Url.Action("Index", "CareRequests") : !sitter && key == "notifications" ? Url.Action("Index", "Notifications") : sitter && key == "requests" ? Url.Action("Index", "SitterRequests") : sitter && key == "bookings" ? Url.Action("Index", "SitterBookings") : sitter && key == "availability" ? Url.Action("Index", "SitterAvailability") : sitter && portalRoutes.ContainsKey(key) ? Url.Action(portalRoutes[key], "SitterPortal") : home + "#" + key;
-                        <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@label</span>
+                        <a class="@(active ? "active" : "")" href="@href" data-nav-section="@key"><svg class="line-icon @(icon == "paw" ? "paw-icon" : "")"><use href="#icon-@icon" /></svg><span>@L[label]</span>
                             @if (key == "requests" && portal?.IncomingRequestCount > 0) { <span class="nav-count">@portal.IncomingRequestCount</span> }
                             @if (key == "notifications" && unread > 0) { <span class="nav-count">@unread</span> }
                         </a>
                     }
-                    <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" class="@(controller == "SitterPortal" && action == "Settings" || controller == "ParentSettings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>Settings</span></a>
-                @if (!sitter) { <a class="@(controller == "CombinedCare" ? "active" : "")" asp-controller="CombinedCare" asp-action="Index"><svg class="line-icon"><use href="#icon-calendar" /></svg><span>Combined care</span></a> }
+                    <a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" class="@(controller == "SitterPortal" && action == "Settings" || controller == "ParentSettings" ? "active" : "")"><svg class="line-icon"><use href="#icon-settings" /></svg><span>@L["Settings"]</span></a>
+                @if (!sitter) { <a class="@(controller == "CombinedCare" ? "active" : "")" asp-controller="CombinedCare" asp-action="Index"><svg class="line-icon"><use href="#icon-calendar" /></svg><span>@L["Combined care"]</span></a> }
                 </nav>
             </div>
             <div class="sidebar-bottom">
@@ -69,11 +69,11 @@
                 }
                 else
                 {
-                    <a class="sidebar-promo" href="@(home)#sitters"><span class="round-icon"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span><strong>A little help. A lot of care.</strong><small>Find a friendly sitter for your child’s next stay.</small><span>Explore sitters ↗</span></a>
+                    <a class="sidebar-promo" href="@(home)#sitters"><span class="round-icon"><svg class="line-icon"><use href="#icon-sparkles" /></svg></span><strong>@L["A little help. A lot of care."]</strong><small>@L["Find a friendly sitter for your child’s next stay."]</small><span>@L["Explore sitters ↗"]</span></a>
                 }
                 <div class="portal-user">
                     <a class="portal-avatar" href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))" aria-label="Manage account">@if (!sitter && user?.ProfilePhotoVersion is { } photo) { <img src="@Url.Action("Photo", "ParentSettings", new { v = photo })" alt="" /> } else { @initial }</a>
-                    <span class="portal-user-text"><strong>@displayName</strong><small>@(sitter ? "Babysitter" : "Parent")@(string.IsNullOrEmpty(user?.City) ? "" : " · " + user.City)</small></span>
+                    <span class="portal-user-text"><strong>@displayName</strong><small>@L[sitter ? "Babysitter" : "Parent"]@(string.IsNullOrEmpty(user?.City) ? "" : " · " + user.City)</small></span>
                     <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
                         <button type="submit" class="portal-icon-button" aria-label="Log out"><svg class="line-icon"><use href="#icon-logout" /></svg></button>
                     </form>
@@ -83,15 +83,15 @@
         <div class="portal-main">
             <header class="portal-topbar">
                 <button class="mobile-nav-toggle round-icon" type="button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded="false"><svg class="line-icon"><use href="#icon-menu" /></svg></button>
-                <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>@(sitter ? "Sitter" : "Parent") portal</span><span aria-hidden="true">›</span><span>@(ViewData["Breadcrumb"] ?? ViewData["Title"])</span></nav>
+                <nav class="portal-breadcrumb" aria-label="Breadcrumb"><span>@L[sitter ? "Sitter portal" : "Parent portal"]</span><span aria-hidden="true">›</span><span>@L[(ViewData["Breadcrumb"] ?? ViewData["Title"])?.ToString() ?? ""]</span></nav>
                 <div class="topbar-tools">
                     @if (portal is not null)
                     {
-                        <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@(sitter ? "Search requests, children…" : "Search children, bookings…")" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
+                        <label class="dashboard-search"><svg class="line-icon"><use href="#icon-search" /></svg><input id="dashboard-search" type="search" form="@ViewData["SearchForm"]" name="search" value="@ViewData["SearchTerm"]" placeholder="@L[sitter ? "Search requests, children…" : "Search children, bookings…"]" aria-label="Search dashboard" /><kbd>Ctrl K</kbd></label>
                     }
                     <a href="@(sitter ? Url.Action("Notifications", "SitterPortal") : Url.Action("Index", "Notifications"))" class="round-icon notification-shortcut" aria-label="Notifications, @unread unread"><svg class="line-icon"><use href="#icon-bell" /></svg>@if (unread > 0) { <i></i> }</a>
                     <a href="@Url.Action("Index", "Messages")" class="round-icon topbar-message" aria-label="Messages"><svg class="line-icon"><use href="#icon-chat" /></svg></a>
-                    <details class="account-menu"><summary><span class="portal-avatar">@if (!sitter && user?.ProfilePhotoVersion is { } topPhoto) { <img src="@Url.Action("Photo", "ParentSettings", new { v = topPhoto })" alt="" /> } else { @initial }</span><span><strong>@displayName</strong><small>@(sitter ? "Babysitter" : "Parent")</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))">Manage your account ↗</a><a href="@Url.Action("Index", "Help")">Help Center</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">Log out</button></form></div></details>
+                    <details class="account-menu"><summary><span class="portal-avatar">@if (!sitter && user?.ProfilePhotoVersion is { } topPhoto) { <img src="@Url.Action("Photo", "ParentSettings", new { v = topPhoto })" alt="" /> } else { @initial }</span><span><strong>@displayName</strong><small>@L[sitter ? "Babysitter" : "Parent"]</small></span><svg class="line-icon"><use href="#icon-down" /></svg></summary><div><a href="@(sitter ? Url.Action("Settings", "SitterPortal") : Url.Action("Index", "ParentSettings"))">@L["Manage your account ↗"]</a><a href="@Url.Action("Index", "Help")">@L["Help Center"]</a><form asp-area="Identity" asp-page="/Account/Logout" method="post"><button type="submit">@L["Log out"]</button></form></div></details>
                 </div>
             </header>
             <main id="main-content">
@@ -99,7 +99,7 @@
                 @if (TempData["Error"] is string error) { <div class="portal-notice error" role="alert">@error</div> }
                 @RenderBody()
             </main>
-            <footer class="portal-footer"><span>A little care makes a big difference.</span><span>CareConnect Babysitting <svg class="line-icon"><use href="#icon-heart" /></svg></span></footer>
+            <footer class="portal-footer"><span>@L["A little care makes a big difference."]</span><span>CareConnect Babysitting <svg class="line-icon"><use href="#icon-heart" /></svg></span></footer>
         </div>
     </div>
     <dialog id="feature-dialog" class="dashboard-dialog" aria-labelledby="feature-title"><button type="button" class="dialog-close round-icon" data-close aria-label="Close"><svg class="line-icon"><use href="#icon-close" /></svg></button><span class="round-icon lime"><svg class="line-icon"><use href="#icon-heart" /></svg></span><h2 id="feature-title">CareConnect help</h2><p id="feature-description">Use the navigation to manage your bookings, messages and account.</p><button class="btn btn-dark" type="button" data-close>Got it</button></dialog>

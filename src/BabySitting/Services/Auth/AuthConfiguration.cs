@@ -31,6 +31,7 @@ public static class AuthConfiguration
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         })
             .AddRoles<IdentityRole<Guid>>()
+            .AddClaimsPrincipalFactory<BabySitting.Services.Localization.LanguageClaimsFactory>()
             .AddEntityFrameworkStores<BabySittingDbContext>()
             .AddSignInManager<ActiveUserSignInManager>();
         // Leave password sign-in available when Google credentials have not been configured.

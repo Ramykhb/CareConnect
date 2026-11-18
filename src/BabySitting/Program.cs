@@ -14,7 +14,11 @@ builder.Services.AddSignalR();
 builder.Services.AddScoped<BabySitting.Services.Accounts.IAccountClosureService, BabySitting.Services.Accounts.AccountClosureService>();
 builder.Services.AddScoped<BabySitting.Services.Chat.IChatService, BabySitting.Services.Chat.ChatService>();
 builder.Services.AddHostedService<BabySitting.Services.Chat.MessageCleanupService>();
+builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
+builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationEmailQueue>();
+builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationEmailWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BabySitting.Services.Notifications.NotificationEmailWorker>());
 builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationBroadcastInterceptor>();
 builder.Services.AddScoped<BabySitting.Services.Notifications.INotificationFeedService, BabySitting.Services.Notifications.NotificationFeedService>();
 builder.Services.AddDbContext<BabySittingDbContext>((services, options) =>
@@ -88,6 +92,7 @@ app.Use(async (context, next) =>
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+BabySitting.Services.Localization.UserLanguage.UseUserLanguage(app);
 app.UseAuthorization();
 app.MapRazorPages();
 app.MapStaticAssets();

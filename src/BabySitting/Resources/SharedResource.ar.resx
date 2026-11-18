@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Dashboard" xml:space="preserve"><value>لوحة التحكم</value></data>
+  <data name="Requests" xml:space="preserve"><value>الطلبات</value></data>
+  <data name="Bookings" xml:space="preserve"><value>الحجوزات</value></data>
+  <data name="Availability" xml:space="preserve"><value>التوفر</value></data>
+  <data name="Earnings" xml:space="preserve"><value>الأرباح</value></data>
+  <data name="Analytics" xml:space="preserve"><value>التحليلات</value></data>
+  <data name="Reviews" xml:space="preserve"><value>التقييمات</value></data>
+  <data name="Notifications" xml:space="preserve"><value>الإشعارات</value></data>
+  <data name="Messages" xml:space="preserve"><value>الرسائل</value></data>
+  <data name="My Pets" xml:space="preserve"><value>حيواناتي الأليفة</value></data>
+  <data name="My Family" xml:space="preserve"><value>عائلتي</value></data>
+  <data name="My Requests" xml:space="preserve"><value>طلباتي</value></data>
+  <data name="Find Sitters" xml:space="preserve"><value>البحث عن جليس</value></data>
+  <data name="Payments" xml:space="preserve"><value>المدفوعات</value></data>
+  <data name="Settings" xml:space="preserve"><value>الإعدادات</value></data>
+  <data name="Combined care" xml:space="preserve"><value>الرعاية المشتركة</value></data>
+  <data name="Workspace" xml:space="preserve"><value>مساحة العمل</value></data>
+  <data name="Menu" xml:space="preserve"><value>القائمة</value></data>
+  <data name="Sitter portal" xml:space="preserve"><value>بوابة الجليس</value></data>
+  <data name="Owner portal" xml:space="preserve"><value>بوابة المالك</value></data>
+  <data name="Parent portal" xml:space="preserve"><value>بوابة الأهل</value></data>
+  <data name="Pet sitter" xml:space="preserve"><value>جليس حيوانات أليفة</value></data>
+  <data name="Pet owner" xml:space="preserve"><value>مالك حيوان أليف</value></data>
+  <data name="Babysitter" xml:space="preserve"><value>جليسة أطفال</value></data>
+  <data name="Parent" xml:space="preserve"><value>ولي أمر</value></data>
+  <data name="Manage your account ↗" xml:space="preserve"><value>إدارة حسابك ↗</value></data>
+  <data name="Help Center" xml:space="preserve"><value>مركز المساعدة</value></data>
+  <data name="Log out" xml:space="preserve"><value>تسجيل الخروج</value></data>
+  <data name="A little help. A lot of care." xml:space="preserve"><value>مساعدة بسيطة. رعاية كبيرة.</value></data>
+  <data name="Find a friendly sitter for your pet’s next stay." xml:space="preserve"><value>اعثر على جليس لطيف لإقامة حيوانك الأليف القادمة.</value></data>
+  <data name="Find a friendly sitter for your child’s next stay." xml:space="preserve"><value>اعثر على جليسة لطيفة لطفلك في المرة القادمة.</value></data>
+  <data name="Explore sitters ↗" xml:space="preserve"><value>استكشف الجليسين ↗</value></data>
+  <data name="A little care makes a big difference." xml:space="preserve"><value>القليل من الرعاية يصنع فرقًا كبيرًا.</value></data>
+  <data name="Search requests, pets…" xml:space="preserve"><value>ابحث في الطلبات والحيوانات…</value></data>
+  <data name="Search pets, bookings…" xml:space="preserve"><value>ابحث في الحيوانات والحجوزات…</value></data>
+  <data name="Search your pets…" xml:space="preserve"><value>ابحث عن حيواناتك…</value></data>
+  <data name="Search sitters, pets, bookings…" xml:space="preserve"><value>ابحث عن الجليسين والحيوانات والحجوزات…</value></data>
+  <data name="Search requests, children…" xml:space="preserve"><value>ابحث في الطلبات والأطفال…</value></data>
+  <data name="Search children, bookings…" xml:space="preserve"><value>ابحث عن الأطفال والحجوزات…</value></data>
+  <data name="Settings &amp; preferences" xml:space="preserve"><value>الإعدادات والتفضيلات</value></data>
+  <data name="Account settings" xml:space="preserve"><value>إعدادات الحساب</value></data>
+  <data name="Care requests" xml:space="preserve"><value>طلبات الرعاية</value></data>
+  <data name="Booking details" xml:space="preserve"><value>تفاصيل الحجز</value></data>
+</root>

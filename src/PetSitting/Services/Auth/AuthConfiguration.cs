@@ -31,6 +31,7 @@ public static class AuthConfiguration
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         })
             .AddRoles<IdentityRole<Guid>>()
+            .AddClaimsPrincipalFactory<PetSitting.Services.Localization.LanguageClaimsFactory>()
             .AddEntityFrameworkStores<PetSittingDbContext>()
             .AddSignInManager<ActiveUserSignInManager>();
         // Leave password sign-in available when Google credentials have not been configured.

@@ -33,6 +33,14 @@ public sealed class AuthTests
         public string LastLink() => WebUtility.HtmlDecode(Regex.Match(Messages.Last(), "href=['\"]([^'\"]+)").Groups[1].Value);
     }
 
+    // Pin email to the local Mailpit inbox so a developer's real SMTP secrets (e.g. Brevo) can't change these tests.
+    private static IWebHostBuilder LocalMailpit(IWebHostBuilder b) => b.UseEnvironment("Development").ConfigureAppConfiguration((_, config) =>
+        config.AddInMemoryCollection(new Dictionary<string, string?> {
+            ["Email:Provider"] = "Smtp", ["Email:Host"] = "localhost", ["Email:Port"] = "1025",
+            ["Email:EnableSsl"] = "false", ["Email:UserName"] = "", ["Email:Password"] = "",
+            ["Email:InboxUrl"] = "http://localhost:8025"
+        }));
+
     [Fact]
     public async Task Brevo_uses_authenticated_TLS_and_hides_the_local_mail_inbox()
     {
@@ -92,7 +100,7 @@ public sealed class AuthTests
     [InlineData("/Identity/Account/RegisterConfirmation", "Verify your email")]
     public async Task Confirmation_pages_use_the_illustrated_auth_layout(string path, string heading)
     {
-        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => LocalMailpit(b));
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync(path);
         Assert.Contains(heading, html);
@@ -133,7 +141,7 @@ public sealed class AuthTests
         var mail = new Mailbox();
         var clock = new TestClock();
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-            b.UseEnvironment("Development").ConfigureServices(s =>
+            LocalMailpit(b).ConfigureServices(s =>
             {
                 s.RemoveAll<IEmailSender>(); s.AddSingleton<IEmailSender>(mail);
                 s.RemoveAll<TimeProvider>(); s.AddSingleton<TimeProvider>(clock);

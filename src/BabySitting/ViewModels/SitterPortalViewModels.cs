@@ -87,7 +87,7 @@ public sealed class SitterNotificationsViewModel : SitterPortalPage
     public string? Search { get; set; }
     public IEnumerable<Notification> Visible => Items.Where(n => (Filter == "all" || Category(n).ToString().Equals(Filter, StringComparison.OrdinalIgnoreCase)) && (string.IsNullOrWhiteSpace(Search) || (n.Title + " " + n.Body).Contains(Search, StringComparison.OrdinalIgnoreCase)));
     public static NotificationCategory Category(Notification n) => n.Category != NotificationCategory.General ? n.Category : n.Title.Contains("payment", StringComparison.OrdinalIgnoreCase) || n.Title.Contains("payout", StringComparison.OrdinalIgnoreCase) ? NotificationCategory.Payment : n.Title.Contains("review", StringComparison.OrdinalIgnoreCase) ? NotificationCategory.Review : n.Title.Contains("request", StringComparison.OrdinalIgnoreCase) ? NotificationCategory.Request : n.Title.Contains("booking", StringComparison.OrdinalIgnoreCase) || n.Title.Contains("care", StringComparison.OrdinalIgnoreCase) ? NotificationCategory.Booking : NotificationCategory.General;
-    public AlertPreferencesForm PreferencesForm => new() { Version = Preferences.RowVersion.Length == 0 ? "" : Convert.ToBase64String(Preferences.RowVersion), Requests = Preferences.Requests, Bookings = Preferences.Bookings, Payments = Preferences.Payments, Reviews = Preferences.Reviews, RequestSound = Preferences.RequestSound };
+    public AlertPreferencesForm PreferencesForm => new() { Version = Preferences.RowVersion.Length == 0 ? "" : Convert.ToBase64String(Preferences.RowVersion), Requests = Preferences.Requests, Bookings = Preferences.Bookings, Payments = Preferences.Payments, Reviews = Preferences.Reviews, RequestSound = Preferences.RequestSound, EmailRequests = Preferences.EmailRequests, EmailBookings = Preferences.EmailBookings, EmailPayments = Preferences.EmailPayments, EmailReviews = Preferences.EmailReviews };
 }
 public sealed class AlertPreferencesForm
 {
@@ -97,6 +97,10 @@ public sealed class AlertPreferencesForm
     public bool Payments { get; set; }
     public bool Reviews { get; set; }
     public bool RequestSound { get; set; }
+    public bool EmailRequests { get; set; }
+    public bool EmailBookings { get; set; }
+    public bool EmailPayments { get; set; }
+    public bool EmailReviews { get; set; }
 }
 public sealed class SitterSettingsViewModel : SitterPortalPage
 {

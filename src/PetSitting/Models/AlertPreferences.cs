@@ -10,5 +10,11 @@ public sealed class AlertPreferences : Entity
     public bool Payments { get; set; } = true;
     public bool Reviews { get; set; } = true;
     public bool RequestSound { get; set; }
+    // Email copies are opt-in; in-app alerts stay on by default.
+    public bool EmailRequests { get; set; }
+    public bool EmailBookings { get; set; }
+    public bool EmailPayments { get; set; }
+    public bool EmailReviews { get; set; }
+    public bool EmailAllows(NotificationCategory category) => category switch { NotificationCategory.Request => EmailRequests, NotificationCategory.Booking => EmailBookings, NotificationCategory.Payment => EmailPayments, NotificationCategory.Review => EmailReviews, _ => false };
     public bool Allows(NotificationCategory category) => category switch { NotificationCategory.Request => Requests, NotificationCategory.Booking => Bookings, NotificationCategory.Payment => Payments, NotificationCategory.Review => Reviews, _ => true };
 }

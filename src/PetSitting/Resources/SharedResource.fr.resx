@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Dashboard" xml:space="preserve"><value>Tableau de bord</value></data>
+  <data name="Requests" xml:space="preserve"><value>Demandes</value></data>
+  <data name="Bookings" xml:space="preserve"><value>Réservations</value></data>
+  <data name="Availability" xml:space="preserve"><value>Disponibilités</value></data>
+  <data name="Earnings" xml:space="preserve"><value>Revenus</value></data>
+  <data name="Analytics" xml:space="preserve"><value>Statistiques</value></data>
+  <data name="Reviews" xml:space="preserve"><value>Avis</value></data>
+  <data name="Notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="My Pets" xml:space="preserve"><value>Mes animaux</value></data>
+  <data name="My Family" xml:space="preserve"><value>Ma famille</value></data>
+  <data name="My Requests" xml:space="preserve"><value>Mes demandes</value></data>
+  <data name="Find Sitters" xml:space="preserve"><value>Trouver un gardien</value></data>
+  <data name="Payments" xml:space="preserve"><value>Paiements</value></data>
+  <data name="Settings" xml:space="preserve"><value>Paramètres</value></data>
+  <data name="Combined care" xml:space="preserve"><value>Garde combinée</value></data>
+  <data name="Workspace" xml:space="preserve"><value>Espace de travail</value></data>
+  <data name="Menu" xml:space="preserve"><value>Menu</value></data>
+  <data name="Sitter portal" xml:space="preserve"><value>Espace gardien</value></data>
+  <data name="Owner portal" xml:space="preserve"><value>Espace propriétaire</value></data>
+  <data name="Parent portal" xml:space="preserve"><value>Espace parent</value></data>
+  <data name="Pet sitter" xml:space="preserve"><value>Gardien d’animaux</value></data>
+  <data name="Pet owner" xml:space="preserve"><value>Propriétaire d’animal</value></data>
+  <data name="Babysitter" xml:space="preserve"><value>Baby-sitter</value></data>
+  <data name="Parent" xml:space="preserve"><value>Parent</value></data>
+  <data name="Manage your account ↗" xml:space="preserve"><value>Gérer votre compte ↗</value></data>
+  <data name="Help Center" xml:space="preserve"><value>Centre d’aide</value></data>
+  <data name="Log out" xml:space="preserve"><value>Se déconnecter</value></data>
+  <data name="A little help. A lot of care." xml:space="preserve"><value>Un peu d’aide. Beaucoup d’attention.</value></data>
+  <data name="Find a friendly sitter for your pet’s next stay." xml:space="preserve"><value>Trouvez un gardien bienveillant pour le prochain séjour de votre animal.</value></data>
+  <data name="Find a friendly sitter for your child’s next stay." xml:space="preserve"><value>Trouvez une baby-sitter bienveillante pour la prochaine garde de votre enfant.</value></data>
+  <data name="Explore sitters ↗" xml:space="preserve"><value>Découvrir les gardiens ↗</value></data>
+  <data name="A little care makes a big difference." xml:space="preserve"><value>Un peu d’attention fait une grande différence.</value></data>
+  <data name="Search requests, pets…" xml:space="preserve"><value>Rechercher demandes, animaux…</value></data>
+  <data name="Search pets, bookings…" xml:space="preserve"><value>Rechercher animaux, réservations…</value></data>
+  <data name="Search your pets…" xml:space="preserve"><value>Rechercher vos animaux…</value></data>
+  <data name="Search sitters, pets, bookings…" xml:space="preserve"><value>Rechercher gardiens, animaux, réservations…</value></data>
+  <data name="Search requests, children…" xml:space="preserve"><value>Rechercher demandes, enfants…</value></data>
+  <data name="Search children, bookings…" xml:space="preserve"><value>Rechercher enfants, réservations…</value></data>
+  <data name="Settings &amp; preferences" xml:space="preserve"><value>Paramètres et préférences</value></data>
+  <data name="Account settings" xml:space="preserve"><value>Paramètres du compte</value></data>
+  <data name="Care requests" xml:space="preserve"><value>Demandes de garde</value></data>
+  <data name="Booking details" xml:space="preserve"><value>Détails de la réservation</value></data>
+</root>

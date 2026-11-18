@@ -25,7 +25,7 @@ public sealed class ParentSettingsController(BabySittingDbContext db, UserManage
         return new() { Account = account, HasPassword = await users.HasPasswordAsync(account), TwoFactorEnabled = await users.GetTwoFactorEnabledAsync(account), SignedInAt = auth.Properties?.IssuedUtc,
             Profile = new() { FirstName = account.FirstName, LastName = account.LastName, City = account.City, Phone = account.PhoneNumber,
                 HomeAddress = account.HomeAddress, Language = account.PreferredLanguage, EmergencyContact = account.EmergencyContact, Version = account.ConcurrencyStamp ?? "" },
-            Alerts = new() { Version = alerts.RowVersion.Length == 0 ? "" : Convert.ToBase64String(alerts.RowVersion), Requests = alerts.Requests, Bookings = alerts.Bookings, Payments = alerts.Payments, Reviews = alerts.Reviews, RequestSound = alerts.RequestSound } };
+            Alerts = new() { Version = alerts.RowVersion.Length == 0 ? "" : Convert.ToBase64String(alerts.RowVersion), Requests = alerts.Requests, Bookings = alerts.Bookings, Payments = alerts.Payments, Reviews = alerts.Reviews, RequestSound = alerts.RequestSound, EmailRequests = alerts.EmailRequests, EmailBookings = alerts.EmailBookings, EmailPayments = alerts.EmailPayments, EmailReviews = alerts.EmailReviews } };
     }
     [HttpGet]
     public async Task<IActionResult> Index()

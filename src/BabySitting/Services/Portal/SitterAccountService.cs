@@ -46,7 +46,7 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
         var preferences = await db.AlertPreferences.AsNoTracking().SingleOrDefaultAsync(a => a.UserId == account.Id, ct) ?? new();
         return new() { Account = account, Profile = p, Now = now, Unread = portal.Unread, IncomingRequestCount = portal.Incoming,
             Form = new() { FirstName = account.FirstName, LastName = account.LastName, Phone = account.PhoneNumber, City = p?.City ?? account.City ?? "", Bio = p?.Bio ?? "", Experience = p?.YearsOfExperience ?? 0, HourlyRate = p?.HourlyRate ?? 0, Currency = p?.Currency ?? "USD", Available = p?.IsAvailable ?? true, Services = p is null || p.Services.Count == 0 ? Enum.GetValues<ServiceType>() : p.Services.Select(s => s.ServiceType).ToArray(), UserVersion = account.ConcurrencyStamp, ProfileVersion = p is null ? "" : Convert.ToBase64String(p.RowVersion) },
-            Alerts = new() { Version = preferences.RowVersion.Length == 0 ? "" : Convert.ToBase64String(preferences.RowVersion), Requests = preferences.Requests, Bookings = preferences.Bookings, Payments = preferences.Payments, Reviews = preferences.Reviews, RequestSound = preferences.RequestSound } };
+            Alerts = new() { Version = preferences.RowVersion.Length == 0 ? "" : Convert.ToBase64String(preferences.RowVersion), Requests = preferences.Requests, Bookings = preferences.Bookings, Payments = preferences.Payments, Reviews = preferences.Reviews, RequestSound = preferences.RequestSound, EmailRequests = preferences.EmailRequests, EmailBookings = preferences.EmailBookings, EmailPayments = preferences.EmailPayments, EmailReviews = preferences.EmailReviews } };
     }
     public async Task<PortalWriteResult> SaveSettingsAsync(Guid userId, SitterSettingsForm form, CancellationToken ct = default)
     {
@@ -79,8 +79,8 @@ public sealed class SitterAccountService(BabySittingDbContext db, UserManager<Ap
         var p = await db.AlertPreferences.SingleOrDefaultAsync(p => p.UserId == userId, ct);
         if (p is null) { if (!string.IsNullOrEmpty(form.Version)) return new(false, "Refresh your alert preferences before saving."); p = new() { UserId = userId }; db.AlertPreferences.Add(p); }
         else if (!Matches(p.RowVersion, form.Version)) return new(false, "Your alert preferences changed. Refresh before saving.");
-        p.Requests = form.Requests; p.Bookings = form.Bookings; p.Payments = form.Payments; p.Reviews = form.Reviews; p.RequestSound = form.RequestSound;
-        try { await db.SaveChangesAsync(ct); await live.ChangedAsync(userId, preferencesChanged: true); return new(true, "Your in-app alert preferences have been saved."); }
+        p.Requests = form.Requests; p.Bookings = form.Bookings; p.Payments = form.Payments; p.Reviews = form.Reviews; p.RequestSound = form.RequestSound; p.EmailRequests = form.EmailRequests; p.EmailBookings = form.EmailBookings; p.EmailPayments = form.EmailPayments; p.EmailReviews = form.EmailReviews;
+        try { await db.SaveChangesAsync(ct); await live.ChangedAsync(userId, preferencesChanged: true); return new(true, "Your alert preferences have been saved."); }
         catch (DbUpdateConcurrencyException) { return new(false, "Your preferences changed. Refresh and try again."); }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 }) { return new(false, "Preferences already exist. Refresh and try again."); }
     }

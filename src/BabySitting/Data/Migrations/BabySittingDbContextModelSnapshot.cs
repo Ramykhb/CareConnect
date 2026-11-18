@@ -120,6 +120,18 @@ namespace BabySitting.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("EmailBookings")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EmailPayments")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EmailRequests")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EmailReviews")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("Payments")
                         .HasColumnType("bit");
 

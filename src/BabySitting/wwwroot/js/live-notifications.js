@@ -58,6 +58,8 @@
         .withAutomaticReconnect({ nextRetryDelayInMilliseconds: ctx => Math.min(2000 * 2 ** ctx.previousRetryCount, 60000) })
         .build();
     connection.on('notification.pushed', ({ notification, silent }) => {
+        // Pages (e.g. combined care) can refresh themselves when an update for them arrives.
+        document.dispatchEvent(new CustomEvent('careconnect:notification', { detail: notification }));
         if (allowedCategories && !allowedCategories.has(notification.category)) return;
         prepend(notification);
         if (!silent) toast(notification);

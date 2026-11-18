@@ -12,10 +12,12 @@ public sealed record LiveNotification(Guid Id, string Title, string Body, string
 
 // Pushes events to a user's open tabs (WatchWise: LiveNotifications::push / ::changed).
 // A failed push never breaks the request that saved the notification; the page can always reload the feed.
-public sealed class LiveNotifications(IHubContext<NotificationHub> hub, ILogger<LiveNotifications> logger, IServiceScopeFactory scopes)
+public sealed class LiveNotifications(IHubContext<NotificationHub> hub, ILogger<LiveNotifications> logger, IServiceScopeFactory scopes, NotificationEmailQueue? emails = null)
 {
     public async Task PushAsync(Notification notification, bool silent = false)
     {
+        // Already-read records (history backfills) are never emailed.
+        if (!silent) emails?.Enqueue(notification.Id);
         try
         {
             // Use an independent scope after commit; the writer may still hold its transaction object.
