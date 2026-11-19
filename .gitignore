@@ -8,7 +8,7 @@
 !.env.example
 **/appsettings.Local.json
 **/appsettings.*.Local.json
-TestResults/
+TestResults*/
 artifacts/
 *.user
 *.suo
