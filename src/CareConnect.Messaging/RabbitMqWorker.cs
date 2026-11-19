@@ -42,6 +42,9 @@ public sealed class RabbitMqWorker(IServiceScopeFactory scopes, IOptions<BrokerO
                                 await PublishAsync(channel, o.Exchange, message.RoutingKey, Encoding.UTF8.GetBytes(message.PayloadJson),
                                     message.Id.ToString(), message.CorrelationId.ToString(), null, stoppingToken);
                                 await store.PublishedAsync(message.Id, stoppingToken);
+                                // Ids only: message bodies can contain invitation details.
+                                log.LogInformation("Published integration event {EventId} ({RoutingKey}), correlation {CorrelationId}",
+                                    message.Id, message.RoutingKey, message.CorrelationId);
                             }
                             catch (Exception) when (!stoppingToken.IsCancellationRequested)
                             {
@@ -87,6 +90,8 @@ public sealed class RabbitMqWorker(IServiceScopeFactory scopes, IOptions<BrokerO
                 throw new InvalidDataException("Unexpected event envelope.");
             using var scope = scopes.CreateScope();
             await scope.ServiceProvider.GetRequiredService<IIntegrationStore>().ReceiveAsync(message, ct);
+            log.LogInformation("Processed integration event {EventId} ({EventType}) from {Source}, correlation {CorrelationId}",
+                message.Metadata.EventId, message.Metadata.EventType, message.Metadata.Source, message.Metadata.CorrelationId);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
