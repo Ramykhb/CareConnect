@@ -1,0 +1,30 @@
+@using PetSitting.ViewModels
+@model CustomerReviewsViewModel
+@{ ViewData["PortalClass"] = "customer-page"; var bookings = typeof(PetSitting.Controllers.OwnerBookingsController).Name.Replace("Controller", ""); }
+<section class="account-page-heading"><div><h1>Reviews</h1><p>Reviews you wrote and completed care you haven't reviewed yet.</p></div></section>
+@if (Model.Awaiting.Count > 0)
+{
+    <section class="dash-card cp-awaiting"><h2>Waiting for your review <span>@Model.Awaiting.Count</span></h2>
+        @foreach (var a in Model.Awaiting)
+        {
+            <div class="cp-awaiting-row"><div><strong>@a.Title</strong><small>@a.SitterName · completed @DashboardViewModel.Local(a.CompletedAt).ToString("d MMM yyyy")</small></div><a class="btn btn-dark btn-sm" asp-controller="@bookings" asp-action="Details" asp-route-id="@a.RequestId">Write a review</a></div>
+        }
+    </section>
+}
+@if (Model.Reviews.Count == 0)
+{
+    <section class="dash-card cp-empty"><h2>No reviews yet</h2><p>After care is completed you can rate your sitter from the booking page.</p></section>
+}
+else
+{
+    <div class="cp-reviews">
+    @foreach (var r in Model.Reviews)
+    {
+        <article class="dash-card cp-review"><header><div><h2>@r.SitterName</h2><small>@r.Title · @DashboardViewModel.Local(r.At).ToString("d MMM yyyy")</small></div><span class="cp-stars" aria-label="@r.Rating out of 5 stars">@(new string('★', r.Rating))@(new string('☆', 5 - r.Rating))</span></header>
+            @if (!string.IsNullOrWhiteSpace(r.Comment)) { <p>@r.Comment</p> }
+            @if (!string.IsNullOrWhiteSpace(r.Reply)) { <p class="cp-reply"><strong>Sitter's reply:</strong> @r.Reply</p> }
+            <a asp-controller="@bookings" asp-action="Details" asp-route-id="@r.RequestId">View booking</a>
+        </article>
+    }
+    </div>
+}

@@ -1,0 +1,30 @@
+@using BabySitting.ViewModels
+@using BabySitting.Models
+@model FindSittersViewModel
+@{ ViewData["PortalClass"] = "customer-page"; }
+<section class="account-page-heading"><div><h1>Find sitters</h1><p>Browse available sitters. To book one, create a request and choose them as your preferred sitter.</p></div><div class="account-heading-actions"><a class="btn btn-dark btn-sm" asp-controller="CareRequests" asp-action="Create">Create a request</a></div></section>
+<form method="get" class="dash-card cp-filters" role="search">
+    <label>City<input name="city" value="@Model.City" list="cp-cities" placeholder="Any city" /><datalist id="cp-cities">@foreach (var c in Model.Cities) { <option value="@c"></option> }</datalist></label>
+    <label>Service<select name="service"><option value="">Any service</option>@foreach (var s in Enum.GetValues<ServiceType>()) { <option value="@s" selected="@(Model.Service == s)">@DashboardViewModel.Service(s)</option> }</select></label>
+    <label>Name or keyword<input type="search" name="search" value="@Model.Search" placeholder="e.g. experienced, Ana" /></label>
+    <button type="submit" class="btn btn-dark btn-sm">Search</button>
+</form>
+@if (Model.Sitters.Count == 0)
+{
+    <section class="dash-card cp-empty"><h2>No sitters match</h2><p>Try another city or service, or clear the keyword.</p></section>
+}
+else
+{
+    <p class="portal-muted cp-count">@Model.Sitters.Count sitter@(Model.Sitters.Count == 1 ? "" : "s")@(string.IsNullOrWhiteSpace(Model.City) ? "" : " in " + Model.City)</p>
+    <div class="cp-sitters">
+    @foreach (var s in Model.Sitters)
+    {
+        <article class="dash-card cp-sitter"><header><span class="portal-avatar">@s.Name.FirstOrDefault()</span><div><h2>@s.Name</h2><small>@s.City · @s.YearsOfExperience yrs experience@(s.Verified ? " · Verified" : "")@(s.Extra is null ? "" : " · " + s.Extra)</small></div></header>
+            <p class="cp-rating">@(s.Rating is { } r ? $"★ {r:0.0} · {s.ReviewCount} review{(s.ReviewCount == 1 ? "" : "s")}" : "No reviews yet")</p>
+            <p class="cp-bio">@(s.Bio.Length > 220 ? s.Bio[..220] + "…" : s.Bio)</p>
+            <p class="cp-services">@string.Join(" · ", s.Services.Select(DashboardViewModel.Service))</p>
+            <footer><strong>@DashboardViewModel.Money(s.HourlyRate, s.Currency)<small> / hour</small></strong></footer>
+        </article>
+    }
+    </div>
+}

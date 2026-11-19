@@ -243,3 +243,25 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 
 /* Last payout sent */
 .payout-last-paid { margin: 0 0 12px; font-size: .85rem; opacity: .85; }
+
+/* Owner/parent Find Sitters, Payments and Reviews pages (#13) */
+.cp-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+.cp-filters label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .85rem; flex: 1 1 180px; }
+.cp-filters input, .cp-filters select { padding: 8px 10px; border: 1px solid #d9dde3; border-radius: 10px; font: inherit; font-weight: 400; }
+.cp-count { margin: 0 0 10px; }
+.cp-sitters, .cp-reviews { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.cp-sitter header, .cp-review header { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.cp-sitter header { justify-content: flex-start; }
+.cp-sitter h2, .cp-review h2 { font-size: 1.05rem; margin: 0; }
+.cp-sitter small, .cp-review small, .cp-awaiting-row small { display: block; color: #6b7280; }
+.cp-rating, .cp-services { font-size: .85rem; color: #4b5563; margin: 8px 0 0; }
+.cp-bio { margin: 8px 0 0; font-size: .9rem; }
+.cp-sitter footer { margin-top: 10px; }
+.cp-table { width: 100%; border-collapse: collapse; }
+.cp-table th, .cp-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eef0f3; font-size: .9rem; }
+.cp-awaiting { margin-bottom: 14px; }
+.cp-awaiting h2 span { font-size: .8em; padding: 2px 8px; border-radius: 999px; background: #eef1e6; margin-left: 6px; }
+.cp-awaiting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #eef0f3; }
+.cp-stars { color: #d4a017; letter-spacing: 1px; white-space: nowrap; }
+.cp-reply { background: #f6f7f9; padding: 8px 10px; border-radius: 10px; font-size: .9rem; }
+.cp-empty h2 { font-size: 1.1rem; }

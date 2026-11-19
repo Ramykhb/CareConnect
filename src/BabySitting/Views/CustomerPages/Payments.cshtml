@@ -1,0 +1,26 @@
+@using BabySitting.ViewModels
+@using BabySitting.Models
+@model CustomerPaymentsViewModel
+@{ ViewData["PortalClass"] = "customer-page"; }
+<section class="account-page-heading"><div><h1>Payments</h1><p>Every payment for your bookings. Payments are demo records; no card is charged.</p></div></section>
+<div class="portal-kpis"><article class="dash-card portal-kpi"><div><h2>Paid this year</h2></div><strong>@DashboardViewModel.Money(Model.PaidThisYear)</strong><small>Successful payments · USD</small></article>
+<article class="dash-card portal-kpi"><div><h2>Refunded</h2></div><strong>@DashboardViewModel.Money(Model.Refunded)</strong><small>From cancelled bookings · USD</small></article></div>
+@if (Model.Payments.Count == 0)
+{
+    <section class="dash-card cp-empty"><h2>No payments yet</h2><p>When a sitter accepts your request you can pay from the booking page.</p></section>
+}
+else
+{
+    <section class="dash-card"><div class="table-responsive"><table class="cp-table">
+        <thead><tr><th scope="col">Booking</th><th scope="col">Sitter</th><th scope="col">Date</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>
+        @foreach (var p in Model.Payments)
+        {
+            <tr><td><a asp-controller="@(typeof(BabySitting.Controllers.ParentBookingsController).Name.Replace("Controller", ""))" asp-action="Details" asp-route-id="@p.RequestId">@p.Title</a></td><td>@p.SitterName</td>
+                <td>@DashboardViewModel.Local(p.At).ToString("d MMM yyyy")</td><td>@DashboardViewModel.Money(p.Amount, p.Currency)</td>
+                <td><span class="status-chip @(p.Status == PaymentStatus.Succeeded ? "green" : p.Status == PaymentStatus.Refunded ? "yellow" : "gray")">@(p.Status == PaymentStatus.Succeeded ? "Paid" : p.Status.ToString())</span></td>
+                <td>@if (p.Receipt) { <a asp-controller="@(typeof(BabySitting.Controllers.ParentBookingsController).Name.Replace("Controller", ""))" asp-action="Receipt" asp-route-id="@p.RequestId">Receipt (PDF)</a> }</td></tr>
+        }
+        </tbody>
+    </table></div></section>
+}
