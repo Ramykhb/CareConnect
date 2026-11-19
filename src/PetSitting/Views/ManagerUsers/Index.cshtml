@@ -1,0 +1,53 @@
+@using PetSitting.Services.Accounts
+@model ManagedUserPage
+@{
+    ViewData["Title"] = "Users";
+    var here = Context.Request.Path + Context.Request.QueryString;
+}
+<div class="py-4">
+    <partial name="_ManagerNav" />
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div><h1>Users</h1><p class="text-secondary">Find any account, switch it off or back on, and add other managers. Switched-off accounts can't sign in.</p></div>
+        <a class="btn btn-dark" asp-action="AddManager">Add a manager</a>
+    </div>
+    @if (TempData["Success"] is string ok) { <div class="alert alert-success" role="status">@ok</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    <form method="get" class="row g-2 align-items-end mb-3" role="search">
+        <div class="col-sm-5"><label class="form-label" for="search">Name or email</label><input class="form-control" id="search" name="search" value="@Model.Search" /></div>
+        <div class="col-sm-3"><label class="form-label" for="role">Role</label><select class="form-select" id="role" name="role">@foreach (var (key, label) in ManagerUserService.RoleFilters) { <option value="@key" selected="@(Model.Role == key)">@label</option> }</select></div>
+        <div class="col-sm-2"><label class="form-label" for="status">Status</label><select class="form-select" id="status" name="status"><option value="all" selected="@(Model.Status == "all")">All</option><option value="active" selected="@(Model.Status == "active")">Active</option><option value="inactive" selected="@(Model.Status == "inactive")">Switched off</option></select></div>
+        <div class="col-sm-2"><button class="btn btn-outline-dark w-100" type="submit">Search</button></div>
+    </form>
+    <p class="text-secondary">@Model.Total account@(Model.Total == 1 ? "" : "s")</p>
+    @if (Model.Users.Count == 0)
+    {
+        <p class="text-secondary">No accounts match.</p>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table align-middle">
+            <thead><tr><th scope="col">Account</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+            <tbody>
+            @foreach (var u in Model.Users)
+            {
+                <tr>
+                    <td><strong>@(string.IsNullOrWhiteSpace(u.Name) ? "(no name)" : u.Name)</strong><br /><small class="text-secondary">@u.Email@(u.EmailConfirmed ? "" : " · email not confirmed")</small></td>
+                    <td>@u.Role</td>
+                    <td><span class="badge @(u.IsActive ? "text-bg-success" : "text-bg-secondary")">@(u.IsActive ? "Active" : "Switched off")</span></td>
+                    <td><form asp-action="SetActive" method="post" class="m-0"><input type="hidden" name="id" value="@u.Id" /><input type="hidden" name="active" value="@((!u.IsActive).ToString().ToLowerInvariant())" /><input type="hidden" name="version" value="@u.Version" /><input type="hidden" name="returnUrl" value="@here" />
+                        <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(u.IsActive ? "Switch off" : "Switch on")</button></form></td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+        @if (Model.Pages > 1)
+        {
+            <nav aria-label="Pages"><ul class="pagination">
+                @for (var p = 1; p <= Model.Pages; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-page="@p">@p</a></li>
+                }
+            </ul></nav>
+        }
+    }
+</div>

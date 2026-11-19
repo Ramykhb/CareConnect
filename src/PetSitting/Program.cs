@@ -19,6 +19,7 @@ builder.Services.AddHostedService<PetSitting.Services.Bookings.BookingExpiryServ
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<PetSitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<PetSitting.Services.Portal.IPayoutReviewService, PetSitting.Services.Portal.PayoutReviewService>();
+builder.Services.AddScoped<PetSitting.Services.Accounts.IManagerUserService, PetSitting.Services.Accounts.ManagerUserService>();
 builder.Services.AddScoped<PetSitting.Services.Requests.IOfferChoiceService, PetSitting.Services.Requests.OfferChoiceService>();
 builder.Services.AddSingleton<PetSitting.Services.Notifications.NotificationEmailQueue>();
 builder.Services.AddSingleton<PetSitting.Services.Notifications.NotificationEmailWorker>();
