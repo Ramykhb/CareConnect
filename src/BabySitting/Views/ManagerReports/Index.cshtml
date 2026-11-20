@@ -1,0 +1,105 @@
+@using BabySitting.Services.Portal
+@using BabySitting.ViewModels
+@model ManagerReport
+@{
+    ViewData["Title"] = "Overview";
+    string Money(decimal amount) => DashboardViewModel.Money(amount, "USD");
+    string Label(string status) => status switch { "AwaitingPayment" => "Awaiting payment", "InProgress" => "In progress", _ => status };
+    var maxBookings = Math.Max(1, Model.Months.Max(m => m.Bookings));
+    var maxRevenue = Math.Max(1m, Model.Months.Max(m => m.Revenue));
+    var maxRequests = Math.Max(1, Model.RequestsByStatus.Max(s => s.Count));
+    var maxBookingStatus = Math.Max(1, Model.BookingsByStatus.Max(s => s.Count));
+}
+@section Styles { <link rel="stylesheet" href="~/css/manager-reports.css" asp-append-version="true" /> }
+<div class="py-4 mr-page">
+    <partial name="_ManagerNav" />
+    <div class="mr-heading">
+        <div><h1>Overview</h1><p>How BabySitting is doing from @Model.From.ToLocalTime().ToString("d MMM yyyy") to today.</p></div>
+        <div class="mr-actions">
+            <nav class="mr-periods" aria-label="Report period">
+                @foreach (var d in ManagerReportService.Periods)
+                {
+                    <a asp-action="Index" asp-route-days="@d" class="@(Model.Days == d ? "active" : "")" aria-current="@(Model.Days == d ? "page" : null)">@(d == 365 ? "1 year" : d + " days")</a>
+                }
+            </nav>
+            <a class="btn btn-outline-dark" asp-action="Export" asp-route-days="@Model.Days">Download CSV</a>
+        </div>
+    </div>
+
+    @if (Model.ClosuresWaiting > 0 || Model.PayoutsWaitingCount > 0 || Model.MessagesRetrying > 0)
+    {
+        <section class="mr-todo" aria-label="Waiting for a manager">
+            @if (Model.ClosuresWaiting > 0) { <a asp-controller="AccountClosures" asp-action="Index"><strong>@Model.ClosuresWaiting</strong> account closure@(Model.ClosuresWaiting == 1 ? "" : "s") to review</a> }
+            @if (Model.PayoutsWaitingCount > 0) { <a asp-controller="Payouts" asp-action="Index"><strong>@Model.PayoutsWaitingCount</strong> payout@(Model.PayoutsWaitingCount == 1 ? "" : "s") to send · @Money(Model.PayoutsWaiting)</a> }
+            @if (Model.MessagesRetrying > 0) { <span><strong>@Model.MessagesRetrying</strong> message@(Model.MessagesRetrying == 1 ? "" : "s") to the other app being retried</span> }
+        </section>
+    }
+
+    <section class="mr-cards" aria-label="Key numbers">
+        <article><small>Money received</small><strong>@Money(Model.Revenue)</strong><span>@Money(Model.Refunded) refunded · @Model.PaymentsFailed failed</span></article>
+        <article><small>New bookings</small><strong>@Model.NewBookings</strong><span>@Model.CompletionRate% completed · @Model.CancellationRate% cancelled</span></article>
+        <article><small>New requests</small><strong>@Model.NewRequests</strong><span>@Model.CombinedLinks combined-care link@(Model.CombinedLinks == 1 ? "" : "s") in total</span></article>
+        <article><small>Reviews</small><strong>@(Model.AverageRating is { } avg ? avg.ToString("0.0") + " ★" : "—")</strong><span>@Model.Reviews review@(Model.Reviews == 1 ? "" : "s")</span></article>
+        <article><small>Accounts</small><strong>@(Model.Customers + Model.Sitters)</strong><span>@Model.Customers parents · @Model.Sitters babysitters · @Model.NewAccounts new</span></article>
+        <article><small>Payouts sent</small><strong>@Money(Model.PayoutsSent)</strong><span>@Model.SwitchedOff switched-off account@(Model.SwitchedOff == 1 ? "" : "s") · @Model.Managers manager@(Model.Managers == 1 ? "" : "s")</span></article>
+    </section>
+
+    <section class="mr-panel" aria-labelledby="mr-months">
+        <h2 id="mr-months">Last six months</h2>
+        <table class="mr-months">
+            <thead><tr><th scope="col">Month</th><th scope="col">New bookings</th><th scope="col">Money received</th></tr></thead>
+            <tbody>
+            @foreach (var m in Model.Months)
+            {
+                <tr>
+                    <th scope="row">@m.Label</th>
+                    <td><span class="mr-bar"><span style="width:@((m.Bookings * 100 / maxBookings).ToString())%"></span></span>@m.Bookings</td>
+                    <td><span class="mr-bar mr-bar-money"><span style="width:@(((int)(m.Revenue * 100 / maxRevenue)).ToString())%"></span></span>@Money(m.Revenue)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+
+    <div class="mr-two">
+        <section class="mr-panel" aria-labelledby="mr-requests">
+            <h2 id="mr-requests">Requests by status</h2>
+            <ul class="mr-status">
+                @foreach (var s in Model.RequestsByStatus)
+                {
+                    <li><span>@Label(s.Label)</span><span class="mr-bar"><span style="width:@((s.Count * 100 / maxRequests).ToString())%"></span></span><strong>@s.Count</strong></li>
+                }
+            </ul>
+        </section>
+        <section class="mr-panel" aria-labelledby="mr-bookings">
+            <h2 id="mr-bookings">Bookings by status</h2>
+            <ul class="mr-status">
+                @foreach (var s in Model.BookingsByStatus)
+                {
+                    <li><span>@Label(s.Label)</span><span class="mr-bar"><span style="width:@((s.Count * 100 / maxBookingStatus).ToString())%"></span></span><strong>@s.Count</strong></li>
+                }
+            </ul>
+        </section>
+    </div>
+
+    <section class="mr-panel" aria-labelledby="mr-top">
+        <h2 id="mr-top">Top sitters</h2>
+        @if (Model.TopSitters.Count == 0)
+        {
+            <p class="mr-empty">No completed bookings in this period yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive"><table class="mr-table">
+                <thead><tr><th scope="col">Sitter</th><th scope="col">Completed</th><th scope="col">Earned</th><th scope="col">Rating</th></tr></thead>
+                <tbody>
+                @foreach (var s in Model.TopSitters)
+                {
+                    <tr><td>@s.Name</td><td>@s.Completed</td><td>@Money(s.Earned)</td><td>@(s.Rating is { } r ? r.ToString("0.0") + " ★" : "—")</td></tr>
+                }
+                </tbody>
+            </table></div>
+        }
+    </section>
+    <p class="mr-note">Numbers cover the chosen period, except the six-month table and anything waiting. Money is in USD.</p>
+</div>
