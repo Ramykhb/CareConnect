@@ -31,6 +31,19 @@ foreach ($app in "PetSitting", "BabySitting") {
     if ($LASTEXITCODE -ne 0) { Write-Error "$app build failed - fix the errors above, then run this script again."; exit 1 }
 }
 
+# ASP.NET does not read .env by itself. Copy its KEY=value lines (for example GROQ_API_KEY and Ai__Enabled)
+# into this process's environment, so both app windows started below inherit them. Values are never printed.
+$envFile = Join-Path $root ".env"
+if (Test-Path $envFile) {
+    foreach ($line in Get-Content $envFile) {
+        if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$') {
+            $value = $Matches[2]
+            if ($value.Length -ge 2 -and $value[0] -eq $value[-1] -and $value[0] -in '"', "'") { $value = $value.Substring(1, $value.Length - 2) }
+            [Environment]::SetEnvironmentVariable($Matches[1], $value, "Process")
+        }
+    }
+}
+
 # One window per app.
 foreach ($app in "PetSitting", "BabySitting") {
     Start-Process powershell -WorkingDirectory $root -ArgumentList "-NoExit", "-Command", "`$host.UI.RawUI.WindowTitle = '$app'; dotnet run --project src/$app --no-build"
