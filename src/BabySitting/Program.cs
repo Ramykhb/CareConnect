@@ -19,6 +19,9 @@ builder.Services.AddHostedService<BabySitting.Services.Bookings.BookingExpirySer
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IPayoutReviewService, BabySitting.Services.Portal.PayoutReviewService>();
+builder.Services.Configure<BabySitting.Services.Matching.AiMatchingOptions>(builder.Configuration.GetSection(BabySitting.Services.Matching.AiMatchingOptions.Section));
+builder.Services.AddHttpClient(BabySitting.Services.Matching.SitterMatchingService.HttpClientName);
+builder.Services.AddScoped<BabySitting.Services.Matching.ISitterMatchingService, BabySitting.Services.Matching.SitterMatchingService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IManagerReportService, BabySitting.Services.Portal.ManagerReportService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterVerificationService, BabySitting.Services.Portal.SitterVerificationService>();
 builder.Services.AddScoped<BabySitting.Services.Accounts.IManagerUserService, BabySitting.Services.Accounts.ManagerUserService>();

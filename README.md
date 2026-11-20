@@ -129,6 +129,23 @@ Combined care uses explicit one-time invitation codes to link customer-owned req
 
 Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally; bank transfers and administrative payout processing are not connected.
 
+## AI sitter matching
+
+On the request wizard's sitter step, eligible sitters are sorted by match quality, and each one shows a short reason ("Best match · Verified · 4.8★ from 12 reviews …").
+
+- **Rules (always on):** verified status, reviews, completed bookings, experience, price against the budget, and (BabySitting) first aid training.
+- **Claude (optional):** when switched on, the best 10 sitters by the rules are sent to the Claude API, which re-orders them and writes the reasons. Only numbers and flags are sent (verified, rating, review and booking counts, experience, hourly rate, estimated cost, first aid, service, hours, budget, children's ages). Sitters are labelled `s1`, `s2`…; no names, emails, addresses, notes or ids leave the app.
+- If the AI is off, has no key, times out (8 s) or answers badly, the rule order is used and the page works as normal.
+
+Switch it on per app with user secrets (never commit a key):
+
+```sh
+dotnet user-secrets set "Ai:Enabled" "true" --project src/PetSitting
+dotnet user-secrets set "Ai:ApiKey" "<your Anthropic API key>" --project src/PetSitting
+```
+
+Optional settings: `Ai:Model` (default `claude-sonnet-5-5`), `Ai:TimeoutSeconds` (8), `Ai:MaxCandidates` (10). Repeat for `src/BabySitting`.
+
 ## RabbitMQ
 
 The main Docker Compose file manages RabbitMQ, reusing your existing SQL Server. The separate authentication Compose file runs Mailpit for local confirmation and recovery email. Copy `.env.example` to `.env`, set RabbitMQ credentials, and run:
