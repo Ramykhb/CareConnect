@@ -51,6 +51,7 @@ public sealed class OwnerRequestWizard
     // Why each sitter is suggested (by sitter id), and whether the order came from the AI.
     public IReadOnlyDictionary<Guid, string> MatchReasons { get; set; } = new Dictionary<Guid, string>();
     public bool MatchedByAi { get; set; }
+    public bool MatchingRequested { get; set; }
     public DateTimeOffset? SavedAt { get; set; }
     public static readonly string[] Steps = ["Pet", "Service", "Date & time", "Location", "Details & budget", "Review"];
 }

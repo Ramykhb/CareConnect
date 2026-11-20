@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PetSitting.Tests;
 
-// #1 sitter matching: rule ranking, the optional Claude re-ranking, and its safe fallbacks.
+// #1 sitter matching: rule ranking, the optional Groq re-ranking, and its safe fallbacks.
 public sealed class SitterMatchingTests
 {
     private static readonly MatchRequest Request = new("PetSitting", 4, 60m, null, null);
@@ -29,9 +29,12 @@ public sealed class SitterMatchingTests
         var options = Options.Create(new AiMatchingOptions { Enabled = enabled, ApiKey = key, TimeoutSeconds = timeout });
         return (new SitterMatchingService(new Factory(handler), options, NullLogger<SitterMatchingService>.Instance), handler);
     }
-    private static Task<HttpResponseMessage> Claude(string text) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+    private static Task<HttpResponseMessage> Groq(string text) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
     {
-        Content = new StringContent("{\"content\":[{\"type\":\"text\",\"text\":" + System.Text.Json.JsonSerializer.Serialize(text) + "}]}", Encoding.UTF8, "application/json")
+        Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            choices = new[] { new { finish_reason = "stop", message = new { content = "{\"matches\":" + text + "}" } } }
+        }), Encoding.UTF8, "application/json")
     });
 
     [Fact]
@@ -54,23 +57,27 @@ public sealed class SitterMatchingTests
     }
 
     [Fact]
-    public async Task Claude_reorders_the_sitters_and_writes_the_reasons()
+    public async Task Groq_reorders_the_sitters_and_writes_the_reasons()
     {
-        var (service, handler) = Create(true, _ => Claude("Here you go: [{\"id\":\"s3\",\"reason\":\"Cheapest and keen\"},{\"id\":\"s1\",\"reason\":\"Most trusted\"},{\"id\":\"s9\",\"reason\":\"unknown\"},{\"id\":\"s1\",\"reason\":\"dup\"}]"));
+        var (service, handler) = Create(true, _ => Groq("[{\"id\":\"s3\",\"reason\":\"Cheapest and keen\"},{\"id\":\"s1\",\"reason\":\"Most trusted\"},{\"id\":\"s9\",\"reason\":\"unknown\"},{\"id\":\"s1\",\"reason\":\"dup\"}]"));
         var ranked = await service.RankAsync(Request, [Newcomer, Pricey, Trusted]);
         // Rule order was Trusted (s1), Pricey (s2), Newcomer (s3); the AI picked s3 then s1, and s2 keeps its place after them.
         Assert.Equal([Newcomer.Id, Trusted.Id, Pricey.Id], ranked.Select(r => r.Id));
         Assert.Equal("Cheapest and keen", ranked[0].Reason);
         Assert.True(ranked[0].FromAi);
         Assert.False(ranked[2].FromAi);
-        Assert.Equal("test-key", handler.Last!.Headers.GetValues("x-api-key").Single());
-        Assert.Contains("claude-sonnet-5-5", handler.Body);
+        Assert.Equal("Bearer", handler.Last!.Headers.Authorization?.Scheme);
+        Assert.Equal("test-key", handler.Last.Headers.Authorization?.Parameter);
+        Assert.Equal("https://api.groq.com/openai/v1/chat/completions", handler.Last.RequestUri!.ToString());
+        using var body = System.Text.Json.JsonDocument.Parse(handler.Body!);
+        Assert.Equal("openai/gpt-oss-20b", body.RootElement.GetProperty("model").GetString());
+        Assert.True(body.RootElement.GetProperty("response_format").GetProperty("json_schema").GetProperty("strict").GetBoolean());
     }
 
     [Fact]
     public async Task Only_numbers_and_flags_are_sent_to_the_AI()
     {
-        var (service, handler) = Create(true, _ => Claude("[]"));
+        var (service, handler) = Create(true, _ => Groq("[]"));
         await service.RankAsync(Request, [Newcomer, Trusted]);
         Assert.DoesNotContain(Newcomer.Id.ToString(), handler.Body);
         Assert.DoesNotContain(Trusted.Id.ToString(), handler.Body);
@@ -86,7 +93,7 @@ public sealed class SitterMatchingTests
     [InlineData("[]")]
     public async Task A_bad_or_empty_answer_falls_back_to_the_rules(string answer)
     {
-        var (service, _) = Create(true, _ => Claude(answer));
+        var (service, _) = Create(true, _ => Groq(answer));
         var ranked = await service.RankAsync(Request, [Newcomer, Trusted]);
         Assert.Equal([Trusted.Id, Newcomer.Id], ranked.Select(r => r.Id));
         Assert.All(ranked, r => Assert.False(r.FromAi));
@@ -97,7 +104,7 @@ public sealed class SitterMatchingTests
     {
         var (failing, _) = Create(true, _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
         Assert.Equal(Trusted.Id, (await failing.RankAsync(Request, [Newcomer, Trusted]))[0].Id);
-        var (slow, _) = Create(true, async r => { await Task.Delay(TimeSpan.FromSeconds(5)); return await Claude("[]"); }, timeout: 1);
+        var (slow, _) = Create(true, async r => { await Task.Delay(TimeSpan.FromSeconds(5)); return await Groq("[]"); }, timeout: 1);
         var started = DateTime.UtcNow;
         Assert.Equal(Trusted.Id, (await slow.RankAsync(Request, [Newcomer, Trusted]))[0].Id);
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(4));
@@ -106,9 +113,9 @@ public sealed class SitterMatchingTests
     [Fact]
     public async Task Nothing_is_sent_without_a_key_or_with_one_sitter()
     {
-        var (noKey, h1) = Create(true, _ => Claude("[]"), key: null);
+        var (noKey, h1) = Create(true, _ => Groq("[]"), key: null);
         await noKey.RankAsync(Request, [Newcomer, Trusted]);
-        var (single, h2) = Create(true, _ => Claude("[]"));
+        var (single, h2) = Create(true, _ => Groq("[]"));
         await single.RankAsync(Request, [Trusted]);
         Assert.Null(h1.Last);
         Assert.Null(h2.Last);
@@ -121,4 +128,35 @@ public sealed class SitterMatchingTests
         Assert.Equal(141, picks[0].Reason.Length);
         Assert.Equal("Good match for your request", picks[1].Reason);
     }
+    [Fact]
+    public async Task Draft_and_review_ranking_never_calls_Groq()
+    {
+        var (service, handler) = Create(true, _ => throw new InvalidOperationException("must not call"));
+        var ranked = await service.RankAsync(Request, [Newcomer, Trusted], useAi: false);
+        Assert.Null(handler.Last);
+        Assert.All(ranked, r => Assert.False(r.FromAi));
+    }
+
+    [Theory]
+    [InlineData("{\"choices\":[]}")]
+    [InlineData("{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"{}\"}}]}")]
+    [InlineData("{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"matches\\\":false}\"}}]}")]
+    public async Task Malformed_or_truncated_Groq_responses_use_local_ranking(string body)
+    {
+        var (service, _) = Create(true, _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        { Content = new StringContent(body, Encoding.UTF8, "application/json") }));
+        var ranked = await service.RankAsync(Request, [Newcomer, Trusted]);
+        Assert.Equal(Trusted.Id, ranked[0].Id);
+        Assert.All(ranked, r => Assert.False(r.FromAi));
+    }
+
+    [Fact]
+    public async Task Caller_cancellation_is_propagated()
+    {
+        var (service, _) = Create(true, _ => Groq("[]"));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RankAsync(Request, [Newcomer, Trusted], cancellation.Token));
+    }
+
 }

@@ -129,22 +129,50 @@ Combined care uses explicit one-time invitation codes to link customer-owned req
 
 Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally; bank transfers and administrative payout processing are not connected.
 
-## AI sitter matching
+## AI sitter matching (Groq)
 
-On the request wizard's sitter step, eligible sitters are sorted by match quality, and each one shows a short reason ("Best match · Verified · 4.8★ from 12 reviews …").
+Both apps offer **Match with AI** in **Create a request → Step 5: Details & budget → Notify a preferred sitter**. Enter a total budget, then click the button. Available sitters are ranked with a short explanation and a “Best match” label. Choose a sitter or keep “No preference”, then continue and submit the request normally. Recommendations do not automatically select or book anyone.
 
-- **Rules (always on):** verified status, reviews, completed bookings, experience, price against the budget, and (BabySitting) first aid training.
-- **Claude (optional):** when switched on, the best 10 sitters by the rules are sent to the Claude API, which re-orders them and writes the reasons. Only numbers and flags are sent (verified, rating, review and booking counts, experience, hourly rate, estimated cost, first aid, service, hours, budget, children's ages). Sitters are labelled `s1`, `s2`…; no names, emails, addresses, notes or ids leave the app.
-- If the AI is off, has no key, times out (8 s) or answers badly, the rule order is used and the page works as normal.
+The backend uses Groq's OpenAI-compatible chat completions API with **`openai/gpt-oss-20b`** and strict JSON schema output ([Groq structured outputs documentation](https://console.groq.com/docs/structured-outputs)). It filters by city, service, active account, schedule and conflicting bookings before ranking. The best 10 local candidates are compared using verification, reviews, completed bookings, experience, estimated hourly cost against your total budget, and first aid training / child age range in BabySitting. Matching is advisory; the fixed amount you offer remains your booking budget.
 
-Switch it on per app with user secrets (never commit a key):
+Only anonymous labels (`s1`, `s2`, …), numerical statistics, service and request criteria go to Groq. Names, real IDs, contact details, addresses, biographies, care instructions and medical notes are excluded. The key stays on the server. AI is called only when you request matching, never for draft autosaves or review screens. Matching is limited to six requests per authenticated user per minute per app instance.
+
+If the key is missing, AI is disabled, Groq errors/rate-limits, the 15-second timeout expires, or the response is invalid, the page shows the local ranking with an explanatory message. At least two eligible sitters are needed to call Groq.
+
+### Configure with environment variables
+
+In **`CareConnect/.env`** (the repository root, next to `.env.example`), add:
+
+```dotenv
+GROQ_API_KEY=gsk_your_actual_groq_key
+Ai__Enabled=true
+Ai__Model=openai/gpt-oss-20b
+Ai__TimeoutSeconds=15
+Ai__MaxCandidates=10
+```
+
+Keep your existing RabbitMQ entries. `.env` is git-ignored. **ASP.NET does not load `.env` automatically**, and Docker Compose only starts RabbitMQ here. From the repository root, export the file in each terminal before starting either app:
+
+```sh
+set -a
+source .env
+set +a
+dotnet run --project src/PetSitting
+```
+
+Repeat in a second terminal with `dotnet run --project src/BabySitting`. Restart the apps after changing configuration. If launching through an IDE, set these variables in its run configuration instead. For hosted environments, add them to the hosting provider's environment/secret settings.
+
+### Alternative: .NET user secrets
+
+For IDE launches, you can store the key directly in each app's development secrets instead of exporting `.env`:
 
 ```sh
 dotnet user-secrets set "Ai:Enabled" "true" --project src/PetSitting
-dotnet user-secrets set "Ai:ApiKey" "<your Anthropic API key>" --project src/PetSitting
+dotnet user-secrets set "Ai:ApiKey" "gsk_your_actual_groq_key" --project src/PetSitting
+dotnet user-secrets set "Ai:Model" "openai/gpt-oss-20b" --project src/PetSitting
 ```
 
-Optional settings: `Ai:Model` (default `claude-sonnet-5-5`), `Ai:TimeoutSeconds` (8), `Ai:MaxCandidates` (10). Repeat for `src/BabySitting`.
+Repeat with `--project src/BabySitting`. Remove any previous Anthropic `Ai:ApiKey`, `Ai:Model` or `Ai:Endpoint` secret overrides when migrating; defaults now target Groq. An explicit `Ai:ApiKey` (or environment variable `Ai__ApiKey`) takes precedence over the `GROQ_API_KEY` alias. Nonsecret defaults are in each app's `appsettings.json`; `Ai__Enabled=false` disables external matching.
 
 ## RabbitMQ
 
@@ -344,7 +372,7 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
-Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching, real payment charges, bank transfers and manager processing remain unimplemented. Dashboard shortcuts link to the implemented pages.
+Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching is available through Groq in the request wizard. Real payment charges, bank transfers and manager processing remain unimplemented. Dashboard shortcuts link to the implemented pages.
 
 Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.
 

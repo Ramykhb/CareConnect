@@ -1,0 +1,18 @@
+@using PetSitting.ViewModels
+@model OwnerRequestWizard
+@if (Model.MatchingRequested)
+{
+    <div asp-validation-summary="All" class="request-errors" role="alert"></div>
+}
+<p class="request-helper" role="status" data-match-result>
+    @if (Model.MatchedByAi) { <text>AI recommendations by Groq · Based on your current dates, service and budget. Review each sitter before choosing.</text> }
+    else if (Model.Sitters.Count < 2) { <text>@(Model.Sitters.Count == 0 ? "No preferred sitters are available for these details. You can still submit an open request." : "One eligible sitter is available. AI matching needs at least two sitters.")</text> }
+    else if (Model.MatchingRequested) { <text>AI matching is unavailable or your details need attention. Showing the local ranking; you can retry.</text> }
+    else { <text>Sorted by local match quality. Use Match with AI for personalized recommendations.</text> }
+</p>
+<div class="sitter-options"><label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-any" type="radio" value="" checked="@(Model.Form.PreferredSitterId is null)" /><span><span class="round-icon"><svg class="line-icon"><use href="#icon-paw" /></svg></span><span><strong>No preference</strong><small>Open to local sitters</small></span></span></label>
+                    @foreach (var sitter in Model.Sitters)
+                    {
+                        <label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-@sitter.Id" type="radio" value="@sitter.Id" checked="@(Model.Form.PreferredSitterId == sitter.Id)" /><span><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><span><strong>@sitter.User.FirstName @sitter.User.LastName</strong><small>@sitter.YearsOfExperience yrs experience · @sitter.City</small>@if (Model.MatchReasons.TryGetValue(sitter.Id, out var why)) { <small class="sitter-match">@(sitter.Id == Model.Sitters[0].Id ? "Best match · " : "")@why</small> }</span></span></label>
+                    }
+                </div>

@@ -219,3 +219,7 @@
 
 /* #1 sitter matching: why a sitter is suggested. */
 .sitter-choice .sitter-match{display:block;margin-top:4px;font-size:10px;color:#2f6b3a;font-weight:600}
+
+.ai-match-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:16px 0 8px; }
+.ai-match-actions small { flex:1; min-width:180px; color:var(--muted); font-size:11px; line-height:1.6; }
+[data-sitter-matches][aria-busy="true"] { opacity:.65; }

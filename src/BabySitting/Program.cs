@@ -20,7 +20,12 @@ builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IPayoutReviewService, BabySitting.Services.Portal.PayoutReviewService>();
 builder.Services.Configure<BabySitting.Services.Matching.AiMatchingOptions>(builder.Configuration.GetSection(BabySitting.Services.Matching.AiMatchingOptions.Section));
-builder.Services.AddHttpClient(BabySitting.Services.Matching.SitterMatchingService.HttpClientName);
+builder.Services.PostConfigure<BabySitting.Services.Matching.AiMatchingOptions>(o =>
+{
+    if (string.IsNullOrWhiteSpace(o.ApiKey)) o.ApiKey = builder.Configuration["GROQ_API_KEY"];
+});
+builder.Services.AddHttpClient(BabySitting.Services.Matching.SitterMatchingService.HttpClientName)
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<BabySitting.Services.Matching.ISitterMatchingService, BabySitting.Services.Matching.SitterMatchingService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IManagerReportService, BabySitting.Services.Portal.ManagerReportService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterVerificationService, BabySitting.Services.Portal.SitterVerificationService>();
@@ -59,6 +64,9 @@ builder.Services.AddHealthChecks().AddCheck<BrokerHealth>("rabbitmq", tags: ["re
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("ai-matching", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         context.Request.Path.StartsWithSegments("/Identity") && HttpMethods.IsPost(context.Request.Method)
         ? RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "local",
@@ -100,8 +108,8 @@ app.Use(async (context, next) =>
     await next(context);
 });
 app.UseRouting();
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 BabySitting.Services.Localization.UserLanguage.UseUserLanguage(app);
 app.UseAuthorization();
 app.MapRazorPages();

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
@@ -17,29 +18,30 @@ public sealed class AiMatchingOptions
     public const string Section = "Ai";
     public bool Enabled { get; set; }
     public string? ApiKey { get; set; }
-    public string Model { get; set; } = "claude-sonnet-5-5";
-    public string Endpoint { get; set; } = "https://api.anthropic.com/v1/messages";
-    public int TimeoutSeconds { get; set; } = 8;
+    public string Model { get; set; } = "openai/gpt-oss-20b";
+    public string Endpoint { get; set; } = "https://api.groq.com/openai/v1/chat/completions";
+    public int TimeoutSeconds { get; set; } = 15;
     public int MaxCandidates { get; set; } = 10;
 }
 
 public interface ISitterMatchingService
 {
-    Task<IReadOnlyList<SitterMatch>> RankAsync(MatchRequest request, IReadOnlyList<MatchCandidate> candidates, CancellationToken ct = default);
+    Task<IReadOnlyList<SitterMatch>> RankAsync(MatchRequest request, IReadOnlyList<MatchCandidate> candidates, CancellationToken ct = default, bool useAi = true);
 }
 
-// Ranks sitters with local rules, then (when switched on) asks Claude to re-order the best few and explain each pick.
-// Any AI problem (switched off, no key, timeout, bad answer) falls back to the rule order without the customer noticing.
+// Ranks sitters with local rules, then (when switched on) asks Groq to re-order the best few and explain each pick.
+// Any AI problem (switched off, no key, timeout, bad answer) falls back to the rule order with a visible fallback in the UI.
 public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMatchingOptions> options, ILogger<SitterMatchingService> log) : ISitterMatchingService
 {
     public const string HttpClientName = "ai-matching";
 
-    public async Task<IReadOnlyList<SitterMatch>> RankAsync(MatchRequest request, IReadOnlyList<MatchCandidate> candidates, CancellationToken ct = default)
+    public async Task<IReadOnlyList<SitterMatch>> RankAsync(MatchRequest request, IReadOnlyList<MatchCandidate> candidates, CancellationToken ct = default, bool useAi = true)
     {
+        ct.ThrowIfCancellationRequested();
         var ruled = candidates.Select(c => new SitterMatch(c.Id, Score(request, c), RuleReason(request, c), false))
             .OrderByDescending(m => m.Score).ToList();
         var o = options.Value;
-        if (!o.Enabled || string.IsNullOrWhiteSpace(o.ApiKey) || ruled.Count < 2) return ruled;
+        if (!useAi || !o.Enabled || string.IsNullOrWhiteSpace(o.ApiKey) || ruled.Count < 2) return ruled;
         var top = ruled.Take(Math.Clamp(o.MaxCandidates, 2, 20)).ToList();
         try
         {
@@ -104,7 +106,8 @@ public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMa
         };
         return "You help a customer of a babysitting app choose a sitter. Rank the sitters below from best to worst match for this request, " +
                "weighing trust (verified, reviews, completed bookings), experience, and price against the budget. " +
-               "Reply with ONLY a JSON array, best first, like [{\"id\":\"s2\",\"reason\":\"...\"}], with one short reason (max 15 words, no names) per sitter.\n\n" +
+               "Reply with a JSON object containing a matches array, best first, with every sitter exactly once. " +
+               "Use one short factual reason (max 15 words, no names) per sitter. Do not invent qualifications or guarantees.\n\n" +
                data.ToJsonString();
     }
 
@@ -114,16 +117,47 @@ public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMa
         {
             Content = JsonContent.Create(new
             {
-                model = o.Model, max_tokens = 800,
-                messages = new[] { new { role = "user", content = BuildPrompt(r, top) } }
+                model = o.Model, max_completion_tokens = 2048, reasoning_effort = "low",
+                messages = new[] { new { role = "user", content = BuildPrompt(r, top) } },
+                response_format = new
+                {
+                    type = "json_schema",
+                    json_schema = new
+                    {
+                        name = "sitter_matches", strict = true,
+                        schema = new
+                        {
+                            type = "object", additionalProperties = false, required = new[] { "matches" },
+                            properties = new
+                            {
+                                matches = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "object", additionalProperties = false, required = new[] { "id", "reason" },
+                                        properties = new
+                                        {
+                                            id = new { type = "string", @enum = Enumerable.Range(1, top.Count).Select(i => "s" + i).ToArray() },
+                                            reason = new { type = "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             })
         };
-        message.Headers.Add("x-api-key", o.ApiKey);
-        message.Headers.Add("anthropic-version", "2023-06-01");
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", o.ApiKey);
         using var response = await http.CreateClient(HttpClientName).SendAsync(message, ct);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<JsonObject>(ct) ?? throw new JsonException("Empty answer.");
-        var text = string.Concat(body["content"]?.AsArray().Where(b => (string?)b?["type"] == "text").Select(b => (string?)b?["text"]) ?? []);
+        var choice = body["choices"]?.AsArray().FirstOrDefault();
+        if ((string?)choice?["finish_reason"] != "stop") throw new JsonException("Incomplete answer.");
+        var content = (string?)choice?["message"]?["content"] ?? throw new JsonException("Missing content.");
+        var answer = JsonNode.Parse(content)?["matches"]?.AsArray() ?? throw new JsonException("Missing matches.");
+        var text = answer.ToJsonString();
         return ParseAnswer(text, top);
     }
 

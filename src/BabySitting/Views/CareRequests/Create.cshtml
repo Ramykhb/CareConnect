@@ -74,13 +74,15 @@
                 <div class="budget-heading"><label>Total budget</label><strong data-budget-total>@(Model.Form.Budget is { } budget ? $"${budget:0.##}" : "In USD")</strong></div>
                 <div class="request-field"><label asp-for="Form.Budget">Fixed total amount (USD)</label><input asp-for="Form.Budget" type="number" min="1" max="99999" step="0.01" placeholder="e.g. 120" /><span asp-validation-for="Form.Budget"></span><small>This is the total offered to the sitter for the full request. Payment is due after acceptance.</small></div>
                 <p class="request-helper">A sitter accepts this fixed total for the full request. No payment is taken when you submit.</p>
-                <label class="compare-offers-option"><input asp-for="Form.CompareOffers" /><span><strong>Let me compare offers before booking</strong><small>Sitters send you offers and you choose one. Untick to book the first sitter who accepts.</small></span></label><fieldset class="preferred-sitters"><legend><svg class="line-icon"><use href="#icon-sparkles" /></svg>Notify a preferred sitter <small>optional</small></legend><p class="request-helper">Available for your city, service and dates. Your request also stays open to other eligible sitters.</p><div class="sitter-options"><label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-any" type="radio" value="" checked="@(Model.Form.PreferredSitterId is null)" /><span><span class="round-icon"><svg class="line-icon"><use href="#icon-family" /></svg></span><span><strong>No preference</strong><small>Open to local sitters</small></span></span></label>
-                    @if (Model.Sitters.Count > 1) { <p class="request-helper">@(Model.MatchedByAi ? "Sorted by our AI matching for your request." : "Sorted by best match for your request.")</p> }
-                    @foreach (var sitter in Model.Sitters)
-                    {
-                        <label class="sitter-choice"><input asp-for="Form.PreferredSitterId" id="sitter-@sitter.Id" type="radio" value="@sitter.Id" checked="@(Model.Form.PreferredSitterId == sitter.Id)" /><span><span class="portal-avatar">@sitter.User.FirstName.FirstOrDefault()</span><span><strong>@sitter.User.FirstName @sitter.User.LastName</strong><small>@sitter.YearsOfExperience yrs experience · @sitter.City@(sitter.HasFirstAidTraining ? " · First aid trained" : "")</small>@if (!string.IsNullOrWhiteSpace(sitter.Qualifications)) { <small class="sitter-qualifications">@sitter.Qualifications</small> }@if (Model.MatchReasons.TryGetValue(sitter.Id, out var why)) { <small class="sitter-match">@(sitter.Id == Model.Sitters[0].Id ? "Best match · " : "")@why</small> }</span></span></label>
-                    }
-                </div>@if (Model.Sitters.Count == 0) { <p class="request-helper">No preferred sitters are available for these details right now. You can still submit an open request.</p> }<span asp-validation-for="Form.PreferredSitterId"></span></fieldset>
+                <label class="compare-offers-option"><input asp-for="Form.CompareOffers" /><span><strong>Let me compare offers before booking</strong><small>Sitters send you offers and you choose one. Untick to book the first sitter who accepts.</small></span></label><fieldset class="preferred-sitters"><legend><svg class="line-icon"><use href="#icon-sparkles" /></svg>Notify a preferred sitter <small>optional</small></legend><p class="request-helper">Available for your city, service and dates. Your request also stays open to other eligible sitters.</p>
+                    <div class="ai-match-actions">
+                        <button type="submit" class="btn btn-dark btn-sm" formaction="@Url.Action("Matches", "CareRequests")" data-ai-match>Match with AI</button>
+                        <small>Compares verification, reviews, experience and estimated cost. Only anonymous sitter statistics and request criteria are sent to Groq.</small>
+                    </div>
+                    <p class="request-helper" data-match-status role="status" aria-live="polite"></p>
+                    <div data-sitter-matches><partial name="/Views/CareRequests/_SitterMatches.cshtml" model="Model" /></div>
+                    <span asp-validation-for="Form.PreferredSitterId"></span>
+                </fieldset>
             </section>
             <section class="request-step" hidden="@(Model.Step != 6)" aria-labelledby="review-heading">
                 <h2 id="review-heading">Review &amp; submit</h2><p class="request-intro">One last look before we send your request@(preferred is null ? "." : " to " + preferred.User.FirstName + ".")</p>
@@ -109,4 +111,4 @@
         </dl><div class="request-matching"><strong><svg class="line-icon"><use href="#icon-sparkles" /></svg>A good fit starts here</strong><p>@(Model.Sitters.Count > 0 ? $"{Model.Sitters.Count} {(Model.Sitters.Count == 1 ? "sitter is" : "sitters are")} available for your city, service and dates." : "Choose your service, dates and city to see available preferred sitters.")</p></div><p class="request-payment-note"><svg class="line-icon"><use href="#icon-lock" /></svg>No payment when you submit.</p></aside>
     </div>
 </form>
-@section Scripts { <script src="~/js/parent-requests.js" asp-append-version="true"></script> }
+@section Scripts { <script src="~/js/parent-requests.js" asp-append-version="true"></script><script src="~/js/ai-matching.js" asp-append-version="true"></script> }

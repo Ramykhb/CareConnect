@@ -141,6 +141,21 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
         return View("Create", model);
     }
 
+    // Recommendations are read-only: no draft, preference or booking is changed here.
+    [HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("ai-matching")]
+    public async Task<IActionResult> Matches(OwnerRequestForm form, Guid draftId, string? version)
+    {
+        var model = new OwnerRequestWizard { Form = form, DraftId = draftId, Version = version ?? "", Step = 5, MatchingRequested = true };
+        await Populate(model);
+        for (var step = 1; step <= 4; step++) await ValidateStep(model, step);
+        if (form.Budget is null) ModelState.AddModelError("Form.Budget", "Enter your fixed total budget before matching.");
+        if (ModelState.IsValid) await RankSitters(model, useAi: true);
+        return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+            ? PartialView("_SitterMatches", model)
+            : View("Create", model);
+    }
+
     private async Task Populate(OwnerRequestWizard model)
     {
         model.Pets = await db.Pets.AsNoTracking().Where(p => p.OwnerId == OwnerId).OrderBy(p => p.Name).ToListAsync();
@@ -149,7 +164,7 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
     }
 
     // Orders the eligible sitters by match quality and keeps a short reason for each (#1 AI sitter matching).
-    private async Task RankSitters(OwnerRequestWizard model)
+    private async Task RankSitters(OwnerRequestWizard model, bool useAi = false)
     {
         var ids = model.Sitters.Select(p => p.Id).ToArray();
         var stats = await db.Reviews.AsNoTracking().Where(r => ids.Contains(r.Booking.SitterProfileId) && r.ReviewerId == r.Booking.CustomerId)
@@ -162,7 +177,7 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
         var candidates = model.Sitters.Select(p => new Services.Matching.MatchCandidate(p.Id, p.YearsOfExperience, p.HourlyRate, p.VerificationStatus == VerificationStatus.Verified,
             stats.TryGetValue(p.Id, out var s) ? s.Average : null, stats.TryGetValue(p.Id, out var s2) ? s2.Count : 0, completed.GetValueOrDefault(p.Id), false)).ToList();
         var matcher = HttpContext.RequestServices.GetRequiredService<Services.Matching.ISitterMatchingService>();
-        var ranked = await matcher.RankAsync(request, candidates, HttpContext.RequestAborted);
+        var ranked = await matcher.RankAsync(request, candidates, HttpContext.RequestAborted, useAi);
         var byId = model.Sitters.ToDictionary(p => p.Id);
         model.Sitters = ranked.Select(r => byId[r.Id]).ToArray();
         model.MatchReasons = ranked.ToDictionary(r => r.Id, r => r.Reason);
