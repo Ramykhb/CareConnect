@@ -1,0 +1,28 @@
+/* Sitter verification: sitter page, settings card and manager review list. */
+.sv-chip { display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+.sv-chip-verified { background:#e2f3e9; color:#1d7a46; }
+.sv-chip-pending { background:#fbf4df; color:#795e28; }
+.sv-chip-rejected { background:#ffe6e1; color:#cf4e40; }
+.sv-chip-none { background:#eef2ee; color:#5d675f; }
+.sv-notice { background:#e2f3e9; color:#1d5f38; border-radius:16px; padding:13px 16px; font-size:12px; margin-bottom:18px; }
+.sv-notice-error { background:#ffe6e1; color:#a43c2b; }
+.sv-layout { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:start; margin-bottom:20px; }
+.sv-layout .portal-muted { margin-top:12px; }
+.sv-layout .portal-form { margin-top:14px; }
+.sv-card .btn { margin-top:14px; }
+.sv-filters { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 18px; }
+.sv-filters a { padding:8px 14px; border-radius:20px; background:#eef2ea; color:var(--ink); text-decoration:none; font-size:12px; font-weight:600; }
+.sv-filters a.active { background:var(--ink); color:white; }
+.sv-requests { display:grid; gap:14px; }
+.sv-request { border:1px solid var(--border); border-radius:16px; padding:16px 18px; background:white; }
+.sv-request header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.sv-request h2 { font-size:16px; margin:0 0 2px; }
+.sv-request small { color:var(--muted); font-size:12px; }
+.sv-request p { margin:10px 0 0; font-size:13px; }
+.sv-note { color:#5d675f; font-style:italic; overflow-wrap:anywhere; }
+.sv-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; align-items:flex-start; }
+.sv-actions form { margin:0; }
+.sv-actions .btn { margin-bottom:0; }
+.sv-reject { display:flex; gap:8px; flex:1; min-width:260px; }
+.sv-reject .form-control { min-height:44px; }
+@media (max-width: 760px) { .sv-layout { grid-template-columns:1fr; } .sv-reject { flex-wrap:wrap; } }

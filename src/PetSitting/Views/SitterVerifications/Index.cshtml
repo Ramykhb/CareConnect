@@ -1,0 +1,56 @@
+@using PetSitting.Models
+@using PetSitting.Services.Portal
+@model IReadOnlyList<VerificationItem>
+@{
+    ViewData["Title"] = "Sitter verification";
+    var filter = (string)ViewBag.Filter;
+}
+@section Styles { <link rel="stylesheet" href="~/css/sitter-verification.css" asp-append-version="true" /> }
+<div class="py-4">
+    <partial name="_ManagerNav" />
+    <h1>Sitter verification</h1>
+    <p class="text-secondary">Sitters send a photo or PDF of an ID or certificate. Open it, check the name matches the sitter, then approve or reject. Approved sitters get a Verified badge.</p>
+    @if (TempData["Success"] is string ok) { <div class="alert alert-success" role="status">@ok</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    <nav class="sv-filters" aria-label="Filter verification requests">
+        @foreach (var (key, label) in new[] { ("pending", "Waiting"), ("verified", "Approved"), ("rejected", "Rejected"), ("all", "All") })
+        {
+            <a class="@(filter == key ? "active" : "")" asp-action="Index" asp-route-status="@key" aria-current="@(filter == key ? "page" : null)">@label</a>
+        }
+    </nav>
+    @if (Model.Count == 0)
+    {
+        <p class="text-secondary">Nothing here.</p>
+    }
+    else
+    {
+        <div class="sv-requests">
+        @foreach (var v in Model)
+        {
+            <article class="sv-request">
+                <header>
+                    <div><h2>@v.SitterName</h2><small>@v.SitterEmail · @v.City · @v.YearsOfExperience yrs experience</small></div>
+                    <span class="sv-chip @(v.Status switch { VerificationStatus.Verified => "sv-chip-verified", VerificationStatus.Rejected => "sv-chip-rejected", _ => "sv-chip-pending" })">@(v.Status == VerificationStatus.Pending ? "Waiting" : v.Status == VerificationStatus.Verified ? "Approved" : "Rejected")</span>
+                </header>
+                <p><strong>@SitterVerificationService.DocumentLabel(v.DocumentType)</strong> · sent @v.SubmittedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm") ·
+                    <a asp-action="Document" asp-route-id="@v.Id" target="_blank" rel="noopener">@(v.ContentType == "application/pdf" ? "Download PDF" : "Open photo")</a></p>
+                @if (v.Note is not null) { <p class="sv-note">“@v.Note”</p> }
+                @if (v.Status == VerificationStatus.Pending)
+                {
+                    <div class="sv-actions">
+                        <form asp-action="Approve" method="post"><input type="hidden" name="id" value="@v.Id" /><input type="hidden" name="version" value="@v.Version" /><button type="submit" class="btn btn-dark">Approve</button></form>
+                        <form asp-action="Reject" method="post" class="sv-reject"><input type="hidden" name="id" value="@v.Id" /><input type="hidden" name="version" value="@v.Version" />
+                            <label class="visually-hidden" for="reason-@v.Id">Reason for rejecting</label>
+                            <input class="form-control" id="reason-@v.Id" name="reason" maxlength="500" required placeholder="Reason, e.g. the photo is blurry" />
+                            <button type="submit" class="btn btn-outline-dark">Reject</button></form>
+                    </div>
+                }
+                else
+                {
+                    <p class="sv-note">Decided @v.ReviewedAtUtc?.ToLocalTime().ToString("d MMM yyyy")@(v.DecisionReason is null ? "" : ": " + v.DecisionReason)</p>
+                }
+            </article>
+        }
+        </div>
+    }
+</div>

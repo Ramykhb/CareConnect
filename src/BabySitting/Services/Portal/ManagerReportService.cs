@@ -20,6 +20,7 @@ public sealed record ManagerReport(int Days, DateTimeOffset From, DateTimeOffset
     int ClosuresWaiting, int MessagesWaiting, int MessagesRetrying, int CombinedLinks,
     IReadOnlyList<ReportMonth> Months, IReadOnlyList<ReportSitter> TopSitters)
 {
+    public int VerificationsWaiting { get; init; }
     public double CompletionRate => NewBookings == 0 ? 0 : Math.Round(CompletedBookings * 100.0 / NewBookings, 1);
     public double CancellationRate => NewBookings == 0 ? 0 : Math.Round(CancelledBookings * 100.0 / NewBookings, 1);
 }
@@ -72,6 +73,7 @@ public sealed class ManagerReportService(BabySittingDbContext db, TimeProvider c
         var closures = await db.AccountClosureRequests.CountAsync(c => c.Status == ClosureStatus.Pending, ct);
         var messagesWaiting = await db.MessageOutboxEntries.CountAsync(m => m.PublishedAtUtc == null, ct);
         var messagesRetrying = await db.MessageOutboxEntries.CountAsync(m => m.PublishedAtUtc == null && m.Attempts > 0, ct);
+        var verifications = await db.SitterVerifications.CountAsync(v => v.Status == VerificationStatus.Pending, ct);
         var links = await db.CombinedCareLinks.CountAsync(l => l.LocalRequestId != null && l.PeerRequestId != null, ct);
 
         // The last six calendar months (UTC): new bookings and money received.
@@ -103,7 +105,7 @@ public sealed class ManagerReportService(BabySittingDbContext db, TimeProvider c
             Booked(BookingStatus.Completed), Booked(BookingStatus.Cancelled),
             revenue, refunded, failed, payoutsSent, waiting?.Total ?? 0, waiting?.Count ?? 0,
             reviews?.Count ?? 0, reviews is null ? null : Math.Round(reviews.Average, 1),
-            closures, messagesWaiting, messagesRetrying, links, months, topSitters);
+            closures, messagesWaiting, messagesRetrying, links, months, topSitters) { VerificationsWaiting = verifications };
     }
 
     // A simple CSV a manager can open in Excel. Names are user input, so they are quoted and kept from starting a formula.

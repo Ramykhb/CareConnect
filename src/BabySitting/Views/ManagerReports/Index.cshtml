@@ -26,9 +26,10 @@
         </div>
     </div>
 
-    @if (Model.ClosuresWaiting > 0 || Model.PayoutsWaitingCount > 0 || Model.MessagesRetrying > 0)
+    @if (Model.ClosuresWaiting > 0 || Model.PayoutsWaitingCount > 0 || Model.MessagesRetrying > 0 || Model.VerificationsWaiting > 0)
     {
         <section class="mr-todo" aria-label="Waiting for a manager">
+            @if (Model.VerificationsWaiting > 0) { <a asp-controller="SitterVerifications" asp-action="Index"><strong>@Model.VerificationsWaiting</strong> sitter verification@(Model.VerificationsWaiting == 1 ? "" : "s") to check</a> }
             @if (Model.ClosuresWaiting > 0) { <a asp-controller="AccountClosures" asp-action="Index"><strong>@Model.ClosuresWaiting</strong> account closure@(Model.ClosuresWaiting == 1 ? "" : "s") to review</a> }
             @if (Model.PayoutsWaitingCount > 0) { <a asp-controller="Payouts" asp-action="Index"><strong>@Model.PayoutsWaitingCount</strong> payout@(Model.PayoutsWaitingCount == 1 ? "" : "s") to send · @Money(Model.PayoutsWaiting)</a> }
             @if (Model.MessagesRetrying > 0) { <span><strong>@Model.MessagesRetrying</strong> message@(Model.MessagesRetrying == 1 ? "" : "s") to the other app being retried</span> }

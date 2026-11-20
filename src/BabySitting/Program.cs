@@ -20,6 +20,7 @@ builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IPayoutReviewService, BabySitting.Services.Portal.PayoutReviewService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IManagerReportService, BabySitting.Services.Portal.ManagerReportService>();
+builder.Services.AddScoped<BabySitting.Services.Portal.ISitterVerificationService, BabySitting.Services.Portal.SitterVerificationService>();
 builder.Services.AddScoped<BabySitting.Services.Accounts.IManagerUserService, BabySitting.Services.Accounts.ManagerUserService>();
 builder.Services.AddScoped<BabySitting.Services.Requests.IOfferChoiceService, BabySitting.Services.Requests.OfferChoiceService>();
 builder.Services.AddSingleton<BabySitting.Services.Notifications.NotificationEmailQueue>();

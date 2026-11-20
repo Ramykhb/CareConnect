@@ -34,6 +34,7 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<AccountPhoto> AccountPhotos => Set<AccountPhoto>();
 
     public DbSet<CombinedCareLink> CombinedCareLinks => Set<CombinedCareLink>();
+    public DbSet<SitterVerification> SitterVerifications => Set<SitterVerification>();
 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
@@ -112,6 +113,14 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
             t.HasCheckConstraint("CK_PetSitterProfile_Rate", "[HourlyRate] >= 0");
             t.HasCheckConstraint("CK_PetSitterProfile_Experience", "[YearsOfExperience] BETWEEN 0 AND 80");
             t.HasCheckConstraint("CK_PetSitterProfile_Verification", "[VerificationStatus] BETWEEN 0 AND 3");
+        });
+        // One verification may wait for review per sitter; the filtered unique index enforces it even under concurrent submits.
+        modelBuilder.Entity<SitterVerification>().HasIndex(v => v.SitterProfileId).IsUnique().HasFilter("[Status] = 1");
+        modelBuilder.Entity<SitterVerification>().HasIndex(v => new { v.Status, v.CreatedAtUtc });
+        modelBuilder.Entity<SitterVerification>().ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_SitterVerification_Status", "[Status] BETWEEN 1 AND 3");
+            t.HasCheckConstraint("CK_SitterVerification_Document", "[DocumentType] BETWEEN 0 AND 3");
         });
         modelBuilder.Entity<PetCareRequest>().ToTable(t =>
         {

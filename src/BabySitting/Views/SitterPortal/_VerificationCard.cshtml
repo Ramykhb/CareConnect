@@ -1,0 +1,13 @@
+@using BabySitting.Models
+@model BabySitting.ViewModels.SitterPortalPage
+@{
+    var status = Model.Profile?.VerificationStatus ?? VerificationStatus.NotSubmitted;
+    var (chip, label, text, button) = status switch
+    {
+        VerificationStatus.Verified => ("sv-chip-verified", "Verified", "Parents see a Verified badge on your profile.", "View details"),
+        VerificationStatus.Pending => ("sv-chip-pending", "Waiting", "A manager is checking your proof.", "View details"),
+        VerificationStatus.Rejected => ("sv-chip-rejected", "Not approved", "Your last proof was not approved. You can send new proof.", "Send new proof"),
+        _ => ("sv-chip-none", "Not verified", "Send a photo of your ID or a first aid or childcare certificate to get a Verified badge.", "Get verified")
+    };
+}
+<section class="dash-card sv-card" id="verification-settings"><div class="card-heading"><h2>Verification</h2><span class="sv-chip @chip">@label</span></div><p class="portal-muted">@text</p><a class="btn btn-dark btn-sm" asp-controller="SitterVerification" asp-action="Index">@button</a></section>

@@ -1539,6 +1539,75 @@ namespace PetSitting.Data.Migrations
                     b.ToTable("SitterServices");
                 });
 
+            modelBuilder.Entity("PetSitting.Models.SitterVerification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasMaxLength(5242880)
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SitterProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SitterProfileId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("SitterVerifications", t =>
+                        {
+                            t.HasCheckConstraint("CK_SitterVerification_Document", "[DocumentType] BETWEEN 0 AND 3");
+
+                            t.HasCheckConstraint("CK_SitterVerification_Status", "[Status] BETWEEN 1 AND 3");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -1915,6 +1984,17 @@ namespace PetSitting.Data.Migrations
                 {
                     b.HasOne("PetSitting.Models.PetSitterProfile", "SitterProfile")
                         .WithMany("Services")
+                        .HasForeignKey("SitterProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SitterProfile");
+                });
+
+            modelBuilder.Entity("PetSitting.Models.SitterVerification", b =>
+                {
+                    b.HasOne("PetSitting.Models.PetSitterProfile", "SitterProfile")
+                        .WithMany()
                         .HasForeignKey("SitterProfileId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();

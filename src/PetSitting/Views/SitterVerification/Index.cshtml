@@ -1,0 +1,88 @@
+@using PetSitting.Models
+@using PetSitting.Services.Portal
+@using PetSitting.ViewModels
+@model SitterVerificationViewModel
+@{
+    ViewData["Title"] = "Verification"; ViewData["PortalClass"] = "sitter-portal-page";
+    var (chip, label) = Model.Status switch
+    {
+        VerificationStatus.Verified => ("sv-chip-verified", "Verified"),
+        VerificationStatus.Pending => ("sv-chip-pending", "Waiting for a manager"),
+        VerificationStatus.Rejected => ("sv-chip-rejected", "Not approved"),
+        _ => ("sv-chip-none", "Not verified yet")
+    };
+    var lastRejected = Model.History.FirstOrDefault(h => h.Status == VerificationStatus.Rejected);
+    var canSend = Model.Profile is not null && Model.Status is VerificationStatus.NotSubmitted or VerificationStatus.Rejected;
+}
+@section Styles { <link rel="stylesheet" href="~/css/pet-account.css" asp-append-version="true" /><link rel="stylesheet" href="~/css/sitter-verification.css" asp-append-version="true" /> }
+<section class="account-page-heading"><div><h1>Verification</h1><p>Send a photo or PDF of your ID or a pet care certificate. A manager checks it, then pet owners see a Verified badge on your profile.</p></div><a class="btn btn-sm" asp-controller="SitterPortal" asp-action="Settings">Back to settings</a></section>
+@if (TempData["Success"] is string ok) { <div class="sv-notice" role="status">@ok</div> }
+@if (TempData["Error"] is string error) { <div class="sv-notice sv-notice-error" role="alert">@error</div> }
+<div class="sv-layout">
+    <section class="dash-card" aria-labelledby="sv-status-title">
+        <div class="card-heading"><h2 id="sv-status-title">Your status</h2><span class="sv-chip @chip">@label</span></div>
+        @switch (Model.Status)
+        {
+            case VerificationStatus.Verified:
+                <p class="portal-muted">You were verified on @Model.Profile!.VerifiedAtUtc?.ToLocalTime().ToString("d MMMM yyyy"). Pet owners see a Verified badge, and verified sitters are shown first.</p>
+                break;
+            case VerificationStatus.Pending:
+                <p class="portal-muted">Your proof is with a manager. You'll get a notification as soon as it's checked.</p>
+                break;
+            case VerificationStatus.Rejected:
+                <p class="portal-muted">Your last proof was not approved@(lastRejected?.DecisionReason is not null ? ": " : ".")@if (lastRejected?.DecisionReason is { } reason) { <strong>@reason</strong> } You can send new proof below.</p>
+                break;
+            default:
+                <p class="portal-muted">Verified sitters get a badge and are shown first to pet owners. It only takes a minute.</p>
+                break;
+        }
+        @if (Model.Profile is null)
+        {
+            <p class="portal-muted">First <a asp-controller="SitterPortal" asp-action="Settings">set up your sitter profile</a>, then come back here.</p>
+        }
+    </section>
+
+    @if (canSend)
+    {
+        <section class="dash-card" aria-labelledby="sv-send-title">
+            <div class="card-heading"><h2 id="sv-send-title">Send proof</h2></div>
+            <form asp-action="Submit" method="post" enctype="multipart/form-data" class="portal-form">
+                <label>Document
+                    <select asp-for="Form.DocumentType">
+                        @foreach (var type in Enum.GetValues<VerificationDocument>()) { <option value="@type">@SitterVerificationService.DocumentLabel(type)</option> }
+                    </select>
+                </label>
+                <label>Photo or PDF
+                    <input type="file" name="document" accept="image/jpeg,image/png,image/webp,application/pdf" required />
+                    <small class="portal-muted">JPEG, PNG, WebP or PDF, up to 5 MB. Make sure your name and photo are easy to read.</small>
+                </label>
+                <label>Note for the manager (optional)
+                    <textarea asp-for="Form.Note" rows="3" maxlength="500"></textarea>
+                </label>
+                <p>Only platform managers can see this file. It is deleted if you close your account.</p>
+                <div><button type="submit" class="btn btn-dark btn-sm">Send for review</button></div>
+            </form>
+        </section>
+    }
+</div>
+
+@if (Model.History.Count > 0)
+{
+    <section class="dash-card sv-history" aria-labelledby="sv-history-title">
+        <div class="card-heading"><h2 id="sv-history-title">What you sent</h2></div>
+        <div class="portal-table-scroll"><table class="portal-table">
+            <thead><tr><th scope="col">Sent</th><th scope="col">Document</th><th scope="col">Status</th><th scope="col">Manager's note</th></tr></thead>
+            <tbody>
+            @foreach (var h in Model.History)
+            {
+                <tr>
+                    <td>@h.SubmittedAtUtc.ToLocalTime().ToString("d MMM yyyy")</td>
+                    <td><a asp-action="Document" asp-route-id="@h.Id" target="_blank" rel="noopener">@SitterVerificationService.DocumentLabel(h.DocumentType)</a></td>
+                    <td>@(h.Status switch { VerificationStatus.Pending => "Waiting", VerificationStatus.Verified => "Approved", VerificationStatus.Rejected => "Not approved", _ => h.Status.ToString() })</td>
+                    <td>@(h.DecisionReason ?? "—")</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    </section>
+}
