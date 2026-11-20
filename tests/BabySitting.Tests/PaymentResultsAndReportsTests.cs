@@ -113,34 +113,45 @@ public sealed class PaymentResultsAndReportsTests
         finally { await Cleanup(db, d, link.Id); }
     }
 
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
+
     [SqlServerFact]
     public async Task The_overview_counts_new_bookings_money_and_reviews()
     {
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development"));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
-        var reports = scope.ServiceProvider.GetRequiredService<IManagerReportService>();
-        var before = await reports.ReportAsync(30);
+        // The report "today" is in 2091, so only this test's rows fall inside its period, even while other tests run.
+        var now = new DateTimeOffset(2091, 6, 15, 12, 0, 0, TimeSpan.Zero);
+        var then = now.AddDays(-2);
+        var reports = new ManagerReportService(db, new FixedClock(now));
         var d = Data.Create();
+        d.Customer.CreatedAtUtc = then; d.Sitter.CreatedAtUtc = then;
+        d.Request.CreatedAtUtc = then; d.Booking.CreatedAtUtc = then;
         d.Booking.Status = BookingStatus.Completed;
-        d.Booking.CompletedAtUtc = DateTimeOffset.UtcNow;
+        d.Booking.CompletedAtUtc = then;
         db.AddRange(d.Customer, d.Sitter, d.Profile, d.Request, d.Booking,
-            new Payment { Booking = d.Booking, PayerId = d.Customer.Id, Amount = 40, Status = PaymentStatus.Succeeded, ProviderTransactionId = "T-" + Guid.NewGuid().ToString("N")[..8], PaidAtUtc = DateTimeOffset.UtcNow },
-            new Review { Booking = d.Booking, ReviewerId = d.Customer.Id, Rating = 5 });
+            new Payment { Booking = d.Booking, PayerId = d.Customer.Id, Amount = 40, Status = PaymentStatus.Succeeded, ProviderTransactionId = "T-" + Guid.NewGuid().ToString("N")[..8], PaidAtUtc = then, CreatedAtUtc = then },
+            new Review { Booking = d.Booking, ReviewerId = d.Customer.Id, Rating = 5, CreatedAtUtc = then });
         await db.SaveChangesAsync();
         try
         {
-            var after = await reports.ReportAsync(30);
-            Assert.True(after.NewBookings >= before.NewBookings + 1);
-            Assert.True(after.CompletedBookings >= before.CompletedBookings + 1);
-            Assert.True(after.Revenue >= before.Revenue + 40);
-            Assert.True(after.Reviews >= before.Reviews + 1);
-            Assert.True(after.NewAccounts >= before.NewAccounts + 2);
-            Assert.True(after.Months[^1].Bookings >= 1);
-            Assert.Equal(6, after.Months.Count);
+            var report = await reports.ReportAsync(30);
+            Assert.Equal(1, report.NewRequests);
+            Assert.Equal(1, report.NewBookings);
+            Assert.Equal(1, report.CompletedBookings);
+            Assert.Equal(100, report.CompletionRate);
+            Assert.Equal(40, report.Revenue);
+            Assert.Equal(1, report.Reviews);
+            Assert.Equal(5, report.AverageRating);
+            Assert.Equal(2, report.NewAccounts);
+            var top = Assert.Single(report.TopSitters);
+            Assert.Equal(("Sitter Report", 1, 40m, 5.0), (top.Name, top.Completed, top.Earned, top.Rating));
+            Assert.Equal(6, report.Months.Count);
+            Assert.Equal(("Jun 2091", 1, 40m), (report.Months[^1].Label, report.Months[^1].Bookings, report.Months[^1].Revenue));
+            Assert.Equal(0, (await new ManagerReportService(db, new FixedClock(now.AddDays(40))).ReportAsync(30)).NewBookings);   // outside the period
             Assert.Equal(30, (await reports.ReportAsync(12345)).Days);                 // unknown periods fall back to 30 days
-            var csv = reports.ToCsv(after);
-            Assert.Contains("\"New bookings\"," + after.NewBookings, csv);
+            Assert.Contains("\"New bookings\",1", reports.ToCsv(report));
         }
         finally { await Cleanup(db, d, Guid.Empty); }
     }

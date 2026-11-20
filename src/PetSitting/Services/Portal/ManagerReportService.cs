@@ -10,7 +10,7 @@ public sealed record ReportCount(string Label, int Count);
 public sealed record ReportMonth(string Label, int Bookings, decimal Revenue);
 public sealed record ReportSitter(string Name, int Completed, decimal Earned, double? Rating);
 
-// Everything a platform manager sees on the overview page, for the chosen period (the last N days).
+// Everything a platform manager sees on the overview page, for the chosen period (the last N days up to now).
 public sealed record ManagerReport(int Days, DateTimeOffset From, DateTimeOffset To,
     int Customers, int Sitters, int Managers, int SwitchedOff, int NewAccounts,
     int NewRequests, IReadOnlyList<ReportCount> RequestsByStatus,
@@ -48,24 +48,24 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
                            group ur by r.Name into g select new { Role = g.Key, Count = g.Count() }).ToListAsync(ct);
         int RoleCount(string role) => roles.FirstOrDefault(r => r.Role == role)?.Count ?? 0;
         var switchedOff = await db.Users.CountAsync(u => !u.IsActive, ct);
-        var newAccounts = await db.Users.CountAsync(u => u.CreatedAtUtc >= from, ct);
+        var newAccounts = await db.Users.CountAsync(u => u.CreatedAtUtc >= from && u.CreatedAtUtc <= now, ct);
 
         // Requests and bookings created in the period, by status.
-        var requests = await db.PetCareRequests.Where(r => r.CreatedAtUtc >= from).GroupBy(r => r.Status)
+        var requests = await db.PetCareRequests.Where(r => r.CreatedAtUtc >= from && r.CreatedAtUtc <= now).GroupBy(r => r.Status)
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
-        var bookings = await db.PetBookings.Where(b => b.CreatedAtUtc >= from).GroupBy(b => b.Status)
+        var bookings = await db.PetBookings.Where(b => b.CreatedAtUtc >= from && b.CreatedAtUtc <= now).GroupBy(b => b.Status)
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
         int Booked(BookingStatus s) => bookings.FirstOrDefault(b => b.Key == s)?.Count ?? 0;
 
         // Money: what customers paid, what went back to them, and sitter payouts.
-        var revenue = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= from).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
-        var refunded = await db.Payments.Where(p => p.Status == PaymentStatus.Refunded && (p.PaidAtUtc ?? p.CreatedAtUtc) >= from).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
-        var failed = await db.Payments.CountAsync(p => p.Status == PaymentStatus.Failed && p.CreatedAtUtc >= from, ct);
-        var payoutsSent = await db.SitterPayouts.Where(p => p.Status == PayoutStatus.Paid && p.PaidAtUtc >= from).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        var revenue = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        var refunded = await db.Payments.Where(p => p.Status == PaymentStatus.Refunded && (p.PaidAtUtc ?? p.CreatedAtUtc) >= from && (p.PaidAtUtc ?? p.CreatedAtUtc) <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        var failed = await db.Payments.CountAsync(p => p.Status == PaymentStatus.Failed && p.CreatedAtUtc >= from && p.CreatedAtUtc <= now, ct);
+        var payoutsSent = await db.SitterPayouts.Where(p => p.Status == PayoutStatus.Paid && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
         var waiting = await db.SitterPayouts.Where(p => p.Status == PayoutStatus.Requested)
             .GroupBy(p => 1).Select(g => new { Count = g.Count(), Total = g.Sum(p => p.Amount) }).FirstOrDefaultAsync(ct);
 
-        var reviews = await db.Reviews.Where(r => r.CreatedAtUtc >= from)
+        var reviews = await db.Reviews.Where(r => r.CreatedAtUtc >= from && r.CreatedAtUtc <= now)
             .GroupBy(r => 1).Select(g => new { Count = g.Count(), Average = g.Average(r => (double)r.Rating) }).FirstOrDefaultAsync(ct);
 
         // Things that need a manager or show the system is healthy.
@@ -76,8 +76,8 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
 
         // The last six calendar months (UTC): new bookings and money received.
         var firstMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero).AddMonths(-(MonthsShown - 1));
-        var bookingDates = await db.PetBookings.Where(b => b.CreatedAtUtc >= firstMonth).Select(b => b.CreatedAtUtc).ToListAsync(ct);
-        var paid = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= firstMonth)
+        var bookingDates = await db.PetBookings.Where(b => b.CreatedAtUtc >= firstMonth && b.CreatedAtUtc <= now).Select(b => b.CreatedAtUtc).ToListAsync(ct);
+        var paid = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= firstMonth && p.PaidAtUtc <= now)
             .Select(p => new { p.PaidAtUtc, p.Amount }).ToListAsync(ct);
         var months = Enumerable.Range(0, MonthsShown).Select(i => firstMonth.AddMonths(i)).Select(m => new ReportMonth(
             m.ToString("MMM yyyy", CultureInfo.InvariantCulture),
@@ -85,7 +85,7 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
             paid.Where(p => p.PaidAtUtc!.Value.UtcDateTime.Year == m.Year && p.PaidAtUtc.Value.UtcDateTime.Month == m.Month).Sum(p => p.Amount))).ToList();
 
         // Sitters with the most completed bookings in the period.
-        var top = await db.PetBookings.Where(b => b.Status == BookingStatus.Completed && b.CompletedAtUtc >= from)
+        var top = await db.PetBookings.Where(b => b.Status == BookingStatus.Completed && b.CompletedAtUtc >= from && b.CompletedAtUtc <= now)
             .GroupBy(b => b.SitterProfileId).Select(g => new { Id = g.Key, Count = g.Count(), Earned = g.Sum(b => b.TotalAmount) })
             .OrderByDescending(x => x.Count).ThenByDescending(x => x.Earned).Take(5).ToListAsync(ct);
         var ids = top.Select(t => t.Id).ToList();
