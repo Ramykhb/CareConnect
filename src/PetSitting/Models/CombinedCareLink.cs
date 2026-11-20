@@ -14,5 +14,9 @@ public sealed class CombinedCareLink : Entity
     [MaxLength(20)] public string? PeerRequestStatus { get; set; }
     [MaxLength(20)] public string? PeerBookingStatus { get; set; }
     public DateTimeOffset? LastPeerUpdateAtUtc { get; set; }
+    // Latest payment result from the other app (Succeeded, Failed or Refunded) and the revision it came with.
+    [MaxLength(20)] public string? PeerPaymentStatus { get; set; }
+    public long PeerPaymentRevision { get; set; }
+    public DateTimeOffset? PeerPaymentAtUtc { get; set; }
     [MaxLength(300)] public string? CancellationIssue { get; set; }
 }

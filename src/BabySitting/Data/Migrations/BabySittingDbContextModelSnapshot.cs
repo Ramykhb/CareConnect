@@ -810,6 +810,16 @@ namespace BabySitting.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTimeOffset?>("PeerPaymentAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("PeerPaymentRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PeerPaymentStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<Guid?>("PeerRequestId")
                         .HasColumnType("uniqueidentifier");
 

@@ -45,7 +45,7 @@ public sealed class IntegrationStore(BabySittingDbContext db) : IIntegrationStor
             }
             if (meta.EventType == "Invited" && link.OriginPlatform == "BabySitting")
                 throw new InvalidDataException("Invitation has an invalid origin.");
-            if (meta.EventType == "State" && link.OriginPlatform == "BabySitting" && link.PeerRequestId is null)
+            if (meta.EventType is "State" or "Payment" && link.OriginPlatform == "BabySitting" && link.PeerRequestId is null)
                 throw new InvalidOperationException("Invitation acceptance has not arrived yet.");
             if (meta.EventType == "Joined" && message.InvitationHash != link.InvitationHash)
                 throw new InvalidDataException("Invalid invitation proof.");
@@ -55,6 +55,20 @@ public sealed class IntegrationStore(BabySittingDbContext db) : IIntegrationStor
                 throw new InvalidDataException("Invalid invitation acceptance.");
             if (message.PeerRequestId is { } target && link.LocalRequestId is { } local && target != local)
                 throw new InvalidDataException("Unexpected target request.");
+            // Payment results are kept apart from the general state, so an older state event never hides a payment.
+            var paymentUpdate = meta.EventType == "Payment" && message.Revision > link.PeerPaymentRevision;
+            if (paymentUpdate)
+            {
+                link.PeerPaymentStatus = message.PaymentStatus;
+                link.PeerPaymentRevision = message.Revision;
+                link.PeerPaymentAtUtc = DateTimeOffset.UtcNow;
+                if (link.LocalRequestId is { } paidRequestId &&
+                    await db.ChildcareRequests.Where(r => r.Id == paidRequestId).Select(r => r.CustomerId).SingleOrDefaultAsync(ct) is { } payer)
+                    db.Notifications.Add(new Notification { UserId = payer, Category = NotificationCategory.Payment,
+                        SourceKey = "combined-payment:" + meta.EventId, Title = "Pet care payment " + PaymentLabel(message.PaymentStatus),
+                        Body = "PetSitting: your payment for the linked booking " + PaymentLabel(message.PaymentStatus) + ".",
+                        RelativeUrl = "/CombinedCare" });
+            }
             if (message.Revision > link.PeerRevision)
             {
                 if (link.OriginPlatform != "BabySitting" && link.LocalRequestId is null)
@@ -81,7 +95,7 @@ public sealed class IntegrationStore(BabySittingDbContext db) : IIntegrationStor
                         CombinedCareOutbox.Enqueue(db, link, request, currentBooking?.Status.ToString(), "State");
                     }
                     if (message.RequestStatus == "Cancelled") await CancelLocalAsync(link, request, ct);
-                    if (request.CustomerId is { } customer)
+                    if (meta.EventType != "Payment" && request.CustomerId is { } customer)
                         db.Notifications.Add(new Notification { UserId = customer, Category = NotificationCategory.Booking,
                             SourceKey = "combined:" + meta.EventId, Title = "Combined care updated",
                             Body = "PetSitting: " + message.RequestStatus + (message.BookingStatus is null ? "" : " / " + message.BookingStatus),
@@ -131,7 +145,7 @@ public sealed class IntegrationStore(BabySittingDbContext db) : IIntegrationStor
         var m = message.Metadata;
         if (m is null || m.Source != "PetSitting" || m.Version != 1 || m.EventId == Guid.Empty || m.CorrelationId == Guid.Empty ||
             message.RequestId == Guid.Empty || message.Revision < 1 ||
-            m.EventType is not ("Invited" or "Joined" or "State") ||
+            m.EventType is not ("Invited" or "Joined" or "State" or "Payment") ||
             !Enum.TryParse<RequestStatus>(message.RequestStatus, out var status) || !Enum.IsDefined(status) || status.ToString() != message.RequestStatus ||
             message.BookingStatus is not null && (!Enum.TryParse<BookingStatus>(message.BookingStatus, out var booking) || !Enum.IsDefined(booking) || booking.ToString() != message.BookingStatus))
             throw new InvalidDataException("Unsupported combined-care event.");
@@ -139,5 +153,12 @@ public sealed class IntegrationStore(BabySittingDbContext db) : IIntegrationStor
             throw new InvalidDataException("Invalid invitation.");
         if (m.EventType == "Joined" && message.PeerRequestId is null)
             throw new InvalidDataException("Missing originating request.");
+        if (m.EventType == "Payment" ? message.PaymentStatus is not ("Succeeded" or "Failed" or "Refunded") : message.PaymentStatus is not null)
+            throw new InvalidDataException("Invalid payment result.");
     }
+
+    public static string PaymentLabel(string? status) => status switch
+    {
+        "Succeeded" => "received", "Failed" => "failed", "Refunded" => "refunded", _ => "updated"
+    };
 }

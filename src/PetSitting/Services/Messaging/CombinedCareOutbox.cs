@@ -7,13 +7,13 @@ namespace PetSitting.Services.Messaging;
 
 public static class CombinedCareOutbox
 {
-    public static void Enqueue(PetSittingDbContext db, CombinedCareLink link, PetCareRequest request, string? bookingStatus, string type)
+    public static void Enqueue(PetSittingDbContext db, CombinedCareLink link, PetCareRequest request, string? bookingStatus, string type, string? paymentStatus = null)
     {
         link.LocalRevision++;
         var metadata = new EventMetadata(Guid.NewGuid(), link.Id, type, 1, "PetSitting", DateTimeOffset.UtcNow);
         var message = new CombinedCareEvent(metadata, request.Id, link.PeerRequestId, link.LocalRevision,
             request.Status.ToString(), bookingStatus,
-            link.InvitationHash, link.InvitationExpiresAtUtc);
+            link.InvitationHash, link.InvitationExpiresAtUtc, paymentStatus);
         db.MessageOutboxEntries.Add(new MessageOutbox { Id = metadata.EventId, CorrelationId = link.Id,
             EventType = type, RoutingKey = "PetSitting".ToLowerInvariant() + ".combined." + type.ToLowerInvariant(),
             PayloadJson = JsonSerializer.Serialize(message) });
@@ -43,6 +43,24 @@ public static class CombinedCareOutbox
                 .OrderByDescending(b => b.Status is not (BookingStatus.Cancelled or BookingStatus.Rejected))
                 .ThenByDescending(b => b.CreatedAtUtc).FirstOrDefault();
             Enqueue(db, link, request, current?.Status.ToString(), "State");
+        }
+
+        // Payment results on a linked request are sent too, after the state change above so they get a higher revision.
+        var payments = db.ChangeTracker.Entries<Payment>()
+            .Where(e => (e.State == EntityState.Added || e.State == EntityState.Modified && e.Property(p => p.Status).IsModified) &&
+                e.Entity.Status is PaymentStatus.Succeeded or PaymentStatus.Failed or PaymentStatus.Refunded)
+            .Select(e => e.Entity).ToArray();
+        foreach (var payment in payments)
+        {
+            var booking = (PetBooking?)payment.Booking ?? db.PetBookings.Local.FirstOrDefault(b => b.Id == payment.BookingId)
+                ?? await db.PetBookings.SingleOrDefaultAsync(b => b.Id == payment.BookingId, ct);
+            if (booking is null) continue;
+            var link = db.CombinedCareLinks.Local.FirstOrDefault(l => l.LocalRequestId == booking.RequestId)
+                ?? await db.CombinedCareLinks.SingleOrDefaultAsync(l => l.LocalRequestId == booking.RequestId, ct);
+            if (link is null) continue;
+            var request = db.PetCareRequests.Local.FirstOrDefault(r => r.Id == booking.RequestId)
+                ?? await db.PetCareRequests.SingleAsync(r => r.Id == booking.RequestId, ct);
+            Enqueue(db, link, request, booking.Status.ToString(), "Payment", payment.Status.ToString());
         }
     }
 }
