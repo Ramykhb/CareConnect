@@ -40,8 +40,8 @@ public sealed class SitterVerificationService(BabySittingDbContext db, UserManag
     {
         var now = clock.GetUtcNow();
         var portal = await PortalData.LoadAsync(db, account, now, ct);
-        var history = portal.Profile is null ? [] : await Items(db.SitterVerifications.Where(v => v.SitterProfileId == portal.Profile.Id))
-            .OrderByDescending(v => v.SubmittedAtUtc).Take(20).ToListAsync(ct);
+        var history = portal.Profile is null ? [] : await Items(db.SitterVerifications.Where(v => v.SitterProfileId == portal.Profile.Id)
+            .OrderByDescending(v => v.CreatedAtUtc).Take(20)).ToListAsync(ct);
         return new() { Account = account, Profile = portal.Profile, Now = now, Unread = portal.Unread, IncomingRequestCount = portal.Incoming, History = history };
     }
 
@@ -91,8 +91,8 @@ public sealed class SitterVerificationService(BabySittingDbContext db, UserManag
             .Select(v => new VerificationFile(v.Bytes, v.ContentType, v.FileName)).SingleOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<VerificationItem>> ListAsync(VerificationStatus? status, CancellationToken ct = default) =>
-        await Items(db.SitterVerifications.Where(v => status == null || v.Status == status))
-            .OrderBy(v => v.Status == VerificationStatus.Pending ? 0 : 1).ThenByDescending(v => v.SubmittedAtUtc).Take(200).ToListAsync(ct);
+        await Items(db.SitterVerifications.Where(v => status == null || v.Status == status)
+            .OrderBy(v => v.Status == VerificationStatus.Pending ? 0 : 1).ThenByDescending(v => v.CreatedAtUtc).Take(200)).ToListAsync(ct);
 
     public async Task<PortalWriteResult> DecideAsync(Guid managerId, Guid id, bool approve, string? reason, string? version, CancellationToken ct = default)
     {
