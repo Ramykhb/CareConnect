@@ -19,6 +19,9 @@ builder.Services.AddHostedService<PetSitting.Services.Bookings.BookingExpiryServ
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<PetSitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<PetSitting.Services.Portal.IPayoutReviewService, PetSitting.Services.Portal.PayoutReviewService>();
+builder.Services.Configure<PetSitting.Services.Matching.AiMatchingOptions>(builder.Configuration.GetSection(PetSitting.Services.Matching.AiMatchingOptions.Section));
+builder.Services.AddHttpClient(PetSitting.Services.Matching.SitterMatchingService.HttpClientName);
+builder.Services.AddScoped<PetSitting.Services.Matching.ISitterMatchingService, PetSitting.Services.Matching.SitterMatchingService>();
 builder.Services.AddScoped<PetSitting.Services.Portal.IManagerReportService, PetSitting.Services.Portal.ManagerReportService>();
 builder.Services.AddScoped<PetSitting.Services.Accounts.IManagerUserService, PetSitting.Services.Accounts.ManagerUserService>();
 builder.Services.AddScoped<PetSitting.Services.Requests.IOfferChoiceService, PetSitting.Services.Requests.OfferChoiceService>();

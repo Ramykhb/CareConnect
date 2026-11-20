@@ -145,6 +145,28 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
     {
         model.Pets = await db.Pets.AsNoTracking().Where(p => p.OwnerId == OwnerId).OrderBy(p => p.Name).ToListAsync();
         model.Sitters = await EligibleSitters(model.Form);
+        if (model.Step >= 5 && model.Sitters.Count > 0) await RankSitters(model);
+    }
+
+    // Orders the eligible sitters by match quality and keeps a short reason for each (#1 AI sitter matching).
+    private async Task RankSitters(OwnerRequestWizard model)
+    {
+        var ids = model.Sitters.Select(p => p.Id).ToArray();
+        var stats = await db.Reviews.AsNoTracking().Where(r => ids.Contains(r.Booking.SitterProfileId) && r.ReviewerId == r.Booking.CustomerId)
+            .GroupBy(r => r.Booking.SitterProfileId).Select(g => new { g.Key, Count = g.Count(), Average = g.Average(r => (double)r.Rating) }).ToDictionaryAsync(g => g.Key);
+        var completed = await db.PetBookings.AsNoTracking().Where(b => ids.Contains(b.SitterProfileId) && b.Status == BookingStatus.Completed)
+            .GroupBy(b => b.SitterProfileId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count);
+        var times = model.Form.Times();
+        var hours = times is { } t ? Math.Max(0, (t.End - t.Start).TotalHours) : 0;
+        var request = new Services.Matching.MatchRequest(model.Form.ServiceType?.ToString() ?? "", hours, model.Form.Budget, null, null);
+        var candidates = model.Sitters.Select(p => new Services.Matching.MatchCandidate(p.Id, p.YearsOfExperience, p.HourlyRate, p.VerificationStatus == VerificationStatus.Verified,
+            stats.TryGetValue(p.Id, out var s) ? s.Average : null, stats.TryGetValue(p.Id, out var s2) ? s2.Count : 0, completed.GetValueOrDefault(p.Id), false)).ToList();
+        var matcher = HttpContext.RequestServices.GetRequiredService<Services.Matching.ISitterMatchingService>();
+        var ranked = await matcher.RankAsync(request, candidates, HttpContext.RequestAborted);
+        var byId = model.Sitters.ToDictionary(p => p.Id);
+        model.Sitters = ranked.Select(r => byId[r.Id]).ToArray();
+        model.MatchReasons = ranked.ToDictionary(r => r.Id, r => r.Reason);
+        model.MatchedByAi = ranked.Any(r => r.FromAi);
     }
 
     private async Task<IReadOnlyList<PetSitterProfile>> EligibleSitters(OwnerRequestForm form)

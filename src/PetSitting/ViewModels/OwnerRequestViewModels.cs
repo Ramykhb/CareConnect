@@ -48,6 +48,9 @@ public sealed class OwnerRequestWizard
     public OwnerRequestForm Form { get; set; } = new();
     public IReadOnlyList<Pet> Pets { get; set; } = [];
     public IReadOnlyList<PetSitterProfile> Sitters { get; set; } = [];
+    // Why each sitter is suggested (by sitter id), and whether the order came from the AI.
+    public IReadOnlyDictionary<Guid, string> MatchReasons { get; set; } = new Dictionary<Guid, string>();
+    public bool MatchedByAi { get; set; }
     public DateTimeOffset? SavedAt { get; set; }
     public static readonly string[] Steps = ["Pet", "Service", "Date & time", "Location", "Details & budget", "Review"];
 }
