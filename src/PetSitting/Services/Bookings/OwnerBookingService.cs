@@ -51,7 +51,7 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
         var ratings = item.Sitter is null ? [] : await db.Reviews.AsNoTracking().Where(r => r.Booking.SitterProfileId == item.Sitter.Id && r.ReviewerId == r.Booking.CustomerId && r.Booking.Status == BookingStatus.Completed).Select(r => r.Rating).ToArrayAsync();
         return new() { Item = item, Draft = draft, ReviewCount = ratings.Length, AverageRating = ratings.Length == 0 ? null : ratings.Average() };
     }
-    public static bool CanPay(PetBooking booking) => booking.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(booking);
+    public static bool CanPay(PetBooking booking, DateTimeOffset? now = null) => booking.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(booking) && (now ?? DateTimeOffset.UtcNow) < booking.StartsAtUtc;
     public static bool CanCancel(PetCareRequest request, PetBooking? booking, DateTimeOffset now) =>
         booking is null ? request.Status == RequestStatus.Open && request.StartsAtUtc > now
         : request.Status is not (RequestStatus.Cancelled or RequestStatus.Completed) && booking.Status is BookingStatus.Pending or BookingStatus.AwaitingPayment or BookingStatus.Confirmed
@@ -99,7 +99,7 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
             var booking = await db.PetBookings.Include(b => b.Payments).Include(b => b.SitterProfile).Include(b => b.Request).SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner);
             if (booking is null) return new(false, "Booking not found.", true);
             if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(true, "This demo payment was already recorded.");
-            if (!CanPay(booking)) return new(false, "Only an accepted booking awaiting payment can be paid.");
+            if (!CanPay(booking, clock.GetUtcNow())) return new(false, "Payment is available only for accepted care before its scheduled start.");
             if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details before recording payment.");
             var amount = booking.TotalAmount - BookingRules.Paid(booking);
             var payment = new Payment { BookingId = booking.Id, PayerId = owner, Amount = amount, Currency = booking.Currency,

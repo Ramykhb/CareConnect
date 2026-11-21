@@ -13,6 +13,16 @@ namespace BabySitting.Tests;
 public sealed class ExpiryAndChecklistTests
 {
     [Fact]
+    public void Payment_closes_at_the_start_even_before_the_expiry_job_runs()
+    {
+        var start = new DateTimeOffset(2030, 1, 15, 12, 0, 0, TimeSpan.Zero);
+        var booking = new BabysittingBooking { Status = BookingStatus.AwaitingPayment, TotalAmount = 20, StartsAtUtc = start };
+        Assert.True(ParentPaymentService.CanPay(booking, start.AddTicks(-1)));
+        Assert.False(ParentPaymentService.CanPay(booking, start));
+        Assert.False(ParentPaymentService.CanPay(booking, start.AddMinutes(1)));
+    }
+
+    [Fact]
     public void Care_cannot_start_after_the_end_time()
     {
         var now = DateTimeOffset.UtcNow;
@@ -69,6 +79,9 @@ public sealed class ExpiryAndChecklistTests
         var requestIds = new[] { open.Id, future.Id, unpaidRequest.Id, noShowRequest.Id, upcomingRequest.Id };
         try
         {
+            var latePayment = await new ParentPaymentService(db, TimeProvider.System).PayAsync(customer.Id, unpaid.Id, Guid.NewGuid(), Convert.ToBase64String(unpaid.RowVersion));
+            Assert.False(latePayment.Succeeded);
+            Assert.False(await db.Payments.AnyAsync(p => p.BookingId == unpaid.Id));
             Assert.Equal(3, await BookingExpiryService.RunAsync(db, now, customerId: customer.Id));
             db.ChangeTracker.Clear();
             var requests = await db.ChildcareRequests.AsNoTracking().Where(r => requestIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Status);
