@@ -3,4 +3,5 @@
 <body class="careconnect-public"><a class="auth-skip" href="#main-content">Skip to content</a><partial name="_BabyIcons" />
 <div class="public-shell"><header class="public-topbar"><a class="auth-brand" asp-area="" asp-controller="Home" asp-action="Index"><span class="brand-icon"><svg><use href="#icon-family" /></svg></span>CareConnect</a><nav aria-label="Main navigation">@if (!User.IsInRole(Roles.PlatformManager)) { <a asp-area="" asp-controller="Home" asp-action="Index">Home</a><a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a> }<partial name="_LoginPartial" /></nav></header>
 <main id="main-content" class="public-card identity-content">@RenderBody()</main><footer class="public-footer">CareConnect · Thoughtful care, every step.</footer></div>
-<script src="~/lib/jquery/dist/jquery.min.js"></script><script src="~/js/identity.js" asp-append-version="true"></script>@await RenderSectionAsync("Scripts", required: false)</body></html>
+<script src="~/lib/jquery/dist/jquery.min.js"></script><script src="~/js/identity.js" asp-append-version="true"></script>@await RenderSectionAsync("Scripts", required: false)<partial name="/Views/Shared/_RequestAssistant.cshtml" />
+</body></html>

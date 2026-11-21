@@ -1,3 +1,4 @@
+using CareConnect.Ai;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
@@ -8,9 +9,20 @@ using BabySitting.Services.Messaging;
 using CareConnect.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddDevelopmentAiEnvironment();
 builder.Services.AddControllersWithViews();
 // Live notifications (WatchWise-style): SignalR hub + EF Core hook that pushes saved notifications.
 builder.Services.AddSignalR();
+builder.Services.Configure<CareConnect.Ai.GroqAssistantOptions>(builder.Configuration.GetSection("Ai"));
+builder.Services.PostConfigure<CareConnect.Ai.GroqAssistantOptions>(o =>
+{
+    if (string.IsNullOrWhiteSpace(o.ApiKey)) o.ApiKey = builder.Configuration["GROQ_API_KEY"];
+});
+builder.Services.AddHttpClient<CareConnect.Ai.IGroqDraftClient, CareConnect.Ai.GroqDraftClient>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<CareConnect.Ai.AssistantThrottle>();
+builder.Services.AddScoped<CareConnect.Ai.IRequestAssistantService, BabySitting.Services.RequestAssistant.RequestAssistantService>();
+builder.Services.AddHostedService<BabySitting.Services.RequestAssistant.AssistantCleanupService>();
 builder.Services.AddScoped<BabySitting.Services.Accounts.IAccountClosureService, BabySitting.Services.Accounts.AccountClosureService>();
 builder.Services.AddScoped<BabySitting.Services.Chat.IChatService, BabySitting.Services.Chat.ChatService>();
 builder.Services.AddHostedService<BabySitting.Services.Chat.MessageCleanupService>();
@@ -107,11 +119,24 @@ app.Use(async (context, next) =>
         context.Response.Headers.CacheControl = "no-store";
     await next(context);
 });
+// WebSocket handshakes are not protected by CORS; reject foreign browser origins explicitly.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/hubs/request-assistant") && context.Request.Headers.Origin is { Count: > 0 } origin &&
+        (!Uri.TryCreate(origin.ToString(), UriKind.Absolute, out var uri) ||
+         !string.Equals(uri.GetLeftPart(UriPartial.Authority), context.Request.Scheme + "://" + context.Request.Host, StringComparison.OrdinalIgnoreCase)))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+    await next(context);
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseRateLimiter();
 BabySitting.Services.Localization.UserLanguage.UseUserLanguage(app);
 app.UseAuthorization();
+app.MapHub<BabySitting.Services.RequestAssistant.RequestAssistantHub>(BabySitting.Services.RequestAssistant.RequestAssistantHub.Path);
 app.MapRazorPages();
 app.MapStaticAssets();
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });

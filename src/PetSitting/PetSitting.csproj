@@ -9,6 +9,7 @@
     <EmbeddedResource Include="wwwroot/fonts/manrope-600.ttf" LogicalName="PetSitting.ReceiptFonts.manrope-600.ttf" />
     <ProjectReference Include="../CareConnect.Messaging/CareConnect.Messaging.csproj" />
     <ProjectReference Include="../CareConnect.Contracts/CareConnect.Contracts.csproj" />
+    <ProjectReference Include="../CareConnect.Ai/CareConnect.Ai.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
