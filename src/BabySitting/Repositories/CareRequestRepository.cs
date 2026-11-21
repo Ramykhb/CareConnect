@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using BabySitting.Data;
 using BabySitting.Models;
+using BabySitting.ViewModels;
 
 namespace BabySitting.Repositories;
 
@@ -61,6 +63,24 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
             db.Notifications.Add(new Notification { UserId = sitter, Category = NotificationCategory.Request,
                 SourceKey = "offer-changed:" + request.Id + ":" + now.UtcTicks, Title = "A request you made an offer on changed",
                 Body = request.Title + " · " + "The parent changed this request (price, dates or details). Review it and send your offer again if it still works for you.", RelativeUrl = "/SitterRequests?id=" + request.Id, CreatedAtUtc = now });
+        // Keep the wizard's submission snapshot current for status pages and "book again" (same as PetSitting),
+        // without breaking the wizard's submitted-request link.
+        var draft = await db.ParentRequestDrafts.SingleOrDefaultAsync(d => d.SubmittedRequestId == id && d.CustomerId == parentId);
+        if (draft is not null)
+        {
+            var snapshot = JsonSerializer.Deserialize<ParentRequestForm>(draft.DataJson) ?? new();
+            var start = DashboardViewModel.Local(request.StartsAtUtc).DateTime; var end = DashboardViewModel.Local(request.EndsAtUtc).DateTime;
+            snapshot.ServiceType = request.ServiceType; snapshot.City = request.City; snapshot.Instructions = request.Description;
+            snapshot.StartDate = DateOnly.FromDateTime(start); snapshot.StartTime = TimeOnly.FromDateTime(start);
+            snapshot.EndDate = DateOnly.FromDateTime(end); snapshot.EndTime = TimeOnly.FromDateTime(end);
+            snapshot.Budget = request.Budget; snapshot.NumberOfChildren = request.NumberOfChildren;
+            snapshot.YoungestChildAgeYears = request.YoungestChildAgeYears; snapshot.OldestChildAgeYears = request.OldestChildAgeYears;
+            if (snapshot.Address != (request.ServiceAddress ?? ""))
+            {
+                snapshot.StreetAddress = request.ServiceAddress; snapshot.Area = null; snapshot.Building = null; snapshot.AccessNotes = null;
+            }
+            draft.DataJson = JsonSerializer.Serialize(snapshot); draft.UpdatedAtUtc = now;
+        }
         try
         {
             await db.SaveChangesAsync();

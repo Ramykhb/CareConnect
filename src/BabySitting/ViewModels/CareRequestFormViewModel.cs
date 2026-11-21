@@ -67,6 +67,9 @@ public class CareRequestFormViewModel : IValidatableObject
     // Cross-field rules checked by ModelState.IsValid together with the attributes above.
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        // Babysitting happens at the family's home, so the sitter needs the address (the wizard requires it too).
+        if (string.IsNullOrWhiteSpace(ServiceAddress))
+            yield return new ValidationResult("Enter the home address where care is needed.", [nameof(ServiceAddress)]);
         if (OldestChildAgeYears < YoungestChildAgeYears)
             yield return new ValidationResult("The oldest child can't be younger than the youngest child.", [nameof(OldestChildAgeYears)]);
         if (NumberOfChildren == 1 && OldestChildAgeYears != YoungestChildAgeYears)

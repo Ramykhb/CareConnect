@@ -166,6 +166,48 @@ public sealed class ReviewFixesTests
         }
     }
 
+    [Fact]
+    public void The_edit_form_requires_the_home_address()
+    {
+        var form = new CareRequestFormViewModel { NumberOfChildren = 1, YoungestChildAgeYears = 3, OldestChildAgeYears = 3, ServiceAddress = "  " };
+        Assert.Contains(form.Validate(new ValidationContext(form)), r => r.MemberNames.Contains(nameof(form.ServiceAddress)));
+        form.ServiceAddress = "Street 1, Beirut";
+        Assert.DoesNotContain(form.Validate(new ValidationContext(form)), r => r.MemberNames.Contains(nameof(form.ServiceAddress)));
+    }
+
+    [SqlServerFact]
+    public async Task Editing_a_request_updates_the_saved_wizard_copy_used_by_book_again()
+    {
+        await using var factory = Factory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
+        var parent = new ApplicationUser { Id = Guid.NewGuid(), FirstName = "Pam", LastName = "ReviewFix", UserName = "reviewfix-" + Guid.NewGuid().ToString("N") };
+        var start = DateTimeOffset.UtcNow.AddDays(5);
+        var request = new ChildcareRequest { Customer = parent, Title = "Evening care", Description = "Old notes", City = "Beirut", ServiceAddress = "Old street",
+            StartsAtUtc = start, EndsAtUtc = start.AddHours(4), Budget = 100, Status = RequestStatus.Open, NumberOfChildren = 1, YoungestChildAgeYears = 3, OldestChildAgeYears = 3 };
+        var draft = new ParentRequestDraft { Customer = parent, SubmittedRequest = request, Step = 6,
+            DataJson = System.Text.Json.JsonSerializer.Serialize(new ParentRequestForm { City = "Beirut", StreetAddress = "Old street", Instructions = "Old notes", Budget = 100 }) };
+        db.AddRange(parent, request, draft);
+        await db.SaveChangesAsync();
+        try
+        {
+            db.ChangeTracker.Clear();
+            var version = (await db.ChildcareRequests.AsNoTracking().SingleAsync(r => r.Id == request.Id)).RowVersion;
+            Assert.Equal(CareRequestWriteResult.Saved, await scope.ServiceProvider.GetRequiredService<ICareRequestRepository>().UpdateAsync(parent.Id, request.Id, version, r =>
+            { r.City = "Jounieh"; r.ServiceAddress = "New street"; r.Description = "New notes"; r.Budget = 60; r.NumberOfChildren = 2; r.OldestChildAgeYears = 6; }, DateTimeOffset.UtcNow));
+            db.ChangeTracker.Clear();
+            var saved = System.Text.Json.JsonSerializer.Deserialize<ParentRequestForm>((await db.ParentRequestDrafts.AsNoTracking().SingleAsync(d => d.Id == draft.Id)).DataJson)!;
+            Assert.Equal(("Jounieh", "New street", "New notes", 60m, 2, 6), (saved.City, saved.StreetAddress, saved.Instructions, saved.Budget!.Value, saved.NumberOfChildren, saved.OldestChildAgeYears));
+        }
+        finally
+        {
+            db.ChangeTracker.Clear();
+            await db.ParentRequestDrafts.Where(d => d.CustomerId == parent.Id).ExecuteDeleteAsync();
+            await db.ChildcareRequests.Where(r => r.Id == request.Id).ExecuteDeleteAsync();
+            await db.Users.Where(u => u.Id == parent.Id).ExecuteDeleteAsync();
+        }
+    }
+
     private static string Hidden(string html, string name) =>
         WebUtility.HtmlDecode(Regex.Match(html, $"<input(?=[^>]*name=\"{name}\")(?=[^>]*value=\"([^\"]*)\")[^>]*>").Groups[1].Value);
 }

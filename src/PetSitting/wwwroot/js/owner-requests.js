@@ -46,8 +46,9 @@
             pending = (async () => {
                 try {
                     const response = await fetch(form.dataset.autosaveUrl, { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                    // A redirect (to the login page) or an HTML error page is not a draft result.
-                    if (response.redirected) throw new Error('Draft not saved: you were signed out. Sign in again in a new tab, then keep editing.');
+                    // Signed out: background requests get 401 (or a redirect to the login page). 400 means the page's security token expired.
+                    if (response.status === 401 || response.redirected) throw new Error('Draft not saved: you were signed out. Sign in again in a new tab, then keep editing.');
+                    if (response.status === 400) throw new Error('Draft not saved: this page has expired. Reload the page to keep editing.');
                     const result = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : {};
                     if (!response.ok) {
                         if (response.status === 409) conflicted = true;
