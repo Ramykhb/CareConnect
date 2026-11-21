@@ -106,6 +106,8 @@ public sealed class AccountClosureService(PetSittingDbContext db, UserManager<Ap
                 var update = await users.UpdateAsync(user);
                 if (!update.Succeeded) return new(false, string.Join(" ", update.Errors.Select(e => e.Description)));
                 await users.UpdateSecurityStampAsync(user); // signs the person out everywhere
+                // Free the Google login too, so the person can sign up again with Google later.
+                foreach (var login in await users.GetLoginsAsync(user)) await users.RemoveLoginAsync(user, login.LoginProvider, login.ProviderKey);
                 await db.RequestAssistantConversations.Where(c => c.UserId == user.Id).ExecuteDeleteAsync(ct);
                 await db.AccountPhotos.Where(p => p.UserId == user.Id).ExecuteDeleteAsync(ct);
                 await db.SitterVerifications.Where(v => v.SitterProfile.UserId == user.Id).ExecuteDeleteAsync(ct);

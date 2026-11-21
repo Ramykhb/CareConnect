@@ -46,7 +46,9 @@
             pending = (async () => {
                 try {
                     const response = await fetch(form.dataset.autosaveUrl, { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                    const result = await response.json();
+                    // A redirect (to the login page) or an HTML error page is not a draft result.
+                    if (response.redirected) throw new Error('Draft not saved: you were signed out. Sign in again in a new tab, then keep editing.');
+                    const result = (response.headers.get('content-type') || '').includes('application/json') ? await response.json() : {};
                     if (!response.ok) {
                         if (response.status === 409) conflicted = true;
                         throw new Error(result.message || 'Draft not saved. Check your entries and try again.');
@@ -91,6 +93,14 @@
             await pending;
             navigating = true;
             form.requestSubmit(button);
+        });
+        form.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement) || ['checkbox', 'radio', 'button', 'submit', 'reset', 'file'].includes(target.type)) return;
+            event.preventDefault();
+            const primary = form.querySelector('button[name="command"][value="next"], button[name="command"][value="submit"]');
+            if (primary && !primary.disabled) form.requestSubmit(primary);
         });
         window.addEventListener('beforeunload', event => { if (dirty && !navigating) { event.preventDefault(); event.returnValue = ''; } });
 

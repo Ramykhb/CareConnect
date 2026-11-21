@@ -62,16 +62,22 @@
     connection.onreconnected(sync);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 
+    // Only one send at a time: a double click (or Enter then click) must not send the same message twice.
+    const sendButton = form.querySelector('button[type="submit"]');
+    let sending = false;
     form.addEventListener('submit', event => {
-        if (connection.state !== signalR.HubConnectionState.Connected) return; // fall back to the normal form post
+        if (sending) { event.preventDefault(); return; }
+        if (connection.state !== signalR.HubConnectionState.Connected) { sending = true; return; } // fall back to the normal form post
         event.preventDefault();
         const body = input.value.trim();
         if (!body) return;
+        sending = true;
         input.disabled = true;
+        if (sendButton) sendButton.disabled = true;
         connection.invoke('Send', bookingId, body)
             .then(() => { input.value = ''; status.textContent = ''; })
             .catch(err => { status.textContent = err?.message?.replace(/^.*HubException: /, '') || 'Message not sent. Try again.'; })
-            .finally(() => { input.disabled = false; input.focus(); });
+            .finally(() => { sending = false; input.disabled = false; if (sendButton) sendButton.disabled = false; input.focus(); });
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
 

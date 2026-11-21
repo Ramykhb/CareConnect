@@ -3,7 +3,11 @@
 @{ ViewData["Title"] = "Delete account"; }
 <h1>Delete account</h1>
 @if (Model.StatusMessage is not null) { <p class="alert alert-info" role="status">@Model.StatusMessage</p> }
-@if (Model.Pending is { } pending)
+@if (Model.IsManager)
+{
+    <p class="alert alert-info" role="status">Manager accounts can't be deleted here, so the platform is never left without a manager. If you no longer need this account, ask another manager to switch it off on the Users page.</p>
+}
+else if (Model.Pending is { } pending)
 {
     <div class="alert alert-warning">
         <strong>Closure requested</strong> on @pending.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm"). A platform manager will review it.

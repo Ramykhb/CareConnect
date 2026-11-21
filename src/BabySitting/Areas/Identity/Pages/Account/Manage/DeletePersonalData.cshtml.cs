@@ -14,6 +14,8 @@ public sealed class DeletePersonalDataModel(UserManager<ApplicationUser> users, 
 {
     // Set when deletion is blocked by care records: the page then offers a closure request instead.
     public bool NeedsManager { get; private set; }
+    // Platform managers may not delete themselves: the platform could be left with no manager at all.
+    public bool IsManager => User.IsInRole(Roles.PlatformManager);
     public AccountClosureRequest? Pending { get; private set; }
     [BindProperty] public string? Reason { get; set; }
     [TempData] public string? StatusMessage { get; set; }
@@ -31,6 +33,7 @@ public sealed class DeletePersonalDataModel(UserManager<ApplicationUser> users, 
     }
     public async Task<IActionResult> OnPostAsync()
     {
+        if (IsManager) return Page();
         if (!ModelState.IsValid) return Page();
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
@@ -63,6 +66,7 @@ public sealed class DeletePersonalDataModel(UserManager<ApplicationUser> users, 
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
+        if (IsManager) return Page();
         ModelState.Remove("Reason");
         if (!ModelState.IsValid) { NeedsManager = true; return Page(); }
         if (!await users.CheckPasswordAsync(user, Input.Password))

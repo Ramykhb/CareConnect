@@ -70,6 +70,9 @@ public sealed class ManagerUserService(PetSittingDbContext db, UserManager<Appli
         if (user is null) return new(false, "User not found.", true);
         if (user.ConcurrencyStamp != version) return new(false, "This account changed. Refresh the list and try again.");
         if (user.IsActive == active) return new(true, active ? "This account is already active." : "This account is already switched off.");
+        // A closed account was anonymised and locked for good; switching it on would not let anyone sign in.
+        if (active && await db.AccountClosureRequests.AnyAsync(c => c.UserId == user.Id && c.Status == ClosureStatus.Approved, ct))
+            return new(false, "This account was closed at the person's request and can't be switched back on. They can sign up again with a new account.");
         if (!active)
         {
             if (user.Id == managerId) return new(false, "You can't switch off your own account.");
