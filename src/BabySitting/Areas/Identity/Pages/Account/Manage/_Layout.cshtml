@@ -1,6 +1,8 @@
 @using BabySitting.Models
 @{
-    Layout = "/Views/Shared/_PortalLayout.cshtml";
+    var manager = User.IsInRole(Roles.PlatformManager);
+    // Managers cannot use the owner or sitter portal pages, so they get the plain layout with the manager tabs.
+    Layout = manager ? "/Views/Shared/_Layout.cshtml" : "/Views/Shared/_PortalLayout.cshtml";
     ViewData["PortalClass"] = "identity-settings-page";
     ViewData["Breadcrumb"] = "Account & security";
     var page = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
@@ -9,8 +11,9 @@
     var links = new[] { ("Index", "Profile", "user"), ("Email", "Email address", "mail"), ("ChangePassword", "Password", "lock"),
         ("ExternalLogins", "Linked accounts", "shield"), ("TwoFactorAuthentication", "Two-factor authentication", "shield"), ("PersonalData", "Personal data", "user") };
 }
+@if (manager) { <div class="py-4"><partial name="_ManagerNav" /></div> }
 <div class="identity-settings">
-    <header class="identity-heading"><div><p>YOUR ACCOUNT, YOUR PEACE OF MIND</p><h1>Account &amp; security</h1><span>A few simple settings to keep your account feeling like you.</span></div><a class="btn btn-light btn-sm" href="@profileUrl"><svg class="line-icon"><use href="#icon-back" /></svg>Back to settings</a></header>
+    <header class="identity-heading"><div><p>YOUR ACCOUNT, YOUR PEACE OF MIND</p><h1>Account &amp; security</h1><span>A few simple settings to keep your account feeling like you.</span></div>@if (!manager) { <a class="btn btn-light btn-sm" href="@profileUrl"><svg class="line-icon"><use href="#icon-back" /></svg>Back to settings</a> }</header>
     <div class="identity-settings-grid"><nav class="identity-navigation" aria-label="Account settings">
         @foreach (var (key, label, icon) in links)
         {

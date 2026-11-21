@@ -1,8 +1,9 @@
 @* Links between the platform manager pages. *@
 <nav class="nav nav-tabs mb-3" aria-label="Manager pages">
-    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ManagerReports" ? "active" : "")" asp-controller="ManagerReports" asp-action="Index">Overview</a>
-    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AccountClosures" ? "active" : "")" asp-controller="AccountClosures" asp-action="Index">Account closures</a>
-    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payouts" ? "active" : "")" asp-controller="Payouts" asp-action="Index">Payouts</a>
-    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "SitterVerifications" ? "active" : "")" asp-controller="SitterVerifications" asp-action="Index">Verifications</a>
-    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ManagerUsers" ? "active" : "")" asp-controller="ManagerUsers" asp-action="Index">Users</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ManagerReports" ? "active" : "")" asp-area="" asp-controller="ManagerReports" asp-action="Index">Overview</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AccountClosures" ? "active" : "")" asp-area="" asp-controller="AccountClosures" asp-action="Index">Account closures</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payouts" ? "active" : "")" asp-area="" asp-controller="Payouts" asp-action="Index">Payouts</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "SitterVerifications" ? "active" : "")" asp-area="" asp-controller="SitterVerifications" asp-action="Index">Verifications</a>
+    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ManagerUsers" ? "active" : "")" asp-area="" asp-controller="ManagerUsers" asp-action="Index">Users</a>
+    <a class="nav-link @((ViewContext.RouteData.Values["page"]?.ToString() ?? "").StartsWith("/Account/Manage") ? "active" : "")" asp-area="Identity" asp-page="/Account/Manage/Index">Settings</a>
 </nav>
