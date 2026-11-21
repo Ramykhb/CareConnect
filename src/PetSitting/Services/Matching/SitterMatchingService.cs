@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace PetSitting.Services.Matching;
 
 // What the matcher knows about a sitter. Only numbers and flags: never names, emails, addresses or notes.
-public sealed record MatchCandidate(Guid Id, int Experience, decimal HourlyRate, bool Verified, double? Rating, int Reviews, int Completed, bool FirstAid = false);
+public sealed record MatchCandidate(Guid Id, int Experience, decimal HourlyRate, bool Verified, double? Rating, int Reviews, int Completed, bool FirstAid = false, string Currency = "USD");
 // What the matcher knows about the request.
 public sealed record MatchRequest(string Service, double Hours, decimal? Budget, int? YoungestChildAge = null, int? OldestChildAge = null);
 public sealed record SitterMatch(Guid Id, double Score, string Reason, bool FromAi);
@@ -70,7 +70,7 @@ public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMa
         if (c.Rating is { } rating && c.Reviews > 0) score += rating * 8 * Math.Min(1, c.Reviews / 3.0);
         score += Math.Min(20, c.Completed * 2);
         score += Math.Min(15, c.Experience * 1.5);
-        if (r.Budget is { } budget && budget > 0 && r.Hours > 0)
+        if (c.Currency == "USD" && r.Budget is { } budget && budget > 0 && r.Hours > 0)
         {
             var cost = c.HourlyRate * (decimal)r.Hours;
             score += cost <= budget ? 15 : -Math.Min(25, (double)((cost - budget) / budget) * 40);
@@ -87,7 +87,8 @@ public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMa
         if (c.Completed > 0) parts.Add(c.Completed + " completed booking" + (c.Completed == 1 ? "" : "s"));
         if (c.FirstAid) parts.Add("first aid trained");
         if (c.Experience > 0) parts.Add(c.Experience + " yrs experience");
-        if (r.Budget is { } budget && budget > 0 && r.Hours > 0 && c.HourlyRate * (decimal)r.Hours <= budget) parts.Add("fits your budget");
+        if (c.Currency == "USD" && r.Budget is { } budget && budget > 0 && r.Hours > 0 && c.HourlyRate * (decimal)r.Hours <= budget) parts.Add("fits your budget");
+        if (c.Currency != "USD") parts.Add("rate in " + c.Currency + "; compare currency before booking");
         return parts.Count == 0 ? "Available for your dates" : char.ToUpperInvariant(parts[0][0]) + string.Join(" · ", parts)[1..];
     }
 
@@ -96,16 +97,17 @@ public sealed class SitterMatchingService(IHttpClientFactory http, IOptions<AiMa
     {
         var data = new JsonObject
         {
-            ["service"] = r.Service, ["hours"] = Math.Round(r.Hours, 1), ["budgetUsd"] = r.Budget,
+            ["service"] = r.Service, ["hours"] = Math.Round(r.Hours, 1), ["budgetUsd"] = r.Budget, ["budgetCurrency"] = "USD",
             ["youngestChildAge"] = r.YoungestChildAge, ["oldestChildAge"] = r.OldestChildAge,
             ["sitters"] = new JsonArray(candidates.Select((c, i) => (JsonNode)new JsonObject
             {
                 ["id"] = "s" + (i + 1), ["verified"] = c.Verified, ["rating"] = c.Rating, ["reviews"] = c.Reviews, ["completedBookings"] = c.Completed,
-                ["yearsExperience"] = c.Experience, ["hourlyRateUsd"] = c.HourlyRate, ["estimatedCostUsd"] = Math.Round(c.HourlyRate * (decimal)r.Hours, 2), ["firstAid"] = c.FirstAid
+                ["yearsExperience"] = c.Experience, ["currency"] = c.Currency, ["hourlyRate"] = c.HourlyRate, ["estimatedCost"] = Math.Round(c.HourlyRate * (decimal)r.Hours, 2), ["firstAid"] = c.FirstAid
             }).ToArray())
         };
         return "You help a customer of a pet sitting app choose a sitter. Rank the sitters below from best to worst match for this request, " +
                "weighing trust (verified, reviews, completed bookings), experience, and price against the budget. " +
+               "Compare affordability only when the sitter currency equals the USD budget currency. No exchange rates are provided; never treat other currencies as USD or claim they fit the budget. " +
                "Reply with a JSON object containing a matches array, best first, with every sitter exactly once. " +
                "Use one short factual reason (max 15 words, no names) per sitter. Do not invent qualifications or guarantees.\n\n" +
                data.ToJsonString();

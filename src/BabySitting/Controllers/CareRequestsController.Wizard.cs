@@ -166,7 +166,7 @@ public sealed partial class CareRequestsController
         var hours = times is { } t ? Math.Max(0, (t.End - t.Start).TotalHours) : 0;
         var request = new Services.Matching.MatchRequest(model.Form.ServiceType?.ToString() ?? "", hours, model.Form.Budget, model.Form.YoungestChildAgeYears, model.Form.OldestChildAgeYears);
         var candidates = model.Sitters.Select(p => new Services.Matching.MatchCandidate(p.Id, p.YearsOfExperience, p.HourlyRate, p.VerificationStatus == VerificationStatus.Verified,
-            stats.TryGetValue(p.Id, out var s) ? s.Average : null, stats.TryGetValue(p.Id, out var s2) ? s2.Count : 0, completed.GetValueOrDefault(p.Id), p.HasFirstAidTraining)).ToList();
+            stats.TryGetValue(p.Id, out var s) ? s.Average : null, stats.TryGetValue(p.Id, out var s2) ? s2.Count : 0, completed.GetValueOrDefault(p.Id), p.HasFirstAidTraining, p.Currency)).ToList();
         var matcher = HttpContext.RequestServices.GetRequiredService<Services.Matching.ISitterMatchingService>();
         var ranked = await matcher.RankAsync(request, candidates, HttpContext.RequestAborted, useAi);
         var byId = model.Sitters.ToDictionary(p => p.Id);

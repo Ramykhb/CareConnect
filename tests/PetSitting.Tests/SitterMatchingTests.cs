@@ -38,6 +38,23 @@ public sealed class SitterMatchingTests
     });
 
     [Fact]
+    public void Foreign_currency_rates_are_not_scored_or_sent_as_USD()
+    {
+        var foreign = Newcomer with { Currency = "EUR", HourlyRate = 1 };
+        Assert.Equal(SitterMatchingService.Score(Request with { Budget = null }, foreign), SitterMatchingService.Score(Request, foreign));
+        Assert.DoesNotContain("fits your budget", SitterMatchingService.RuleReason(Request, foreign));
+        Assert.Contains("EUR", SitterMatchingService.RuleReason(Request, foreign));
+        var prompt = SitterMatchingService.BuildPrompt(Request, [foreign]);
+        using var json = System.Text.Json.JsonDocument.Parse(prompt[prompt.IndexOf('{')..]);
+        var candidate = json.RootElement.GetProperty("sitters")[0];
+        Assert.Equal("EUR", candidate.GetProperty("currency").GetString());
+        Assert.Equal(1m, candidate.GetProperty("hourlyRate").GetDecimal());
+        Assert.False(candidate.TryGetProperty("hourlyRateUsd", out _));
+        Assert.False(candidate.TryGetProperty("estimatedCostUsd", out _));
+        Assert.Equal("USD", json.RootElement.GetProperty("budgetCurrency").GetString());
+    }
+
+    [Fact]
     public async Task Rules_put_trusted_affordable_sitters_first_and_explain_why()
     {
         var (service, handler) = Create(false, _ => throw new InvalidOperationException("must not call the AI"));
