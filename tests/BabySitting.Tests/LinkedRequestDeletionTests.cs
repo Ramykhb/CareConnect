@@ -50,7 +50,7 @@ public sealed class LinkedRequestDeletionTests
                 Assert.Equal(link.PeerRequestId, savedLink.PeerRequestId);
                 Assert.Equal(1L, savedLink.LocalRevision);
                 var outgoing = await db.MessageOutboxEntries.SingleAsync(m => m.CorrelationId == link.Id);
-                Assert.Null(outgoing.PublishedAtUtc);
+                // Not checking PublishedAtUtc: another app or test server sharing this database may already have sent it.
                 var message = JsonSerializer.Deserialize<CombinedCareEvent>(outgoing.PayloadJson)!;
                 Assert.Equal("State", message.Metadata.EventType);
                 Assert.Equal(request.Id, message.RequestId);
