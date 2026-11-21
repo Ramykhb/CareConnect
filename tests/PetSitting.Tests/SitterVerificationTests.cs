@@ -296,7 +296,16 @@ public sealed class SitterVerificationTests
         await db.PetSitterProfiles.Where(p => p.Id == people.Profile).ExecuteDeleteAsync();
         var users = services.GetRequiredService<UserManager<ApplicationUser>>();
         foreach (var email in new[] { people.SitterEmail, people.ManagerEmail })
-            if (await users.FindByEmailAsync(email) is { } user) Assert.True((await users.DeleteAsync(user)).Succeeded);
+            if (await users.FindByEmailAsync(email) is { } user)
+                {
+                    // Other tests may have just notified this manager (for example about a sitter to verify).
+                    for (var attempt = 1; ; attempt++)
+                    {
+                        await services.GetRequiredService<PetSittingDbContext>().Notifications.Where(n => n.UserId == user.Id).ExecuteDeleteAsync();
+                        try { Assert.True((await users.DeleteAsync(user)).Succeeded); break; }
+                        catch (DbUpdateException) when (attempt < 5) { }
+                    }
+                }
     }
 
     private static string Hidden(string html, string name) =>

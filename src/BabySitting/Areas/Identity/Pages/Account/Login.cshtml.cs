@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using BabySitting.Models;
+using BabySitting.Services.Auth;
 
 namespace BabySitting.Areas.Identity.Pages.Account;
 
@@ -30,6 +31,8 @@ public sealed class LoginModel(SignInManager<ApplicationUser> signIn) : PageMode
         await OnGetAsync(returnUrl);
         if (!ModelState.IsValid) return Page();
         var result = await signIn.PasswordSignInAsync(Input.Email.Trim(), Input.Password, Input.RememberMe, lockoutOnFailure: true);
+        if (result.Succeeded || result.RequiresTwoFactor)
+            ReturnUrl = await LoginDestination.ForAsync(signIn.UserManager, await signIn.UserManager.FindByEmailAsync(Input.Email.Trim()), ReturnUrl);
         if (result.Succeeded) return LocalRedirect(ReturnUrl);
         if (result.RequiresTwoFactor) return RedirectToPage("LoginWith2fa", new { returnUrl = ReturnUrl, rememberMe = Input.RememberMe });
         if (result.IsLockedOut) return RedirectToPage("Lockout");

@@ -115,7 +115,13 @@ public sealed class ManagerUsersAndCustomerPagesTests
             var ids = await db.Users.Where(u => u.LastName == tag).Select(u => u.Id).ToListAsync();
             await db.Notifications.Where(n => ids.Contains(n.UserId)).ExecuteDeleteAsync();
             await db.UserRoles.Where(r => ids.Contains(r.UserId)).ExecuteDeleteAsync();
-            await db.Users.Where(u => ids.Contains(u.Id)).ExecuteDeleteAsync();
+            // Other tests may notify this manager at any moment (for example about a sitter to verify), so retry.
+            for (var attempt = 1; ; attempt++)
+            {
+                await db.Notifications.Where(n => ids.Contains(n.UserId)).ExecuteDeleteAsync();
+                try { await db.Users.Where(u => ids.Contains(u.Id)).ExecuteDeleteAsync(); break; }
+                catch (Microsoft.Data.SqlClient.SqlException) when (attempt < 5) { }
+            }
         }
     }
 

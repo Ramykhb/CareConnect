@@ -1,0 +1,16 @@
+@page
+@model PetSitting.Areas.Identity.Pages.Account.AccessDeniedModel
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["AuthVariant"] = "auth-recovery-page";
+    ViewData["Title"] = "This page isn't for your account";
+}
+<section class="auth-form auth-recovery" aria-labelledby="auth-heading">
+    <span class="recovery-icon" aria-hidden="true"><svg class="line-icon"><use href="#icon-shield" /></svg></span>
+    <h1 id="auth-heading">This page isn't for your account</h1>
+    <p class="auth-subtitle">The page you opened belongs to a different kind of account (for example a sitter, an owner or a manager page). Your own pages are on your home page.</p>
+    <a class="btn btn-dark w-100" href="/Dashboard">Go to my home page</a>
+    <form method="post" action="/Identity/Account/Logout?returnUrl=%2FIdentity%2FAccount%2FLogin" class="auth-subtitle">
+        @Html.AntiForgeryToken()Using the wrong account? <button type="submit" class="btn btn-link p-0 align-baseline">Sign out</button> and sign in with the right one.
+    </form>
+</section>

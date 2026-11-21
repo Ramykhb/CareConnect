@@ -73,7 +73,7 @@ On Windows, from the solution directory:
 .\start-all.ps1
 ```
 
-It starts Docker Desktop if needed, Mailpit (http://localhost:8025), RabbitMQ (http://localhost:15672, when `.env` exists), and opens one window per application. Close a window or press Ctrl+C in it to stop that application. If scripts are blocked, run `powershell -ExecutionPolicy Bypass -File .\start-all.ps1`.
+It starts Docker Desktop if needed, Mailpit (http://localhost:8025), RabbitMQ (http://localhost:15672, when `.env` exists), and runs both applications inside the same window (no extra windows open). Press Ctrl+C in that window to stop both applications. If scripts are blocked, run `powershell -ExecutionPolicy Bypass -File .\start-all.ps1`.
 
 ## SQL Server and migrations
 

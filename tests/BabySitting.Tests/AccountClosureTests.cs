@@ -107,7 +107,13 @@ public sealed class AccountClosureTests
             await db.ChildcareRequests.Where(r => r.Id == booked.Id || r.Id == open.Id).ExecuteDeleteAsync();
             await db.BabysitterProfiles.Where(p => p.Id == profile.Id).ExecuteDeleteAsync();
             await db.UserRoles.Where(r => ids.Contains(r.UserId)).ExecuteDeleteAsync();
-            await db.Users.Where(u => ids.Contains(u.Id)).ExecuteDeleteAsync();
+            // Other tests may notify this manager at any moment (for example about a sitter to verify), so retry.
+            for (var attempt = 1; ; attempt++)
+            {
+                await db.Notifications.Where(n => ids.Contains(n.UserId)).ExecuteDeleteAsync();
+                try { await db.Users.Where(u => ids.Contains(u.Id)).ExecuteDeleteAsync(); break; }
+                catch (Microsoft.Data.SqlClient.SqlException) when (attempt < 5) { }
+            }
         }
 
         string Version2(Guid id) => Convert.ToBase64String(db.AccountClosureRequests.AsNoTracking().Single(r => r.Id == id).RowVersion);

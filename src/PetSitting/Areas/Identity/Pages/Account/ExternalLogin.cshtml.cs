@@ -44,6 +44,8 @@ public sealed class ExternalLoginModel(SignInManager<ApplicationUser> signIn, Re
         var info = await signIn.GetExternalLoginInfoAsync();
         if (!ValidGoogle(info)) return await FailedAsync();
         var result = await signIn.ExternalLoginSignInAsync("Google", info!.ProviderKey, isPersistent: false, bypassTwoFactor: false);
+        if (result.Succeeded || result.RequiresTwoFactor)
+            ReturnUrl = await LoginDestination.ForAsync(signIn.UserManager, await signIn.UserManager.FindByLoginAsync("Google", info.ProviderKey), ReturnUrl);
         if (result.Succeeded) return await FinishAsync();
         if (result.RequiresTwoFactor) return RedirectToPage("LoginWith2fa", new { returnUrl = ReturnUrl, rememberMe = false });
         if (result.IsLockedOut) return RedirectToPage("Lockout");
@@ -71,6 +73,7 @@ public sealed class ExternalLoginModel(SignInManager<ApplicationUser> signIn, Re
             return Page();
         }
         var login = await signIn.ExternalLoginSignInAsync("Google", info.ProviderKey, isPersistent: false, bypassTwoFactor: false);
+        ReturnUrl = LoginDestination.For(false, ReturnUrl);
         return login.Succeeded ? await FinishAsync() : await FailedAsync();
     }
 
