@@ -19,7 +19,7 @@ CareConnect/
 │   │   ├── appsettings.json
 │   │   └── PetSitting.csproj
 │   ├── BabySitting/              # Same MVC structure
-│   └── CareConnect.Contracts/    # Shared event metadata and future message contracts
+│   └── CareConnect.Contracts/    # Shared event envelope and combined-care contracts
 ├── tests/
 │   ├── PetSitting.Tests/
 │   └── BabySitting.Tests/
@@ -127,13 +127,36 @@ Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit
 
 Combined care uses explicit one-time invitation codes to link customer-owned requests in the two apps. Each customer signs in separately and supplies local pet or family details; the broker exchanges coordination state only. Invitations waiting to be claimed do not create actionable, ownerless requests. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
-Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally; bank transfers and administrative payout processing are not connected.
+Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally, and managers can mark requests paid after processing them manually. Bank transfers are not connected.
+
+## Manager operations and report exports
+
+Managers can use `/ManagerReports`, `/ManagerUsers`, `/SitterVerifications`, `/Payouts` and `/AccountClosures` in each app. The overview provides CSV, PDF and Excel downloads for the selected reporting period. Monetary metrics, including monthly revenue and top-sitter earnings, contain USD records only; other currencies are excluded without conversion. Activity counts include all currencies. Sitter analytics retain their existing per-currency reports.
+
+Sitters submit proof through `/Sitter/Verification`; managers approve or reject it, and the result updates the public verification badge. Customers can choose the comparison option on a new request, review submitted offers and select a sitter before a booking is created. Requests without that option retain the direct sitter-acceptance flow.
+
+## Payment deadlines and expiration
+
+Payment endpoints and payment buttons accept an unpaid booking only before its scheduled start, including while the expiry worker has not run yet. Every five minutes, the expiry worker saves old open requests as expired, cancels bookings still awaiting payment at their start time, and cancels confirmed bookings that never started by their end time. Recorded demo payments on cancelled bookings are marked refunded. In-progress care remains active until the sitter completes it. Saved status/payment transitions enqueue the existing combined-care messages in the same database save.
+
+## Durable notification email delivery
+
+Apply `AddDurableNotificationEmails` to **both** databases before starting the updated apps:
+
+```sh
+dotnet ef database update --project src/PetSitting -- --environment Development
+dotnet ef database update --project src/BabySitting -- --environment Development
+```
+
+New unread notifications save their email delivery intent with the notification. The worker checks the database on startup, after a wake-up signal and at least every 30 seconds. Delivery requires an active user, a confirmed email address and an enabled category preference. Read history backfills and pre-migration notifications are not emailed.
+
+SMTP failures remain pending and retry after 30 seconds, doubling up to one hour. A two-minute database lease coordinates workers and allows recovery after a crash. Pending deliveries are retained during notification cleanup. The in-memory signal carries no delivery IDs that could be lost. SMTP delivery is at least once: a crash after the SMTP server accepts a message but before the database records success can cause a duplicate email on recovery. No bank or SMS transport is added.
 
 ## AI sitter matching (Groq)
 
 Both apps offer **Match with AI** in **Create a request → Step 5: Details & budget → Notify a preferred sitter**. Enter a total budget, then click the button. Available sitters are ranked with a short explanation and a “Best match” label. Choose a sitter or keep “No preference”, then continue and submit the request normally. Recommendations do not automatically select or book anyone.
 
-The backend uses Groq's OpenAI-compatible chat completions API with **`openai/gpt-oss-20b`** and strict JSON schema output ([Groq structured outputs documentation](https://console.groq.com/docs/structured-outputs)). It filters by city, service, active account, schedule and conflicting bookings before ranking. The best 10 local candidates are compared using verification, reviews, completed bookings, experience, estimated hourly cost against your total budget, and first aid training / child age range in BabySitting. Matching is advisory; the fixed amount you offer remains your booking budget.
+The backend uses Groq's OpenAI-compatible chat completions API with **`openai/gpt-oss-20b`** and strict JSON schema output ([Groq structured outputs documentation](https://console.groq.com/docs/structured-outputs)). It filters by city, service, active account, schedule and conflicting bookings before ranking. The best 10 local candidates are compared using verification, reviews, completed bookings, experience, estimated hourly cost against your total budget, and first aid training / child age range in BabySitting. Matching is advisory; the fixed amount you offer remains your booking budget. Candidate rates retain their recorded currency. Only USD rates are compared with the USD budget; other currencies are identified explicitly and are not converted or scored for affordability.
 
 Only anonymous labels (`s1`, `s2`, …), numerical statistics, service and request criteria go to Groq. Names, real IDs, contact details, addresses, biographies, care instructions and medical notes are excluded. The key stays on the server. AI is called only when you request matching, never for draft autosaves or review screens. Matching is limited to six requests per authenticated user per minute per app instance.
 
@@ -217,7 +240,7 @@ Existing manually created classic queues with these names must be drained and mi
 
 1. Submit your pet or baby request normally. Choose **Add baby/pet care** on its confirmation page, or **Combined care** in the customer sidebar.
 2. Select the request and generate a one-time code. Sign in as a customer in the other app, create the other care request, open **Combined care** there and paste the code while selecting that request. You choose each service's dates and budget separately. An invitation may take a few seconds to arrive.
-3. Sitters see a Combined care badge on linked requests, the other service’s latest status in request details, and whether the link is still pending. These indicators update through the existing inbox polling. Each app continues its own sitter selection, chat, payment and care workflow. The Combined care page shows both request and booking states; refresh it to see updates. One service can be booked while the other is still seeking a sitter. No booking or payment is implied for the other app.
+3. Sitters see a Combined care badge on linked requests, the other service’s latest status in request details, and whether the link is still pending. These indicators update through the existing inbox polling. Each app continues its own sitter selection, chat, payment and care workflow. The Combined care page shows request, booking and payment states and refreshes its linked-care list on live update notifications; pending outgoing changes are polled briefly until synchronized. One service can be booked while the other is still seeking a sitter. No booking or payment is implied for the other app.
 4. Cancelling a customer request synchronizes cancellation to the other request and any booking that has not started, withdraws pending offers, notifies the local customer/sitter, and updates dummy refund records. If the other service is already in progress or completed, it stays intact and displays a resolution notice. A sitter withdrawing reopens only that service's request. Account closure also publishes cancellation of open linked requests.
 
 Codes expire after 24 hours and can be used for only one request pair. The originating customer can select the same request and generate again to recover the existing code, extending it if it expired. Keep the code private: possession authorizes linking, without requiring accounts in the two apps to share an email address. Replaying an already accepted invitation cannot reassign its request. Local request ownership and customer-role authorization apply to both actions, with antiforgery protection.
@@ -260,7 +283,7 @@ Run route/configuration checks with `dotnet test`. To include the actual SQL Ser
 CARECONNECT_SQL_TESTS=1 dotnet test CareConnect.sln
 ```
 
-RabbitMQ delivery and combined-care coordination are implemented. External AI integration and manager operations remain future work. Local care workflows continue independently when messaging is disabled or unavailable.
+RabbitMQ delivery and combined-care coordination are implemented. Groq sitter matching and manager reports, account management, verification review, payout review and account closure are implemented. Local care workflows continue independently when messaging is disabled or unavailable.
 
 ## Authentication
 
@@ -292,7 +315,7 @@ Registration requires exactly one account type: customer or sitter. Accounts can
 - `/Identity/Account/Logout`: POST with antiforgery protection.
 - `/Identity/Account/ResendEmailConfirmation` and `/Identity/Account/ForgotPassword`: email confirmation and recovery.
 - `/Identity/Account/Manage`: edit name, city, and phone; change password/email; enable authenticator, manage recovery codes, export personal data, and delete an unused account after password verification.
-- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. Both apps display their customer and sitter dashboards. Manager pages remain access-controlled placeholders.
+- `/Dashboard`: authenticated account hub; Customer/Sitter/Manager subpages enforce their respective roles. Both apps display their customer and sitter dashboards. Managers can open the overview, users, sitter verification, payout review and account closure pages.
 
 Use an authenticator app's manual time-based setup with the secret shown on the setup page. Save recovery codes privately. Accounts linked to care records cannot be hard-deleted through self-service; the form explains that a platform manager must handle account closure while retaining those records.
 
@@ -372,7 +395,7 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
-Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching is available through Groq in the request wizard. Real payment charges, bank transfers and manager processing remain unimplemented. Dashboard shortcuts link to the implemented pages.
+Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics and manager overview pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching is available through Groq in the request wizard. Real payment charges and bank transfers remain unimplemented; managers can review verifications, users, closures and payout records. Dashboard shortcuts link to the implemented pages.
 
 Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.
 
@@ -390,11 +413,11 @@ No new schema migration is required. Ensure the existing `AddPetCareDetails` mig
 
 The sitter sidebar now opens `/SitterBookings` and `/SitterAvailability`. Bookings have Upcoming, In progress, Accepted, Completed, and Cancelled filters, owner/pet search, a weekly summary, and a CSV export that neutralizes spreadsheet formula fields. Each booking opens `/SitterBookings/Details/{id}` with an acceptance/start/completion timeline, owner contact details when provided, payment records, a care checklist, photo updates, and issue reporting. Records are restricted to the assigned sitter; a different sitter cannot read or change the booking.
 
-Care can start only at or after the scheduled start and after successful payments in the booking currency cover its full amount (zero-cost bookings require no payment). Start and completion timestamps and owner notifications are committed together. Repeated status submissions do not create duplicate notifications. Completion also completes the care request. Owner instructions provide the checklist’s initial items, without inventing medication doses or care times. Sitters can add tasks and optional due times within the stay, and update checkboxes while care is in progress. Care updates and issue reports are saved with owner notifications. Owners can read these notes and photos in their dashboard’s booking details. Photos accept JPEG/PNG/WebP up to 5 MB, are stored outside public static assets in the database, and are served only to the booking owner or assigned sitter. No veterinarian contact, service fee, or payout is fabricated.
+Care can start at or after the scheduled start and strictly before the scheduled end, after successful payments in the booking currency cover its full amount (zero-cost bookings require no payment). Start and completion timestamps and owner notifications are committed together. Repeated status submissions do not create duplicate notifications. Completion also completes the care request. Owner instructions provide the checklist’s initial items, without inventing medication doses or care times. Starting care saves a checklist snapshot, so later changes to pet/family notes do not change completed items or historical instructions. Sitters can add tasks and optional due times within the stay, and update checkboxes while care is in progress. Care updates and issue reports are saved with owner notifications. Owners can read these notes and photos in their dashboard’s booking details. Photos accept JPEG/PNG/WebP up to 5 MB, are stored outside public static assets in the database, and are served only to the booking owner or assigned sitter. No veterinarian contact, service fee, or payout is fabricated.
 
 The availability page supports month and week navigation, Today, date selection, private reasons, all-day/hour ranges, yearly recurrence, and a global accepting-requests preference. In week view, drag within a day to choose hours and review them in the editor before saving; day headings and keyboard Enter/Space provide alternatives. Monthly calendars include every date, including the sixth row when required. Dates and hours use `Asia/Beirut`; week totals include overnight care. A new rule overrides older rules for its selected interval, so a single date can be reopened without deleting a recurring block. Yearly ranges cannot start or end on February 29. Future recurring hours that fall in a DST gap begin at the next valid local minute.
 
-Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages, reports, and owner notifications are local application records; these actions do not send email, real payment charges or bank transfers. Linked booking lifecycle transitions enqueue RabbitMQ state events; care notes and photos stay local. Booking conversations use a separate implemented SignalR chat flow.
+Existing positive `SitterAvailability` windows remain the base schedule; no windows means no date restrictions. Private `SitterScheduleException` records add available/unavailable overrides. Request acceptance reads these same rules. Schedule writes and request acceptance use serializable transactions: blocking hours that affect an active booking is rejected, including when a request is accepted concurrently. Stale schedule forms require a refresh. A sitter profile is required to save schedule rules or respond to requests. Photo messages and reports remain local application records. Confirmed account holders can enable email alerts for notification categories; no real charges or bank transfers are made. Linked booking lifecycle transitions enqueue RabbitMQ state events; care notes and photos stay local. Booking conversations use a separate implemented SignalR chat flow.
 
 Apply the additive migration before running the updated application:
 
@@ -402,15 +425,15 @@ Apply the additive migration before running the updated application:
 dotnet ef database update --project src/PetSitting -- --environment Development
 ```
 
-`AddSitterBookingCareAndCalendar` adds start timestamps, checklist tasks, care updates/private photos, schedule exceptions, and a schedule revision. It was applied to the local development database. Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/PetSitting.Tests` for the HTTP role/CSRF/rendering checks and SQL tests for payment-gated status changes, private photo access, checklist persistence, annual rules, schedule conflicts, and concurrent blocking/acceptance. The week-page rendering check covers the custom `TimeOnly` hour format as well as the week date heading.
+`AddSitterBookingCareAndCalendar` adds start timestamps, checklist tasks, care updates/private photos, schedule exceptions, and a schedule revision. Apply all pending migrations before running the updated application. Run `CARECONNECT_SQL_TESTS=1 dotnet test tests/PetSitting.Tests` for the HTTP role/CSRF/rendering checks and SQL tests for payment-gated status changes, private photo access, checklist persistence, annual rules, schedule conflicts, and concurrent blocking/acceptance. The week-page rendering check covers the custom `TimeOnly` hour format as well as the week date heading.
 
 ### Sitter account pages
 
 The sitter portal now includes `/Sitter/Earnings`, `/Sitter/Analytics`, `/Sitter/Reviews`, `/Sitter/Notifications`, and `/Sitter/Settings`. Earnings and analytics use the signed-in sitter’s actual records, keep currencies separate, and provide CSV, PDF, and XLSX snapshot exports. Reviews show eligible completed-booking ratings and allow the assigned sitter to save a reply. Notifications support category filters, read controls, 15-second refresh, saved in-app alert preferences, and an optional browser sound test. Settings edit account details, create or update the sitter profile, choose services and pricing, and link to existing Identity security controls.
 
-Payout requests reserve eligible, unallocated successful payments from completed bookings in a serializable transaction. Requests may be cancelled while pending. These are local records: no bank transfer is made. Bank details are not collected, and email/SMS alert switches remain disabled until those transports are connected. Existing prices are not converted between currencies. Analytics request counts refer to recorded sitter responses and their current outcomes; average reply time is available only for responses with a recorded decision timestamp.
+Payout requests reserve eligible, unallocated successful payments from completed bookings in a serializable transaction. Requests may be cancelled while pending. These are local records: no bank transfer is made. Bank details are not collected. Managers can mark pending requests paid from `/Payouts`, which records the payment date and notifies the sitter. Email alert preferences are connected; SMS remains disabled. Existing prices are not converted between currencies. Analytics request counts refer to recorded sitter responses and their current outcomes; average reply time is available only for responses with a recorded decision timestamp.
 
-Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Notification delivery and preference checks are covered by `LiveNotificationTests`; these do not validate all report/export or payout behaviors.
+Apply `AddSitterReportsPreferencesAndPayouts` with the existing EF database-update command. It adds notification categories/deduplication keys, alert preferences, review replies, decision timestamps, and the payout reservation ledger. Notification delivery and preferences are covered by `LiveNotificationTests` and `AlertsAndLanguageTests`. `NotificationEmailRetryTests` covers persisted email retries, `PayoutReviewTests` covers manager completion, and `ManagerReportExportTests` covers PDF/XLSX downloads.
 
 ### BabySitting sitter portal
 
