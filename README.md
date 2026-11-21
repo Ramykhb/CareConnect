@@ -174,7 +174,9 @@ Ai__TimeoutSeconds=15
 Ai__MaxCandidates=10
 ```
 
-Keep your existing RabbitMQ entries. `.env` is git-ignored. **ASP.NET does not load `.env` automatically**, and Docker Compose only starts RabbitMQ here. From the repository root, export the file in each terminal before starting either app:
+Keep your existing RabbitMQ entries. `.env` is git-ignored. **Both apps automatically load AI settings from the repository-root `.env` in Development**, including IDE launches. Restart the apps after editing it. User secrets, process environment variables and command-line settings take precedence. Only AI settings are loaded; RabbitMQ credentials still follow their existing setup.
+
+For an explicit shell setup, you can also export the file before starting either app:
 
 ```sh
 set -a
@@ -183,11 +185,11 @@ set +a
 dotnet run --project src/PetSitting
 ```
 
-Repeat in a second terminal with `dotnet run --project src/BabySitting`. Restart the apps after changing configuration. If launching through an IDE, set these variables in its run configuration instead. For hosted environments, add them to the hosting provider's environment/secret settings.
+Repeat in a second terminal with `dotnet run --project src/BabySitting`. Restart the apps after changing configuration. IDE launches in Development also read the root `.env` automatically; explicit IDE run variables take precedence. For hosted environments, add them to the hosting provider's environment/secret settings.
 
 ### Alternative: .NET user secrets
 
-For IDE launches, you can store the key directly in each app's development secrets instead of exporting `.env`:
+You can store the key directly in each app's development secrets instead of using `.env`:
 
 ```sh
 dotnet user-secrets set "Ai:Enabled" "true" --project src/PetSitting
@@ -196,6 +198,59 @@ dotnet user-secrets set "Ai:Model" "openai/gpt-oss-20b" --project src/PetSitting
 ```
 
 Repeat with `--project src/BabySitting`. Remove any previous Anthropic `Ai:ApiKey`, `Ai:Model` or `Ai:Endpoint` secret overrides when migrating; defaults now target Groq. An explicit `Ai:ApiKey` (or environment variable `Ai__ApiKey`) takes precedence over the `GROQ_API_KEY` alias. Nonsecret defaults are in each app's `appsettings.json`; `Ai__Enabled=false` disables external matching.
+
+## AI request assistant (owners and parents)
+
+Owners and parents see a **Draft with AI** chat button in the bottom-right corner of the dashboard, customer pages, and signed-in home/privacy pages. Open it and describe a request in natural language. The assistant asks for missing details and remembers previous answers, including when you close the panel, navigate to another page or reconnect.
+
+For example, “I need to create a request for Max” selects the owner's saved pet and prompts for the service and dates. “Dog walking tomorrow in Beirut” identifies those details and asks which owned pet needs care. Later answers such as “Max”, “3pm for an hour” or “$30 total” build on the saved conversation. Relative dates use the current **Asia/Beirut** date and time.
+
+- **PetSitting:** selects only pets owned by the signed-in account; collects the service, start/end dates and times, city, street address (except boarding), and a fixed total USD budget. Dog walking requires dogs. Instructions and comparing offers are optional.
+- **BabySitting:** requires a family profile; uses its saved child count and age range unless the parent corrects them, and collects the childcare service, dates/times, city, street address, and fixed total USD budget. Child names and birth dates are not requested.
+- Once required fields are complete and validated, the assistant saves an ordinary request draft at the review step and offers **Review draft**. It never submits a request, selects a sitter, takes payment or books care. The owner/parent reviews the details, confirms care notes and submits through the existing wizard.
+- Requests outside drafting (general knowledge, coding, medical advice, payments or account actions) receive a scope refusal. Greetings, corrections and short follow-up answers remain in scope.
+
+The browser connects to `/hubs/request-assistant` using authenticated **SignalR**, with WebSockets when available and transport fallback/reconnect support. The server calls Groq with `openai/gpt-oss-20b` and strict structured output; server-side validation controls draft creation. The API key never reaches the browser. Both apps use the existing `GROQ_API_KEY` / `Ai:ApiKey` configuration described above. Optional setting: `Ai__AssistantTimeoutSeconds=30`. In Development, the apps automatically read AI settings from the repository-root `.env`. Restart after editing the file. For hosting, use environment variables or your host's secret settings; `.env` loading is disabled outside Development.
+
+Chat messages, extracted request details and owned pet names/species (PetSitting) or child count/age range (BabySitting) are sent to Groq to interpret the conversation. Saved medical notes, existing home addresses, contact details and actual database IDs are not added to prompts. User-supplied message text goes to Groq, so the widget explains what is sent and asks users to leave out passwords, entry codes and medical records.
+
+Each app stores one private conversation per account in its own `RequestAssistantConversations` table. Memory expires after 24 hours of inactivity; an hourly cleanup deletes expired conversations. **New chat** clears the conversation and starts a new session, preserving any already-created request draft. Closing an account clears its assistant conversation. Row-version checks protect concurrent tabs, and message IDs prevent retries from creating a duplicate draft. Provider calls are limited to eight messages per user per minute per app instance, 1,500 characters per message and 20 turns per conversation.
+
+Apply the additive conversation-memory migrations on another machine before starting:
+
+```sh
+dotnet ef database update --project src/PetSitting -- --environment Development
+dotnet ef database update --project src/BabySitting -- --environment Development
+```
+
+Run the provider/validation tests and socket tests normally with `dotnet test`. Database-backed assistant tests are enabled with `CARECONNECT_SQL_TESTS=1`; live Groq conversation tests use **synthetic data** and require explicit opt-in with `CARECONNECT_GROQ_TESTS=1` and `GROQ_API_KEY`:
+
+```sh
+CARECONNECT_SQL_TESTS=1 dotnet test --filter FullyQualifiedName~RequestAssistantPersistenceTests
+CARECONNECT_GROQ_TESTS=1 dotnet test tests/CareConnect.Ai.Tests --filter FullyQualifiedName~GroqDraftLiveTests
+```
+
+## AI care summaries (owners and parents)
+
+Open **Bookings → a booking → AI care summary** in either app. The shortcut jumps to the summary card beneath the booking details. Choose a **Selected day** (Beirut time) or **Entire booking**, then click **Summarize care**.
+
+The card shows concise AI highlights with clickable source citations, deterministic counts of tasks marked complete / not marked complete, the original text of reported issues, and expandable source records. Unfinished checklist items and issue reports remain visible even if the AI does not mention them. Each sitter-update record also links to its original update on the booking page. A missing checkmark does not prove care was missed, and an empty period does not prove that no care happened.
+
+Daily summaries use Asia/Beirut midnight boundaries. A task appears if it is due or was completed on that day. Past days show checklist completion status as of the end of that day; a later completion is not presented as already complete on the earlier day. Undated tasks without a completion in the selected day are counted separately; choose Entire booking to include them. Records with future creation timestamps are excluded, and future completion timestamps are not treated as already complete. Future due items can still appear as pending. Updates use their recorded timestamp. The card remains intact while the booking details poll for updates; generate again after new records arrive.
+
+Groq uses the existing **`openai/gpt-oss-20b`** configuration. The server sends anonymous source keys, checklist labels and status/times, written sitter updates, booking status and service. It does not add profile names, database IDs, private booking chat, addresses, payments, photo contents, or saved medical profile notes / copied checklist Notes. Names or other personal details already written in a checklist label or sitter update remain part of that source text. Sitter messages may themselves contain personal care information; the card explains which records go to Groq. The model is instructed to attribute sitter observations, avoid unsupported conclusions or medical advice, and cite each highlight. The application validates citations, but readers should check the original records for context.
+
+Only the active owner/parent of both the booking and request can generate or read its summary. Requests require the customer role and an anti-forgery token, and are limited to six per authenticated user per minute per app instance. A bounded, private memory cache reuses successful summaries for ten minutes only while the source content is identical. New records, edits, status changes, and different users/bookings produce different cache keys. Summaries are generated on demand; no notifications are sent and no care records are changed. No database migration is needed.
+
+Empty periods, missing AI configuration, provider errors and oversized periods show recorded facts with an explanatory message. To bound provider usage, AI generation accepts up to 80 records / 24,000 source-text characters per period; select a specific day for larger bookings. API keys and timeout settings are shared with the existing request assistant, including `Ai__AssistantTimeoutSeconds`.
+
+Validation includes HTTP authorization/CSRF tests, provider/citation/cache tests, SQL tests for both apps, and an optional live Groq check using synthetic pet-care and childcare records:
+
+```sh
+dotnet test --filter FullyQualifiedName~CareSummary
+CARECONNECT_SQL_TESTS=1 dotnet test --filter FullyQualifiedName~CareSummaryPersistenceTests
+CARECONNECT_GROQ_TESTS=1 dotnet test tests/CareConnect.Ai.Tests --filter FullyQualifiedName~CareSummaryLiveTests
+```
 
 ## RabbitMQ
 

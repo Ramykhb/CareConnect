@@ -34,6 +34,7 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     public DbSet<AccountPhoto> AccountPhotos => Set<AccountPhoto>();
 
     public DbSet<CombinedCareLink> CombinedCareLinks => Set<CombinedCareLink>();
+    public DbSet<RequestAssistantConversation> RequestAssistantConversations => Set<RequestAssistantConversation>();
     public DbSet<SitterVerification> SitterVerifications => Set<SitterVerification>();
 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
@@ -61,6 +62,9 @@ public sealed class PetSittingDbContext(DbContextOptions<PetSittingDbContext> op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<RequestAssistantConversation>().HasIndex(c => c.UserId).IsUnique();
+        modelBuilder.Entity<RequestAssistantConversation>().HasIndex(c => c.UpdatedAtUtc);
+        modelBuilder.Entity<RequestAssistantConversation>().HasOne<ApplicationUser>().WithMany().HasForeignKey(c => c.UserId);
         modelBuilder.Entity<Notification>().Property(n => n.EmailPending).HasDefaultValue(false);
         modelBuilder.Entity<Notification>().HasIndex(n => new { n.EmailPending, n.EmailNextAttemptAtUtc }).HasFilter("[EmailPending] = 1");
         modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.LocalRequestId).IsUnique().HasFilter("[LocalRequestId] IS NOT NULL");

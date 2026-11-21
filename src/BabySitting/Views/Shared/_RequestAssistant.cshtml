@@ -1,0 +1,27 @@
+@using BabySitting.Models
+@if (User.IsInRole(Roles.Customer))
+{
+    <link rel="stylesheet" href="~/css/request-assistant.css" asp-append-version="true" />
+    <div class="request-assistant" data-request-assistant data-hub-url="@Url.Content("~/hubs/request-assistant")" data-signalr-url="@Url.Content("~/lib/microsoft-signalr/signalr.min.js")">
+        <button type="button" class="ra-launcher" data-ra-toggle aria-controls="request-assistant-panel" aria-expanded="false" aria-label="Open AI request assistant">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 2v-9a9 9 0 0 1 18-1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m13 5 1.2 3.8L18 10l-3.8 1.2L13 15l-1.2-3.8L8 10l3.8-1.2L13 5Z" fill="currentColor"/></svg>
+            <span>Draft with AI</span>
+        </button>
+        <section id="request-assistant-panel" class="ra-panel" role="dialog" aria-modal="false" aria-labelledby="ra-title" hidden>
+            <header class="ra-header"><div><span class="ra-eyebrow">A LITTLE HELP GETTING STARTED</span><h2 id="ra-title">Request assistant <span>AI</span></h2></div><button type="button" class="ra-icon-button" data-ra-close aria-label="Close request assistant">×</button></header>
+            <div class="ra-intro"><p>Describe the care you need. I’ll help fill in the details.</p><div><span class="ra-connection" data-ra-connection>Connecting…</span><button type="button" data-ra-reset>New chat</button></div></div>
+            <div class="ra-messages" data-ra-messages role="log" aria-live="polite" aria-relevant="additions" aria-label="Request assistant conversation"></div>
+            <div class="ra-typing" data-ra-typing role="status" hidden><span></span><span></span><span></span>Thinking through your request…</div>
+            <details class="ra-summary" data-ra-summary hidden><summary>Request details collected</summary><dl data-ra-fields></dl></details>
+            <div class="ra-draft" data-ra-draft hidden><p>Your draft is saved. Review it before sending.</p><a data-ra-draft-link>Review draft <span aria-hidden="true">↗</span></a></div>
+            <p class="ra-error" data-ra-error role="alert" hidden></p><button type="button" class="ra-retry" data-ra-retry hidden>Reconnect</button>
+            <form class="ra-compose" data-ra-form>
+                <label class="ra-sr-only" for="ra-input">Your request or answer</label>
+                <textarea id="ra-input" data-ra-input rows="2" maxlength="1500" placeholder="e.g. I need care for Max tomorrow…" required></textarea>
+                <button type="submit" data-ra-send disabled aria-label="Send message"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 12 16-8-5 16-3-7-8-1Zm8 1 8-9" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
+            </form>
+            <footer class="ra-footer">You review and submit. The assistant only saves a draft.<details><summary>About this assistant</summary><p>Powered by Groq. Your messages, request details and child count/age range are sent to Groq. Chat memory is private to your account and expires after 24 hours of inactivity. Leave out entry codes, passwords and medical records. Start a new chat to clear this conversation; saved drafts remain in your requests.</p></details></footer>
+        </section>
+    </div>
+    <script src="~/js/request-assistant.js" asp-append-version="true"></script>
+}

@@ -1228,6 +1228,53 @@ namespace BabySitting.Data.Migrations
                     b.ToTable("ProcessedMessages");
                 });
 
+            modelBuilder.Entity("BabySitting.Models.RequestAssistantConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DraftId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MessagesJson")
+                        .IsRequired()
+                        .HasMaxLength(100000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StateJson")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedAtUtc");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("RequestAssistantConversations");
+                });
+
             modelBuilder.Entity("BabySitting.Models.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1907,6 +1954,15 @@ namespace BabySitting.Data.Migrations
                     b.Navigation("Payment");
 
                     b.Navigation("Payout");
+                });
+
+            modelBuilder.Entity("BabySitting.Models.RequestAssistantConversation", b =>
+                {
+                    b.HasOne("BabySitting.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BabySitting.Models.Review", b =>
