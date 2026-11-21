@@ -172,6 +172,48 @@ public sealed class ReviewFixesTests
         }
     }
 
+    [SqlServerFact]
+    public async Task Saving_a_pet_with_no_species_shows_the_form_again_instead_of_an_error_page()
+    {
+        await using var factory = Factory();
+        var email = $"pet-edit-{Guid.NewGuid():N}@example.test";
+        Guid ownerId, petId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var (result, owner) = await scope.ServiceProvider.GetRequiredService<PetSitting.Services.Auth.RegistrationService>().RegisterAsync(email, Password, "Pia", "ReviewFix", "Customer");
+            Assert.True(result.Succeeded);
+            owner!.EmailConfirmed = true;
+            var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            Assert.True((await users.UpdateAsync(owner)).Succeeded);
+            var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+            var pet = new Pet { OwnerId = owner.Id, Name = "Rex", Species = "Dog" };
+            db.Pets.Add(pet); await db.SaveChangesAsync();
+            ownerId = owner.Id; petId = pet.Id;
+        }
+        try
+        {
+            using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+            var login = await client.GetStringAsync("/Identity/Account/Login");
+            Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/Identity/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+            { ["__RequestVerificationToken"] = Hidden(login, "__RequestVerificationToken"), ["Input.Email"] = email, ["Input.Password"] = Password }))).StatusCode);
+            var page = await client.GetStringAsync("/Pets/Edit/" + petId);
+            var response = await client.PostAsync("/Pets/Edit/" + petId, new FormUrlEncodedContent(new Dictionary<string, string>
+            { ["__RequestVerificationToken"] = Hidden(page, "__RequestVerificationToken"), ["Name"] = "Rex", ["Species"] = "" }));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("Please choose a species.", await response.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+            await db.Pets.Where(p => p.Id == petId).ExecuteDeleteAsync();
+            await db.Notifications.Where(n => n.UserId == ownerId).ExecuteDeleteAsync();
+            await db.AlertPreferences.Where(a => a.UserId == ownerId).ExecuteDeleteAsync();
+            await db.UserRoles.Where(r => r.UserId == ownerId).ExecuteDeleteAsync();
+            await db.Users.Where(u => u.Id == ownerId).ExecuteDeleteAsync();
+        }
+    }
+
     private static string Hidden(string html, string name) =>
         WebUtility.HtmlDecode(Regex.Match(html, $"<input(?=[^>]*name=\"{name}\")(?=[^>]*value=\"([^\"]*)\")[^>]*>").Groups[1].Value);
 }
