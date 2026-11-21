@@ -89,8 +89,18 @@ public sealed class ChatService(PetSittingDbContext db, TimeProvider clock) : IC
         var ids = await db.ChatMessages.Where(m => m.BookingId == bookingId && m.RecipientId == userId && m.ReadAtUtc == null && (messageIds == null || messageIds.Contains(m.Id))).Select(m => m.Id).ToListAsync(ct);
         // Opening the conversation also clears its "new message" alert (tracked, so open tabs update their counts).
         var key = ChatKey(bookingId);
-        var alerts = await db.Notifications.Where(n => n.UserId == userId && n.ReadAtUtc == null && n.SourceKey != null && n.SourceKey.StartsWith(key)).ToListAsync(ct);
-        if (alerts.Count > 0) { foreach (var alert in alerts) alert.ReadAtUtc = now; await db.SaveChangesAsync(ct); }
+        for (var attempt = 1; ; attempt++)
+        {
+            var alerts = await db.Notifications.Where(n => n.UserId == userId && n.ReadAtUtc == null && n.SourceKey != null && n.SourceKey.StartsWith(key)).ToListAsync(ct);
+            if (alerts.Count == 0) break;
+            foreach (var alert in alerts) alert.ReadAtUtc = now;
+            try { await db.SaveChangesAsync(ct); break; }
+            catch (DbUpdateConcurrencyException) when (attempt < 3)
+            {
+                // The notification email worker updated one of these alerts at the same moment; load them again and retry.
+                foreach (var entry in db.ChangeTracker.Entries<Notification>().ToList()) entry.State = EntityState.Detached;
+            }
+        }
         if (ids.Count == 0) return [];
         await db.ChatMessages.Where(m => ids.Contains(m.Id)).ExecuteUpdateAsync(s => s.SetProperty(m => m.ReadAtUtc, now), ct);
         return await db.ChatMessages.AsNoTracking().Where(m => ids.Contains(m.Id)).Select(m => new ChatMessageDto(m.Id, m.BookingId, m.SenderId, m.Body, m.CreatedAtUtc, m.ReadAtUtc)).ToListAsync(ct);

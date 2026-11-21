@@ -80,7 +80,7 @@ public sealed class ChatTests
 
             clock.Now = read.ReadAtUtc!.Value.AddHours(24).AddMinutes(1);
             Assert.Single((await chat.ThreadAsync(owner.Id, booking.Id))!.Messages);              // hidden even before cleanup
-            Assert.Equal(1, await ChatService.DeleteExpiredAsync(db, clock.Now));
+            Assert.True(await ChatService.DeleteExpiredAsync(db, clock.Now) >= 1);               // clean-up covers every chat, so other tests' old messages may go too
             Assert.Equal(1, await db.ChatMessages.CountAsync(m => m.BookingId == booking.Id));     // the unread reply stays
         }
         finally

@@ -43,7 +43,9 @@ public sealed class NotificationEmailRetryTests
     [SqlServerFact]
     public async Task Failed_mail_survives_a_worker_restart_and_delivers_only_once_after_recovery()
     {
-        var clock = new Clock(); var sender = new Sender();
+        // The test's "now" is in 2091 and the email is first due then. Every other app or test server sharing this
+        // database runs on the real clock, so their email workers never pick this notification up first.
+        var clock = new Clock { Now = new DateTimeOffset(2091, 6, 15, 12, 0, 0, TimeSpan.Zero) }; var sender = new Sender();
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureServices(s => {
                 s.RemoveAll<IHostedService>();
@@ -54,7 +56,7 @@ public sealed class NotificationEmailRetryTests
         var db = scope.ServiceProvider.GetRequiredService<BabySittingDbContext>();
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = Guid.NewGuid().ToString(), FirstName = "Retry", LastName = "Test",
             Email = "retry@example.test", EmailConfirmed = true };
-        var note = new Notification { User = user, Title = "Care update", Body = "Test", Category = NotificationCategory.Booking };
+        var note = new Notification { User = user, Title = "Care update", Body = "Test", Category = NotificationCategory.Booking, EmailNextAttemptAtUtc = clock.Now };
         try
         {
             db.AddRange(user, note, new AlertPreferences { User = user, EmailBookings = true });
