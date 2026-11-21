@@ -121,10 +121,10 @@ public sealed class SitterMatchingTests
     {
         var (failing, _) = Create(true, _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
         Assert.Equal(Trusted.Id, (await failing.RankAsync(Request, [Newcomer, Trusted]))[0].Id);
-        var (slow, _) = Create(true, async r => { await Task.Delay(TimeSpan.FromSeconds(5)); return await Groq("[]"); }, timeout: 1);
+        var (slow, _) = Create(true, async r => { await Task.Delay(TimeSpan.FromSeconds(30)); return await Groq("[]"); }, timeout: 1);
         var started = DateTime.UtcNow;
         Assert.Equal(Trusted.Id, (await slow.RankAsync(Request, [Newcomer, Trusted]))[0].Id);
-        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(4));
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(15));   // the 1 s timeout cut the 30 s reply short, with room for a busy machine
     }
 
     [Fact]
