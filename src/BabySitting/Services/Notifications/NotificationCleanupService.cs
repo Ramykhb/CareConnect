@@ -13,7 +13,7 @@ public sealed class NotificationCleanupService(IServiceScopeFactory scopes, Time
     public static Task<int> DeleteExpiredAsync(BabySittingDbContext db, DateTimeOffset now, CancellationToken ct = default)
     {
         var cutoff = now - Retention;
-        return db.Notifications.Where(n => n.ReadAtUtc != null && n.CreatedAtUtc < cutoff).ExecuteDeleteAsync(ct);
+        return db.Notifications.Where(n => !n.EmailPending && n.ReadAtUtc != null && n.CreatedAtUtc < cutoff).ExecuteDeleteAsync(ct);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

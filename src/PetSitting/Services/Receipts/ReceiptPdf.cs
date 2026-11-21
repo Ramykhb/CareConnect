@@ -19,8 +19,7 @@ public static class ReceiptPdf
     {
         if (!model.HasReceipt) throw new ArgumentException("A receipt requires a successful payment.", nameof(model));
         // Embed the app's fonts so output does not depend on the host's installed fonts.
-        lock (typeof(GlobalFontSettings))
-            GlobalFontSettings.FontResolver ??= new ReceiptFonts();
+        ConfigureFonts();
         var document = new Document();
         document.Info.Title = "Receipt " + model.Item.Reference + " - CareConnect";
         document.Info.Author = "CareConnect";
@@ -122,6 +121,12 @@ public static class ReceiptPdf
         using var output = new MemoryStream();
         renderer.PdfDocument.Save(output, closeStream: false);
         return output.ToArray();
+    }
+
+    internal static void ConfigureFonts()
+    {
+        lock (typeof(GlobalFontSettings))
+            GlobalFontSettings.FontResolver ??= new ReceiptFonts();
     }
 
     private static string Local(DateTimeOffset time) => DashboardViewModel.Local(time).ToString("d MMM yyyy h:mm tt", CultureInfo.InvariantCulture);

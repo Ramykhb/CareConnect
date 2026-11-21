@@ -60,7 +60,7 @@ public sealed class ParentBookingDetails
     public double? AverageRating { get; init; }
     public int ReviewCount { get; init; }
     public bool CanCancel => ParentBookingService.CanCancel(Request, Booking, Item.Now);
-    public bool CanPay => Booking is not null && ParentBookingService.CanPay(Booking);
+    public bool CanPay => Booking is not null && ParentBookingService.CanPay(Booking, Item.Now);
     public bool CanReview => Booking is { Status: BookingStatus.Completed, Review: null };
     public bool HasReceipt => Booking is not null && Booking.Payments.Any(p => p.Status == PaymentStatus.Succeeded && p.Currency == Booking.Currency);
     public decimal Paid => Booking is null ? 0 : BookingRules.Paid(Booking);

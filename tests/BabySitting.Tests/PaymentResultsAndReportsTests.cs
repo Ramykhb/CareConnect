@@ -133,25 +133,37 @@ public sealed class PaymentResultsAndReportsTests
         db.AddRange(d.Customer, d.Sitter, d.Profile, d.Request, d.Booking,
             new Payment { Booking = d.Booking, PayerId = d.Customer.Id, Amount = 40, Status = PaymentStatus.Succeeded, ProviderTransactionId = "T-" + Guid.NewGuid().ToString("N")[..8], PaidAtUtc = then, CreatedAtUtc = then },
             new Review { Booking = d.Booking, ReviewerId = d.Customer.Id, Rating = 5, CreatedAtUtc = then });
+        var foreignRequest = new ChildcareRequest { CustomerId = d.Customer.Id, Title = "EUR booking", Description = "Test", City = "Beirut",
+            StartsAtUtc = d.Request.StartsAtUtc, EndsAtUtc = d.Request.EndsAtUtc, CreatedAtUtc = then, Status = RequestStatus.Completed };
+        var foreignBooking = new BabysittingBooking { Request = foreignRequest, CustomerId = d.Customer.Id, SitterProfileId = d.Profile.Id,
+            Offer = new BabysittingOffer { Request = foreignRequest, SitterProfileId = d.Profile.Id, Amount = 100, Currency = "EUR", Status = OfferStatus.Accepted },
+            StartsAtUtc = foreignRequest.StartsAtUtc, EndsAtUtc = foreignRequest.EndsAtUtc, TotalAmount = 100, Currency = "EUR",
+            Status = BookingStatus.Completed, CreatedAtUtc = then, CompletedAtUtc = then };
+        db.AddRange(foreignRequest, foreignBooking,
+            new Payment { Booking = foreignBooking, PayerId = d.Customer.Id, Amount = 100, Currency = "EUR", Status = PaymentStatus.Succeeded, PaidAtUtc = then },
+            new Payment { Booking = foreignBooking, PayerId = d.Customer.Id, Amount = 50, Currency = "EUR", Status = PaymentStatus.Refunded, PaidAtUtc = then },
+            new SitterPayout { SitterProfileId = d.Profile.Id, ClientToken = Guid.NewGuid(), Amount = 100, Currency = "EUR", Status = PayoutStatus.Paid, PaidAtUtc = then });
         await db.SaveChangesAsync();
         try
         {
             var report = await reports.ReportAsync(30);
-            Assert.Equal(1, report.NewRequests);
-            Assert.Equal(1, report.NewBookings);
-            Assert.Equal(1, report.CompletedBookings);
+            Assert.Equal(2, report.NewRequests);
+            Assert.Equal(2, report.NewBookings);
+            Assert.Equal(2, report.CompletedBookings);
             Assert.Equal(100, report.CompletionRate);
             Assert.Equal(40, report.Revenue);
+            Assert.Equal(0, report.Refunded);
+            Assert.Equal(0, report.PayoutsSent);
             Assert.Equal(1, report.Reviews);
             Assert.Equal(5, report.AverageRating);
             Assert.Equal(2, report.NewAccounts);
             var top = Assert.Single(report.TopSitters);
-            Assert.Equal(("Sitter Report", 1, 40m, 5.0), (top.Name, top.Completed, top.Earned, top.Rating));
+            Assert.Equal(("Sitter Report", 2, 40m, 5.0), (top.Name, top.Completed, top.Earned, top.Rating));
             Assert.Equal(6, report.Months.Count);
-            Assert.Equal(("Jun 2091", 1, 40m), (report.Months[^1].Label, report.Months[^1].Bookings, report.Months[^1].Revenue));
+            Assert.Equal(("Jun 2091", 2, 40m), (report.Months[^1].Label, report.Months[^1].Bookings, report.Months[^1].Revenue));
             Assert.Equal(0, (await new ManagerReportService(db, new FixedClock(now.AddDays(40))).ReportAsync(30)).NewBookings);   // outside the period
             Assert.Equal(30, (await reports.ReportAsync(12345)).Days);                 // unknown periods fall back to 30 days
-            Assert.Contains("\"New bookings\",1", reports.ToCsv(report));
+            Assert.Contains("\"New bookings\",2", reports.ToCsv(report));
         }
         finally { await Cleanup(db, d, Guid.Empty); }
     }
@@ -193,10 +205,11 @@ public sealed class PaymentResultsAndReportsTests
         await db.ProcessedMessages.Where(m => m.CorrelationId == linkId).ExecuteDeleteAsync();
         await db.CombinedCareLinks.Where(l => l.Id == linkId).ExecuteDeleteAsync();
         await db.Reviews.Where(r => r.ReviewerId == d.Customer.Id).ExecuteDeleteAsync();
+        await db.SitterPayouts.Where(p => p.SitterProfileId == d.Profile.Id).ExecuteDeleteAsync();
         await db.Payments.Where(p => p.PayerId == d.Customer.Id).ExecuteDeleteAsync();
         await db.BabysittingBookings.Where(b => b.CustomerId == d.Customer.Id).ExecuteDeleteAsync();
-        await db.BabysittingOffers.Where(o => o.RequestId == d.Request.Id).ExecuteDeleteAsync();
-        await db.ChildcareRequests.Where(r => r.Id == d.Request.Id).ExecuteDeleteAsync();
+        await db.BabysittingOffers.Where(o => o.Request.CustomerId == d.Customer.Id).ExecuteDeleteAsync();
+        await db.ChildcareRequests.Where(r => r.CustomerId == d.Customer.Id).ExecuteDeleteAsync();
         await db.BabysitterProfiles.Where(p => p.Id == d.Profile.Id).ExecuteDeleteAsync();
         await db.Users.Where(u => userIds.Contains(u.Id)).ExecuteDeleteAsync();
     }

@@ -8,25 +8,81 @@ using PetSitting.Services.Auth;
 
 namespace PetSitting.Services.Notifications;
 
-// Saved notifications are queued here after their transaction commits, so a slow mail server never slows a page down.
+// A coalesced wake-up signal only. Delivery IDs and retry state live in the database,
+// so a full channel, a process restart or a failed post-commit wake-up cannot lose mail.
 public sealed class NotificationEmailQueue
 {
-    private readonly Channel<Guid> channel = Channel.CreateBounded<Guid>(new BoundedChannelOptions(1000) { FullMode = BoundedChannelFullMode.DropOldest });
-    public void Enqueue(Guid notificationId) => channel.Writer.TryWrite(notificationId);
-    public IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken ct) => channel.Reader.ReadAllAsync(ct);
+    private readonly Channel<bool> channel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
+    public void Enqueue(Guid notificationId) => channel.Writer.TryWrite(true);
+    public async Task WaitAsync(CancellationToken ct)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        try { await channel.Reader.ReadAsync(timeout.Token); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+    }
 }
 
-// Emails a notification when the user switched email on for its category and has a confirmed address.
 public sealed class NotificationEmailWorker(NotificationEmailQueue queue, IServiceScopeFactory scopes,
-    IOptions<AuthOriginOptions> origin, ILogger<NotificationEmailWorker> logger) : BackgroundService
+    IOptions<AuthOriginOptions> origin, ILogger<NotificationEmailWorker> logger, TimeProvider clock) : BackgroundService
 {
+    public static TimeSpan RetryDelay(int attempts) => TimeSpan.FromSeconds(Math.Min(3600, 30 * Math.Pow(2, Math.Clamp(attempts - 1, 0, 7))));
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var id in queue.ReadAllAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
-            try { await SendAsync(id, stoppingToken); }
+            try { await ProcessPendingAsync(stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-            catch (Exception ex) { logger.LogWarning(ex, "Notification email {NotificationId} could not be sent.", id); }
+            catch (Exception ex) { logger.LogWarning(ex, "Notification email recovery scan failed; it will retry."); }
+            try { await queue.WaitAsync(stoppingToken); }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
+        }
+    }
+
+    public async Task ProcessPendingAsync(CancellationToken ct = default)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+        var now = clock.GetUtcNow();
+        var ids = await db.Notifications.AsNoTracking().Where(n => n.EmailPending &&
+            (n.EmailNextAttemptAtUtc == null || n.EmailNextAttemptAtUtc <= now) &&
+            (n.EmailLeaseUntilUtc == null || n.EmailLeaseUntilUtc <= now))
+            .OrderBy(n => n.CreatedAtUtc).ThenBy(n => n.Id).Select(n => n.Id).Take(100).ToListAsync(ct);
+        foreach (var id in ids) await DeliverAsync(id, ct);
+    }
+
+    public async Task<bool> DeliverAsync(Guid id, CancellationToken ct = default)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
+        var now = clock.GetUtcNow();
+        var lease = Guid.NewGuid();
+        // One worker owns this delivery for two minutes (SMTP itself times out after 30 seconds).
+        var claimed = await db.Notifications.Where(n => n.Id == id && n.EmailPending &&
+            (n.EmailNextAttemptAtUtc == null || n.EmailNextAttemptAtUtc <= now) &&
+            (n.EmailLeaseUntilUtc == null || n.EmailLeaseUntilUtc <= now)).ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.EmailLeaseId, lease).SetProperty(n => n.EmailLeaseUntilUtc, now.AddMinutes(2))
+                .SetProperty(n => n.EmailAttempts, n => n.EmailAttempts + 1), ct);
+        if (claimed == 0) return false;
+        var owned = db.Notifications.Where(n => n.Id == id && n.EmailLeaseId == lease);
+        try
+        {
+            var sent = await SendAsync(id, ct);
+            await owned.ExecuteUpdateAsync(s => s.SetProperty(n => n.EmailPending, false)
+                .SetProperty(n => n.EmailSentAtUtc, sent ? clock.GetUtcNow() : (DateTimeOffset?)null)
+                .SetProperty(n => n.EmailLeaseId, (Guid?)null).SetProperty(n => n.EmailLeaseUntilUtc, (DateTimeOffset?)null)
+                .SetProperty(n => n.EmailNextAttemptAtUtc, (DateTimeOffset?)null).SetProperty(n => n.EmailLastError, (string?)null), ct);
+            return sent;
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            var attempts = await owned.Select(n => n.EmailAttempts).SingleOrDefaultAsync(ct);
+            await owned.ExecuteUpdateAsync(s => s.SetProperty(n => n.EmailNextAttemptAtUtc, clock.GetUtcNow().Add(RetryDelay(attempts)))
+                .SetProperty(n => n.EmailLeaseId, (Guid?)null).SetProperty(n => n.EmailLeaseUntilUtc, (DateTimeOffset?)null)
+                .SetProperty(n => n.EmailLastError, ex.GetType().Name), ct);
+            logger.LogWarning("Notification email {NotificationId} failed ({ErrorType}); retry scheduled.", id, ex.GetType().Name);
+            return false;
         }
     }
 
@@ -35,10 +91,10 @@ public sealed class NotificationEmailWorker(NotificationEmailQueue queue, IServi
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PetSittingDbContext>();
         var item = await db.Notifications.AsNoTracking().Where(n => n.Id == id)
-            .Select(n => new { n.Title, n.Body, n.RelativeUrl, n.Category, n.User.Email, n.User.EmailConfirmed, n.User.FirstName,
+            .Select(n => new { n.Title, n.Body, n.RelativeUrl, n.Category, n.User.Email, n.User.EmailConfirmed, n.User.FirstName, n.User.IsActive,
                 Preferences = db.AlertPreferences.FirstOrDefault(p => p.UserId == n.UserId) })
             .SingleOrDefaultAsync(ct);
-        if (item is null || item.Preferences is null || !item.Preferences.EmailAllows(item.Category)
+        if (item is null || !item.IsActive || item.Preferences is null || !item.Preferences.EmailAllows(item.Category)
             || !item.EmailConfirmed || string.IsNullOrWhiteSpace(item.Email)) return false;
         var link = Uri.TryCreate(origin.Value.PublicOrigin, UriKind.Absolute, out var root) && item.RelativeUrl is { Length: > 0 } url && url.StartsWith('/') && !url.StartsWith("//")
             ? new Uri(root, url).AbsoluteUri : null;

@@ -50,7 +50,7 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
         var ratings = item.Sitter is null ? [] : await db.Reviews.AsNoTracking().Where(r => r.Booking.SitterProfileId == item.Sitter.Id && r.ReviewerId == r.Booking.CustomerId && r.Booking.Status == BookingStatus.Completed).Select(r => r.Rating).ToArrayAsync();
         return new() { Item = item, Draft = draft, ReviewCount = ratings.Length, AverageRating = ratings.Length == 0 ? null : ratings.Average() };
     }
-    public static bool CanPay(BabysittingBooking booking) => ParentPaymentService.CanPay(booking);
+    public static bool CanPay(BabysittingBooking booking, DateTimeOffset? now = null) => ParentPaymentService.CanPay(booking, now);
     public static bool CanCancel(ChildcareRequest request, BabysittingBooking? booking, DateTimeOffset now) =>
         booking is null ? request.Status == RequestStatus.Open && request.StartsAtUtc > now
         : request.Status is not (RequestStatus.Cancelled or RequestStatus.Completed) && booking.Status is BookingStatus.Pending or BookingStatus.AwaitingPayment or BookingStatus.Confirmed

@@ -20,7 +20,7 @@ public interface IParentPaymentService
 // The one place where a parent pays for or reviews a booking (the care-request page and the bookings page both use it).
 public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider clock) : IParentPaymentService
 {
-    public static bool CanPay(BabysittingBooking b) => b.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(b);
+    public static bool CanPay(BabysittingBooking b, DateTimeOffset? now = null) => b.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(b) && (now ?? DateTimeOffset.UtcNow) < b.StartsAtUtc;
     public static bool CanReview(BabysittingBooking b) => b.Status == BookingStatus.Completed && b.Review is null;
 
     // Demo payment: no card details are collected and no money moves. The client token makes a
@@ -38,7 +38,7 @@ public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider c
                     .SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == parentId, ct);
                 if (booking is null) return new BookingWriteResult(false, "Booking not found.", true);
                 if (booking.Payments.Any(p => p.IdempotencyKey == clientToken)) return new(true, "This payment was already recorded.");
-                if (!CanPay(booking)) return new(false, BookingRules.FullyPaid(booking) ? "This booking is already paid." : "Only an accepted booking waiting for payment can be paid.");
+                if (!CanPay(booking, clock.GetUtcNow())) return new(false, BookingRules.FullyPaid(booking) ? "This booking is already paid." : "Payment is available only for accepted care before its scheduled start.");
                 if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details and try again.");
                 var now = clock.GetUtcNow();
                 var amount = booking.TotalAmount - BookingRules.Paid(booking);

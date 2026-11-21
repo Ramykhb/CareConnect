@@ -58,12 +58,13 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
         int Booked(BookingStatus s) => bookings.FirstOrDefault(b => b.Key == s)?.Count ?? 0;
 
-        // Money: what customers paid, what went back to them, and sitter payouts.
-        var revenue = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
-        var refunded = await db.Payments.Where(p => p.Status == PaymentStatus.Refunded && (p.PaidAtUtc ?? p.CreatedAtUtc) >= from && (p.PaidAtUtc ?? p.CreatedAtUtc) <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        // This report is denominated in USD. Keep other currencies out of all monetary totals;
+        // activity counts still include every currency, with no implicit conversion.
+        var revenue = await db.Payments.Where(p => p.Currency == "USD" && p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        var refunded = await db.Payments.Where(p => p.Currency == "USD" && p.Status == PaymentStatus.Refunded && (p.PaidAtUtc ?? p.CreatedAtUtc) >= from && (p.PaidAtUtc ?? p.CreatedAtUtc) <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
         var failed = await db.Payments.CountAsync(p => p.Status == PaymentStatus.Failed && p.CreatedAtUtc >= from && p.CreatedAtUtc <= now, ct);
-        var payoutsSent = await db.SitterPayouts.Where(p => p.Status == PayoutStatus.Paid && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
-        var waiting = await db.SitterPayouts.Where(p => p.Status == PayoutStatus.Requested)
+        var payoutsSent = await db.SitterPayouts.Where(p => p.Currency == "USD" && p.Status == PayoutStatus.Paid && p.PaidAtUtc >= from && p.PaidAtUtc <= now).SumAsync(p => (decimal?)p.Amount, ct) ?? 0;
+        var waiting = await db.SitterPayouts.Where(p => p.Currency == "USD" && p.Status == PayoutStatus.Requested)
             .GroupBy(p => 1).Select(g => new { Count = g.Count(), Total = g.Sum(p => p.Amount) }).FirstOrDefaultAsync(ct);
 
         var reviews = await db.Reviews.Where(r => r.CreatedAtUtc >= from && r.CreatedAtUtc <= now)
@@ -79,7 +80,7 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
         // The last six calendar months (UTC): new bookings and money received.
         var firstMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero).AddMonths(-(MonthsShown - 1));
         var bookingDates = await db.PetBookings.Where(b => b.CreatedAtUtc >= firstMonth && b.CreatedAtUtc <= now).Select(b => b.CreatedAtUtc).ToListAsync(ct);
-        var paid = await db.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= firstMonth && p.PaidAtUtc <= now)
+        var paid = await db.Payments.Where(p => p.Currency == "USD" && p.Status == PaymentStatus.Succeeded && p.PaidAtUtc >= firstMonth && p.PaidAtUtc <= now)
             .Select(p => new { p.PaidAtUtc, p.Amount }).ToListAsync(ct);
         var months = Enumerable.Range(0, MonthsShown).Select(i => firstMonth.AddMonths(i)).Select(m => new ReportMonth(
             m.ToString("MMM yyyy", CultureInfo.InvariantCulture),
@@ -88,7 +89,7 @@ public sealed class ManagerReportService(PetSittingDbContext db, TimeProvider cl
 
         // Sitters with the most completed bookings in the period.
         var top = await db.PetBookings.Where(b => b.Status == BookingStatus.Completed && b.CompletedAtUtc >= from && b.CompletedAtUtc <= now)
-            .GroupBy(b => b.SitterProfileId).Select(g => new { Id = g.Key, Count = g.Count(), Earned = g.Sum(b => b.TotalAmount) })
+            .GroupBy(b => b.SitterProfileId).Select(g => new { Id = g.Key, Count = g.Count(), Earned = g.Sum(b => b.Currency == "USD" ? b.TotalAmount : 0) })
             .OrderByDescending(x => x.Count).ThenByDescending(x => x.Earned).Take(5).ToListAsync(ct);
         var ids = top.Select(t => t.Id).ToList();
         var names = await db.PetSitterProfiles.Where(p => ids.Contains(p.Id))

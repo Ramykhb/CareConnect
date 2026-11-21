@@ -12,4 +12,11 @@ public class Notification : Entity
     [Required, MaxLength(2000)] public string Body { get; set; } = string.Empty;
     [MaxLength(500)] public string? RelativeUrl { get; set; }
     public DateTimeOffset? ReadAtUtc { get; set; }
+    public bool EmailPending { get; set; }
+    public int EmailAttempts { get; set; }
+    public DateTimeOffset? EmailNextAttemptAtUtc { get; set; }
+    public DateTimeOffset? EmailSentAtUtc { get; set; }
+    public Guid? EmailLeaseId { get; set; }
+    public DateTimeOffset? EmailLeaseUntilUtc { get; set; }
+    [MaxLength(100)] public string? EmailLastError { get; set; }
 }
