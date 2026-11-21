@@ -38,18 +38,30 @@ public sealed class BabySittingDbContext(DbContextOptions<BabySittingDbContext> 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         await Services.Messaging.CombinedCareOutbox.CaptureAsync(this, cancellationToken);
+        PrepareNotificationEmails();
         return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         Services.Messaging.CombinedCareOutbox.CaptureAsync(this, CancellationToken.None).GetAwaiter().GetResult();
+        PrepareNotificationEmails();
         return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    private void PrepareNotificationEmails()
+    {
+        // The delivery intent is saved atomically with each new unread notification.
+        // Read history backfills and pre-migration records do not generate email.
+        foreach (var entry in ChangeTracker.Entries<Notification>().Where(e => e.State == EntityState.Added))
+            entry.Entity.EmailPending = entry.Entity.ReadAtUtc is null;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Notification>().Property(n => n.EmailPending).HasDefaultValue(false);
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.EmailPending, n.EmailNextAttemptAtUtc }).HasFilter("[EmailPending] = 1");
         modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.LocalRequestId).IsUnique().HasFilter("[LocalRequestId] IS NOT NULL");
         modelBuilder.Entity<CombinedCareLink>().HasIndex(l => l.InvitationHash).IsUnique();
         modelBuilder.Entity<CombinedCareLink>().HasOne<ChildcareRequest>().WithOne().HasForeignKey<CombinedCareLink>(l => l.LocalRequestId);
