@@ -1,0 +1,19 @@
+@model Guid
+@inject TimeProvider CareSummaryClock
+@{
+    var today = TimeZoneInfo.ConvertTime(CareSummaryClock.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById("Asia/Beirut")).ToString("yyyy-MM-dd");
+}
+<section class="ob-card care-summary" data-care-summary aria-labelledby="care-summary-heading">
+    <header class="cs-heading"><div><span class="cs-eyebrow">A LITTLE REASSURANCE</span><h2 id="care-summary-heading">Care summary <span>AI</span></h2></div><svg class="line-icon" aria-hidden="true"><use href="#icon-sparkles" /></svg></header>
+    <p class="cs-intro">Catch up on recorded care tasks and sitter updates. Each AI highlight links to the records it used.</p>
+    <form asp-controller="CareSummaries" asp-action="Generate" method="post" data-cs-form>
+        <input type="hidden" name="bookingId" value="@Model" />
+        <label>Period<select name="scope"><option value="day">Selected day</option><option value="all">Entire booking</option></select></label>
+        <label data-cs-date-label>Day (Beirut time)<input name="date" type="date" value="@today" max="@today" required /></label>
+        <button type="submit" class="btn btn-dark" data-cs-generate>Summarize care</button>
+    </form>
+    <p class="cs-privacy">Uses checklist labels and written sitter updates with Groq. Photos, private chat, addresses and saved medical profile notes are excluded.</p>
+    <p class="cs-status" role="status" aria-live="polite" data-cs-status>Choose a day, or the entire booking for older care records.</p>
+    <div data-cs-result hidden></div>
+    <noscript><p>Enable JavaScript to generate a care summary. The original sitter updates remain available on this page.</p></noscript>
+</section>

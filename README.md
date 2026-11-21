@@ -230,6 +230,28 @@ CARECONNECT_SQL_TESTS=1 dotnet test --filter FullyQualifiedName~RequestAssistant
 CARECONNECT_GROQ_TESTS=1 dotnet test tests/CareConnect.Ai.Tests --filter FullyQualifiedName~GroqDraftLiveTests
 ```
 
+## AI care summaries (owners and parents)
+
+Open **Bookings → a booking → AI care summary** in either app. The shortcut jumps to the summary card beneath the booking details. Choose a **Selected day** (Beirut time) or **Entire booking**, then click **Summarize care**.
+
+The card shows concise AI highlights with clickable source citations, deterministic counts of tasks marked complete / not marked complete, the original text of reported issues, and expandable source records. Unfinished checklist items and issue reports remain visible even if the AI does not mention them. Each sitter-update record also links to its original update on the booking page. A missing checkmark does not prove care was missed, and an empty period does not prove that no care happened.
+
+Daily summaries use Asia/Beirut midnight boundaries. A task appears if it is due or was completed on that day. Past days show checklist completion status as of the end of that day; a later completion is not presented as already complete on the earlier day. Undated tasks without a completion in the selected day are counted separately; choose Entire booking to include them. Records with future creation timestamps are excluded, and future completion timestamps are not treated as already complete. Future due items can still appear as pending. Updates use their recorded timestamp. The card remains intact while the booking details poll for updates; generate again after new records arrive.
+
+Groq uses the existing **`openai/gpt-oss-20b`** configuration. The server sends anonymous source keys, checklist labels and status/times, written sitter updates, booking status and service. It does not add profile names, database IDs, private booking chat, addresses, payments, photo contents, or saved medical profile notes / copied checklist Notes. Names or other personal details already written in a checklist label or sitter update remain part of that source text. Sitter messages may themselves contain personal care information; the card explains which records go to Groq. The model is instructed to attribute sitter observations, avoid unsupported conclusions or medical advice, and cite each highlight. The application validates citations, but readers should check the original records for context.
+
+Only the active owner/parent of both the booking and request can generate or read its summary. Requests require the customer role and an anti-forgery token, and are limited to six per authenticated user per minute per app instance. A bounded, private memory cache reuses successful summaries for ten minutes only while the source content is identical. New records, edits, status changes, and different users/bookings produce different cache keys. Summaries are generated on demand; no notifications are sent and no care records are changed. No database migration is needed.
+
+Empty periods, missing AI configuration, provider errors and oversized periods show recorded facts with an explanatory message. To bound provider usage, AI generation accepts up to 80 records / 24,000 source-text characters per period; select a specific day for larger bookings. API keys and timeout settings are shared with the existing request assistant, including `Ai__AssistantTimeoutSeconds`.
+
+Validation includes HTTP authorization/CSRF tests, provider/citation/cache tests, SQL tests for both apps, and an optional live Groq check using synthetic pet-care and childcare records:
+
+```sh
+dotnet test --filter FullyQualifiedName~CareSummary
+CARECONNECT_SQL_TESTS=1 dotnet test --filter FullyQualifiedName~CareSummaryPersistenceTests
+CARECONNECT_GROQ_TESTS=1 dotnet test tests/CareConnect.Ai.Tests --filter FullyQualifiedName~CareSummaryLiveTests
+```
+
 ## RabbitMQ
 
 The main Docker Compose file manages RabbitMQ, reusing your existing SQL Server. The separate authentication Compose file runs Mailpit for local confirmation and recovery email. Copy `.env.example` to `.env`, set RabbitMQ credentials, and run:

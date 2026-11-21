@@ -20,6 +20,11 @@ builder.Services.PostConfigure<CareConnect.Ai.GroqAssistantOptions>(o =>
 });
 builder.Services.AddHttpClient<CareConnect.Ai.IGroqDraftClient, CareConnect.Ai.GroqDraftClient>()
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient<CareConnect.Ai.ICareSummaryClient, CareConnect.Ai.GroqCareSummaryClient>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<CareConnect.Ai.CareSummaryCache>();
+builder.Services.AddScoped<CareConnect.Ai.CareSummaryEngine>();
+builder.Services.AddScoped<CareConnect.Ai.ICareSummaryService, PetSitting.Services.CareSummaries.CareSummaryService>();
 builder.Services.AddSingleton<CareConnect.Ai.AssistantThrottle>();
 builder.Services.AddScoped<CareConnect.Ai.IRequestAssistantService, PetSitting.Services.RequestAssistant.RequestAssistantService>();
 builder.Services.AddHostedService<PetSitting.Services.RequestAssistant.AssistantCleanupService>();
@@ -76,6 +81,9 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("ai-matching", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy("care-summaries", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
