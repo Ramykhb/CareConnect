@@ -34,8 +34,22 @@ public sealed class PetCareRequestRepository(PetSittingDbContext db, TimeProvide
         db.PetCareRequestPets.RemoveRange(request.Pets.Where(p => !form.PetIds.Contains(p.PetId)));
         foreach (var pet in pets.Where(p => request.Pets.All(link => link.PetId != p.Id)))
             request.Pets.Add(new PetCareRequestPet { PetId = pet.Id });
-        // Pending invitations use the owner's current price and must be reconfirmed by the sitter.
-        foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending)) { offer.Amount = request.Budget; offer.Currency = request.Currency; }
+        // Pending offers take the owner's current price. An offer the sitter already sent was for the old terms, so it goes
+        // back to waiting for the sitter, who is asked to review the change and send it again.
+        var resend = new List<Guid>();
+        foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))
+        {
+            offer.Amount = request.Budget; offer.Currency = request.Currency;
+            if (offer.SubmittedAtUtc is not null) { offer.SubmittedAtUtc = null; resend.Add(offer.SitterProfileId); }
+        }
+        if (resend.Count > 0)
+        {
+            var now = clock.GetUtcNow();
+            foreach (var sitter in await db.PetSitterProfiles.Where(p => resend.Contains(p.Id)).Select(p => p.UserId).ToListAsync())
+                db.Notifications.Add(new Notification { UserId = sitter, Category = NotificationCategory.Request,
+                    SourceKey = "offer-changed:" + request.Id + ":" + now.UtcTicks, Title = "A request you made an offer on changed",
+                    Body = request.Title + " · " + "The owner changed this request (price, dates or details). Review it and send your offer again if it still works for you.", RelativeUrl = "/SitterRequests?id=" + request.Id, CreatedAtUtc = now });
+        }
         // Keep the submission snapshot current for status pages and "book again", without
         // breaking the wizard's submitted-request idempotency link.
         var draft = await db.OwnerRequestDrafts.SingleOrDefaultAsync(d => d.SubmittedRequestId == id && d.CustomerId == owner);

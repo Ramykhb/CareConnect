@@ -42,7 +42,7 @@ public class CareRequestFormViewModel : IValidatableObject
     [Display(Name = "Address (shared only with the sitter who accepts)")]
     public string? ServiceAddress { get; set; }
 
-    [Range(typeof(decimal), "0", "99999", ErrorMessage = "Budget must be between 0 and 99,999 USD.")]
+    [Range(typeof(decimal), "1", "99999", ErrorMessage = "Budget must be between 1 and 99,999 USD.")]
     [Display(Name = "Budget (USD, total)")]
     public decimal Budget { get; set; }
 

@@ -47,13 +47,20 @@ public sealed class CareRequestRepository(BabySittingDbContext db) : ICareReques
         // if a sitter accepted (or the parent edited in another tab) in the meantime.
         db.Entry(request).Property(r => r.RowVersion).OriginalValue = version;
         apply(request);
-        // Save pending invitations at the parent's current price together with the request edit.
-        // Decided offers retain their original terms as history.
+        // Save pending offers at the parent's current price together with the request edit; decided offers keep their
+        // original terms as history. An offer the sitter already sent was for the old terms, so it goes back to waiting
+        // for the sitter, who is asked to review the change and send it again.
+        var resend = new List<Guid>();
         foreach (var offer in request.Offers.Where(o => o.Status == OfferStatus.Pending))
         {
             offer.Amount = request.Budget;
             offer.Currency = request.Currency;
+            if (offer.SubmittedAtUtc is not null) { offer.SubmittedAtUtc = null; resend.Add(offer.SitterProfileId); }
         }
+        foreach (var sitter in await db.BabysitterProfiles.Where(p => resend.Contains(p.Id)).Select(p => p.UserId).ToListAsync())
+            db.Notifications.Add(new Notification { UserId = sitter, Category = NotificationCategory.Request,
+                SourceKey = "offer-changed:" + request.Id + ":" + now.UtcTicks, Title = "A request you made an offer on changed",
+                Body = request.Title + " · " + "The parent changed this request (price, dates or details). Review it and send your offer again if it still works for you.", RelativeUrl = "/SitterRequests?id=" + request.Id, CreatedAtUtc = now });
         try
         {
             await db.SaveChangesAsync();

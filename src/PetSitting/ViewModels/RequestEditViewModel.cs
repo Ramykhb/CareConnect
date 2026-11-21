@@ -16,7 +16,7 @@ public sealed class RequestEditViewModel : IValidatableObject
     [Required, Display(Name = "Ends (Beirut time)")] public DateTime? EndsAtLocal { get; set; }
     [Required, StringLength(150)] public string City { get; set; } = "";
     [StringLength(300), Display(Name = "Private service address")] public string? ServiceAddress { get; set; }
-    [Range(typeof(decimal), "0", "99999"), Display(Name = "Total budget")] public decimal Budget { get; set; }
+    [Range(typeof(decimal), "1", "99999"), Display(Name = "Total budget")] public decimal Budget { get; set; }
     // Display only; the request's currency cannot be changed by this form.
     public string Currency { get; set; } = "USD";
 
