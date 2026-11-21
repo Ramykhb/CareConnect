@@ -16,12 +16,16 @@ public sealed class ManagerReportsController(IManagerReportService reports) : Co
     public async Task<IActionResult> Index(int? days, CancellationToken ct) =>
         View(await reports.ReportAsync(ManagerReportService.Normalize(days), ct));
 
-    // GET /ManagerReports/Export?days=30 downloads the same numbers as a CSV file.
+    // GET /ManagerReports/Export?days=30 downloads the same numbers in CSV, PDF or Excel format.
     [HttpGet]
-    public async Task<IActionResult> Export(int? days, CancellationToken ct)
+    public async Task<IActionResult> Export(int? days, CancellationToken ct, string format = "csv")
     {
+        if (format is not ("csv" or "pdf" or "xlsx")) return BadRequest("Choose CSV, PDF or Excel.");
         var report = await reports.ReportAsync(ManagerReportService.Normalize(days), ct);
+        var name = $"careconnect-petsitting-report-{report.Days}-days-{report.To:yyyy-MM-dd}";
+        if (format == "pdf") return File(ManagerReportDownloads.Pdf(report), "application/pdf", name + ".pdf");
+        if (format == "xlsx") return File(ManagerReportDownloads.Xlsx(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name + ".xlsx");
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(reports.ToCsv(report))).ToArray();
-        return File(bytes, "text/csv", $"careconnect-petsitting-report-{report.Days}-days-{report.To:yyyy-MM-dd}.csv");
+        return File(bytes, "text/csv", name + ".csv");
     }
 }

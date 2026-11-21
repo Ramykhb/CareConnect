@@ -23,6 +23,8 @@
                 }
             </nav>
             <a class="btn btn-outline-dark" asp-action="Export" asp-route-days="@Model.Days">Download CSV</a>
+            <a class="btn btn-outline-dark" asp-action="Export" asp-route-days="@Model.Days" asp-route-format="pdf">Download PDF</a>
+            <a class="btn btn-outline-dark" asp-action="Export" asp-route-days="@Model.Days" asp-route-format="xlsx">Download Excel</a>
         </div>
     </div>
 
