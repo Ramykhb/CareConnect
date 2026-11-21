@@ -120,9 +120,10 @@
             form.elements.RequestId.value = decision.dataset.request;
             form.elements.Version.value = decision.dataset.version;
             form.elements.Decision.value = decision.dataset.decision;
-            document.getElementById('decision-title').textContent = accept ? 'Accept this request?' : 'Decline this request?';
-            document.getElementById('decision-description').textContent = accept ? `You’re committing to ${decision.dataset.summary} for ${decision.dataset.amount}. The parent will be notified and a booking will be created.` : 'The parent will be notified. This request will stay available to other sitters.';
-            form.querySelector('[data-confirm-decision]').textContent = accept ? 'Accept request' : 'Decline request';
+            const compare = decision.dataset.compare === 'true';
+            document.getElementById('decision-title').textContent = accept ? (compare ? 'Send your offer?' : 'Accept this request?') : 'Decline this request?';
+            document.getElementById('decision-description').textContent = accept ? `You’re committing to ${decision.dataset.summary} for ${decision.dataset.amount}.` + (compare ? ' Your offer is sent; the parent compares offers and may choose another sitter.' : ' The parent will be notified and a booking will be created.') : 'The parent will be notified. This request will stay available to other sitters.';
+            form.querySelector('[data-confirm-decision]').textContent = accept ? (compare ? 'Send offer' : 'Accept request') : 'Decline request';
             dialog.querySelector('.decision-icon use').setAttribute('href', accept ? '#icon-check' : '#icon-close');
             const back = new URL(decision.href);
             back.searchParams.delete('confirm');
