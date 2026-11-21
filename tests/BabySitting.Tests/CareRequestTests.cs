@@ -22,7 +22,7 @@ public sealed class CareRequestTests
     private static CareRequestFormViewModel ValidForm()
     {
         var start = DashboardViewModel.Local(DateTimeOffset.UtcNow).DateTime.Date.AddDays(2).AddHours(18);
-        return new() { Title = "Evening care", Description = "Dinner, bath and bed.", City = "Beirut", Budget = 40, NumberOfChildren = 2, YoungestChildAgeYears = 3, OldestChildAgeYears = 7, StartsAtLocal = start, EndsAtLocal = start.AddHours(4) };
+        return new() { Title = "Evening care", Description = "Dinner, bath and bed.", City = "Beirut", ServiceAddress = "Street 1, Beirut", Budget = 40, NumberOfChildren = 2, YoungestChildAgeYears = 3, OldestChildAgeYears = 7, StartsAtLocal = start, EndsAtLocal = start.AddHours(4) };
     }
 
     private static HashSet<string> Invalid(CareRequestFormViewModel form)

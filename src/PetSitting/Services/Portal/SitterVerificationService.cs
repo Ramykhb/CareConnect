@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
@@ -77,12 +78,25 @@ public sealed class SitterVerificationService(PetSittingDbContext db, UserManage
         profile.VerificationStatus = VerificationStatus.Pending;
         profile.VerifiedAtUtc = null;
         var name = profile.User.FirstName + " " + profile.User.LastName;
-        foreach (var manager in (await users.GetUsersInRoleAsync(Roles.PlatformManager)).Where(m => m.IsActive))
-            db.Notifications.Add(new Notification { UserId = manager.Id, Category = NotificationCategory.General, SourceKey = "verification:" + verification.Id,
-                Title = "Sitter verification to review", Body = name + " sent a " + DocumentLabel(form.DocumentType).ToLowerInvariant() + " to be verified.",
-                RelativeUrl = "/SitterVerifications", CreatedAtUtc = now });
-        try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { return new(false, "Your proof is already waiting for a manager. Refresh the page."); }
+        async Task AlertManagersAsync()
+        {
+            foreach (var manager in (await users.GetUsersInRoleAsync(Roles.PlatformManager)).Where(m => m.IsActive))
+                db.Notifications.Add(new Notification { UserId = manager.Id, Category = NotificationCategory.General, SourceKey = "verification:" + verification.Id,
+                    Title = "Sitter verification to review", Body = name + " sent a " + DocumentLabel(form.DocumentType).ToLowerInvariant() + " to be verified.",
+                    RelativeUrl = "/SitterVerifications", CreatedAtUtc = now });
+        }
+        await AlertManagersAsync();
+        for (var attempt = 1; ; attempt++)
+        {
+            try { await db.SaveChangesAsync(ct); break; }
+            catch (DbUpdateException ex) when (attempt < 3 && ex.InnerException is SqlException { Number: 547 })
+            {
+                // A manager account was removed while the alerts were being saved: alert the current managers instead.
+                foreach (var entry in db.ChangeTracker.Entries<Notification>().Where(e => e.State == EntityState.Added).ToList()) entry.State = EntityState.Detached;
+                await AlertManagersAsync();
+            }
+            catch (DbUpdateException) { return new(false, "Your proof is already waiting for a manager. Refresh the page."); }
+        }
         return new(true, "Thanks! Your proof was sent. A manager will check it and you'll get a notification.");
     }
 

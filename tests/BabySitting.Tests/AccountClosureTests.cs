@@ -54,7 +54,9 @@ public sealed class AccountClosureTests
             Assert.True((await service.RequestAsync(customer.Id, "Moving abroad")).Succeeded);
             Assert.True((await service.RequestAsync(customer.Id, "Again")).Succeeded);
             Assert.Equal(1, await db.AccountClosureRequests.CountAsync(r => r.UserId == customer.Id && r.Status == ClosureStatus.Pending));
-            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == manager.Id && n.Title == "Account closure requested"));
+            // Count only alerts about this customer's request: other tests' closure requests alert every manager too.
+            var pendingId = (await service.PendingForUserAsync(customer.Id))!.Id;
+            Assert.Equal(1, await db.Notifications.CountAsync(n => n.UserId == manager.Id && n.SourceKey == "closure:" + pendingId));
 
             // Withdraw, then request again.
             Assert.True((await service.WithdrawAsync(customer.Id)).Succeeded);

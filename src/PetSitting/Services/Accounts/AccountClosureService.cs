@@ -40,11 +40,24 @@ public sealed class AccountClosureService(PetSittingDbContext db, UserManager<Ap
         var request = new AccountClosureRequest { UserId = userId, Reason = reason, CreatedAtUtc = now };
         db.AccountClosureRequests.Add(request);
         // Every platform manager is told (live, through the notification feed).
-        foreach (var manager in await users.GetUsersInRoleAsync(Roles.PlatformManager))
-            db.Notifications.Add(new Notification { UserId = manager.Id, Category = NotificationCategory.General, SourceKey = "closure:" + request.Id,
-                Title = "Account closure requested", Body = $"{user.FirstName} {user.LastName} asked to close their account.", RelativeUrl = "/AccountClosures/Details/" + request.Id, CreatedAtUtc = now });
-        try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 }) { return new(true, "Your closure request is already with a platform manager."); }
+        async Task AlertManagersAsync()
+        {
+            foreach (var manager in await users.GetUsersInRoleAsync(Roles.PlatformManager))
+                db.Notifications.Add(new Notification { UserId = manager.Id, Category = NotificationCategory.General, SourceKey = "closure:" + request.Id,
+                    Title = "Account closure requested", Body = $"{user.FirstName} {user.LastName} asked to close their account.", RelativeUrl = "/AccountClosures/Details/" + request.Id, CreatedAtUtc = now });
+        }
+        await AlertManagersAsync();
+        for (var attempt = 1; ; attempt++)
+        {
+            try { await db.SaveChangesAsync(ct); break; }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 }) { return new(true, "Your closure request is already with a platform manager."); }
+            catch (DbUpdateException ex) when (attempt < 3 && ex.InnerException is SqlException { Number: 547 })
+            {
+                // A manager account was removed while the alerts were being saved: alert the current managers instead.
+                foreach (var entry in db.ChangeTracker.Entries<Notification>().Where(e => e.State == EntityState.Added).ToList()) entry.State = EntityState.Detached;
+                await AlertManagersAsync();
+            }
+        }
         return new(true, "Your closure request was sent. A platform manager will review it; you can withdraw it until then.");
     }
 
