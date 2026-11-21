@@ -126,7 +126,7 @@ public sealed class SitterVerificationService(PetSittingDbContext db, UserManage
 
     public static string CleanName(string? name, string type)
     {
-        var clean = new string(Path.GetFileName(name ?? "").Where(c => !char.IsControl(c) && c is not ('"' or '\\' or '/')).ToArray()).Trim();
+        var clean = new string(Path.GetFileName((name ?? "").Replace('\\', '/')).Where(c => !char.IsControl(c) && c is not ('"' or '\\' or '/')).ToArray()).Trim();
         if (clean.Length > 150) clean = clean[..150];
         return clean.Length > 0 ? clean : "document" + (type == "application/pdf" ? ".pdf" : "");
     }
