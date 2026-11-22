@@ -33,6 +33,7 @@ builder.Services.AddScoped<BabySitting.Services.Chat.IChatService, BabySitting.S
 builder.Services.AddHostedService<BabySitting.Services.Chat.MessageCleanupService>();
 builder.Services.AddHostedService<BabySitting.Services.Notifications.NotificationCleanupService>();
 builder.Services.AddHostedService<BabySitting.Services.Bookings.BookingExpiryService>();
+builder.Services.AddHostedService<BabySitting.Services.Bookings.CareReminderService>();
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddSingleton<BabySitting.Services.Notifications.LiveNotifications>();
 builder.Services.AddScoped<BabySitting.Services.Portal.IPayoutReviewService, BabySitting.Services.Portal.PayoutReviewService>();
