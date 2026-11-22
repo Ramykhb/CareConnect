@@ -61,8 +61,8 @@
                     <input type="hidden" name="bookingId" value="@b.Id" />
                     <input type="hidden" name="clientToken" value="@Guid.NewGuid()" />
                     <input type="hidden" name="version" value="@Convert.ToBase64String(b.RowVersion)" />
-                    <p class="pet-meta">Your sitter accepted. Pay to confirm the booking — this is a demo payment, no card is charged.</p>
-                    <button type="submit" class="btn btn-lime"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(b.TotalAmount - BookingRules.Paid(b), b.Currency) (demo)</button>
+                    <p class="pet-meta">Your sitter accepted. Pay to confirm the booking.</p>
+                    <button type="submit" class="btn btn-lime"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(b.TotalAmount - BookingRules.Paid(b), b.Currency)</button>
                 </form>
             }
             @if (b.Payments.Any(p => p.Status == PaymentStatus.Succeeded)) { <p class="pet-meta">Paid @DashboardViewModel.Money(BookingRules.Paid(b), b.Currency) · ref @b.Payments.First(p => p.Status == PaymentStatus.Succeeded).ProviderTransactionId</p> }

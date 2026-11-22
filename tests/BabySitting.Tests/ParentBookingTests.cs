@@ -121,7 +121,7 @@ public sealed class ParentBookingTests
             Assert.Contains("Waiting for Omar", pendingPage);
             Assert.Contains("ENTRY-SECRET", pendingPage);
             Assert.Contains("Confirm cancellation", pendingPage);
-            Assert.DoesNotContain("Record demo payment", pendingPage);
+            Assert.DoesNotContain("Pay now</button>", pendingPage);
             Assert.Equal(HttpStatusCode.NotFound, (await otherClient.GetAsync($"/ParentBookings/Details/{pending}")).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await otherClient.GetAsync($"/ParentBookings/DetailUpdates/{completed}")).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await otherClient.GetAsync($"/ParentBookings/Receipt/{completed}")).StatusCode);
@@ -137,7 +137,7 @@ public sealed class ParentBookingTests
             await Post(ownerClient, "/ParentBookings/Pay", paymentForm);
             var paidPage = await ownerClient.GetStringAsync($"/ParentBookings/Details/{acceptedBooking}");
             Assert.Contains("Payment successful", paidPage);
-            Assert.DoesNotContain("Record demo payment", paidPage);
+            Assert.DoesNotContain("Pay now</button>", paidPage);
             var completedPage = await ownerClient.GetStringAsync($"/ParentBookings/Details/{completed}");
             Assert.Contains("Leave a review", completedPage);
             Assert.Contains("Book Omar again", completedPage);

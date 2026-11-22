@@ -88,7 +88,7 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
                     UserId = offer.SitterProfile.UserId, Title = "A pet owner cancelled a request", Body = request.Title + ": " + reason,
                     RelativeUrl = booking is not null && booking.SitterProfileId == offer.SitterProfileId ? "/SitterBookings/Details/" + booking.Id : "/SitterRequests?id=" + request.Id, CreatedAtUtc = now });
             }
-            return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any recorded demo payments were marked refunded.");
+            return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any payments were refunded.");
         });
     }
     public async Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version)
@@ -98,7 +98,7 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
         {
             var booking = await db.PetBookings.Include(b => b.Payments).Include(b => b.SitterProfile).Include(b => b.Request).SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner);
             if (booking is null) return new(false, "Booking not found.", true);
-            if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(true, "This demo payment was already recorded.");
+            if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(true, "This payment was already recorded.");
             if (!CanPay(booking, clock.GetUtcNow())) return new(false, "Payment is available only for accepted care before its scheduled start.");
             if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details before recording payment.");
             var amount = booking.TotalAmount - BookingRules.Paid(booking);
@@ -106,8 +106,8 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
                 Status = PaymentStatus.Succeeded, Provider = "Dummy", ProviderTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant(), IdempotencyKey = token, PaidAtUtc = clock.GetUtcNow() };
             db.Payments.Add(payment); booking.Status = BookingStatus.Confirmed;
             db.Notifications.Add(new() { Category = NotificationCategory.Payment, SourceKey = $"payment:{payment.Id}:{PaymentStatus.Succeeded}", UserId = booking.SitterProfile.UserId,
-                Title = "Demo payment recorded", Body = booking.Request.Title + " is paid and confirmed (demo).", RelativeUrl = "/SitterBookings/Details/" + booking.Id });
-            return new(true, "Demo payment recorded. No card was charged. Your booking is confirmed.");
+                Title = "Payment received", Body = booking.Request.Title + " is paid and confirmed.", RelativeUrl = "/SitterBookings/Details/" + booking.Id });
+            return new(true, "Payment successful. Your booking is confirmed.");
         });
     }
     public async Task<BookingWriteResult> ReviewAsync(Guid owner, Guid bookingId, int rating, string? comment)

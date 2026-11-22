@@ -87,7 +87,7 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
                     UserId = offer.SitterProfile.UserId, Title = "A parent cancelled a request", Body = request.Title + ": " + reason,
                     RelativeUrl = booking is not null && booking.SitterProfileId == offer.SitterProfileId ? "/SitterBookings/Details/" + booking.Id : "/SitterRequests?id=" + request.Id, CreatedAtUtc = now });
             }
-            return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any recorded demo payments were marked refunded.");
+            return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any payments were refunded.");
         });
     }
     // Paying and reviewing live in ParentPaymentService only, so both pages follow the same rules.

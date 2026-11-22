@@ -13,7 +13,7 @@
     {
         ("Request submitted", (DateTimeOffset?)Model.Request.CreatedAtUtc, true, false),
         (accepted ? "Sitter accepted" : Model.Item.Bucket == "rejected" ? "Sitter declined" : "Awaiting a sitter’s decision", accepted ? b?.Offer.DecidedAtUtc ?? b?.CreatedAtUtc : null, accepted, !accepted && !cancelled && Model.Item.Bucket == "pending"),
-        (refunded ? "Demo payment refunded" : b?.TotalAmount == 0 ? "No payment required" : "Payment confirmed", refunded ? null : b?.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.Currency == b.Currency).Max(p => p.PaidAtUtc), paid || refunded, accepted && !paid && !refunded && !cancelled),
+        (refunded ? "Payment refunded" : b?.TotalAmount == 0 ? "No payment required" : "Payment confirmed", refunded ? null : b?.Payments.Where(p => p.Status == PaymentStatus.Succeeded && p.Currency == b.Currency).Max(p => p.PaidAtUtc), paid || refunded, accepted && !paid && !refunded && !cancelled),
         ("Care in progress", b?.StartedAtUtc, started, paid && !started && !cancelled),
         ("Completed", b?.CompletedAtUtc, complete, started && !complete && !cancelled)
     };

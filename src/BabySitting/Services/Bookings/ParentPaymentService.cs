@@ -51,7 +51,7 @@ public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider c
                     Title = "Payment received · " + DashboardViewModel.Money(amount, booking.Currency), Body = booking.Request.Title + " is paid and confirmed.", RelativeUrl = "/SitterBookings/Details/" + booking.Id, CreatedAtUtc = now });
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
-                return new(true, $"Payment of {DashboardViewModel.Money(amount, booking.Currency)} recorded (demo — no real charge). Your booking is confirmed.");
+                return new(true, $"Payment of {DashboardViewModel.Money(amount, booking.Currency)} received. Your booking is confirmed.");
             });
         }
         catch (DbUpdateConcurrencyException) { return new(false, "The booking changed. Refresh and try again."); }

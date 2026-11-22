@@ -51,7 +51,7 @@
     }
     else if (item.Status == "Payment pending")
     {
-        <div class="ob-alert pending"><svg class="line-icon"><use href="#icon-lock" /></svg><span>@sitterFirst accepted your request. Complete the demo payment to confirm care.</span></div>
+        <div class="ob-alert pending"><svg class="line-icon"><use href="#icon-lock" /></svg><span>@sitterFirst accepted your request. Complete the payment to confirm care.</span></div>
     }
     else if (item.Bucket is "cancelled" or "rejected" or "expired")
     {
@@ -84,12 +84,12 @@
     {
         <section class="ob-card ob-sitter-card"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-user" /></svg></span><h2>A friendly face is on the way</h2><p>Eligible sitters in @Model.Request.City can respond to your open request.</p></section>
     }
-    <section class="ob-card ob-payment-card @(paid ? "settled" : "")"><div class="ob-card-heading"><h2>Payment</h2><span class="ob-status @(Model.Refunded > 0 ? "muted" : paid ? "paid" : "pending")">@(Model.Refunded > 0 ? "Refunded" : b is null ? "Not due yet" : item.Bucket == "cancelled" ? "Closed" : paid ? b.TotalAmount == 0 ? "No payment due" : "Successful" : "Pending")</span></div><dl><div><dt>@(b is null ? "Initial offer" : "Care total")</dt><dd>@DashboardViewModel.Money(item.Amount, item.Currency)</dd></div><div><dt>Paid</dt><dd>@DashboardViewModel.Money(Model.Paid, item.Currency)</dd></div>@if (Model.Refunded > 0) { <div><dt>Refunded (demo)</dt><dd>@DashboardViewModel.Money(Model.Refunded, item.Currency)</dd></div> }<div class="ob-payment-total"><dt>@(paid ? "Total" : "Remaining")</dt><dd>@DashboardViewModel.Money(item.Bucket == "cancelled" ? 0 : paid ? item.Amount : Math.Max(0, item.Amount - Model.Paid - Model.Refunded), item.Currency)</dd></div></dl>
+    <section class="ob-card ob-payment-card @(paid ? "settled" : "")"><div class="ob-card-heading"><h2>Payment</h2><span class="ob-status @(Model.Refunded > 0 ? "muted" : paid ? "paid" : "pending")">@(Model.Refunded > 0 ? "Refunded" : b is null ? "Not due yet" : item.Bucket == "cancelled" ? "Closed" : paid ? b.TotalAmount == 0 ? "No payment due" : "Successful" : "Pending")</span></div><dl><div><dt>@(b is null ? "Initial offer" : "Care total")</dt><dd>@DashboardViewModel.Money(item.Amount, item.Currency)</dd></div><div><dt>Paid</dt><dd>@DashboardViewModel.Money(Model.Paid, item.Currency)</dd></div>@if (Model.Refunded > 0) { <div><dt>Refunded</dt><dd>@DashboardViewModel.Money(Model.Refunded, item.Currency)</dd></div> }<div class="ob-payment-total"><dt>@(paid ? "Total" : "Remaining")</dt><dd>@DashboardViewModel.Money(item.Bucket == "cancelled" ? 0 : paid ? item.Amount : Math.Max(0, item.Amount - Model.Paid - Model.Refunded), item.Currency)</dd></div></dl>
         @if (Model.CanPay)
         {
-            <form asp-action="Pay" method="post"><input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" /><p>This is a demo payment. No card details are collected and no money moves.</p><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Record demo payment</button></form>
+            <form asp-action="Pay" method="post"><input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" /><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay now</button></form>
         }
-        @if (b?.Payments.Any(p => p.Provider == "Dummy") == true) { <p class="ob-payment-footnote">Demo payment record · no card was charged.</p> }
+        @if (b?.Payments.Any(p => p.Provider == "Dummy") == true) { <p class="ob-payment-footnote">Payment recorded.</p> }
     </section>
     @foreach (var pet in Model.Request.Pets.Select(p => p.Pet))
     {

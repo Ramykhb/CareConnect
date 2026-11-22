@@ -44,7 +44,7 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
                 else if (payment.Status == PaymentStatus.Pending) { payment.Status = PaymentStatus.Failed; payment.FailureReason = "Booking cancelled automatically."; }
             }
             var title = unpaid ? "Booking cancelled: not paid in time" : "Booking cancelled: care never started";
-            var body = booking.Request.Title + (unpaid ? " wasn't paid before it started." : " ended without care being started. Any demo payment was refunded.");
+            var body = booking.Request.Title + (unpaid ? " wasn't paid before it started." : " ended without care being started. Any payment was refunded.");
             db.Notifications.Add(new Notification { UserId = booking.CustomerId, Category = NotificationCategory.Booking, SourceKey = "booking-auto-cancelled:" + booking.Id,
                 Title = title, Body = body, RelativeUrl = "/ParentBookings/Details/" + booking.RequestId, CreatedAtUtc = now });
             db.Notifications.Add(new Notification { UserId = booking.SitterProfile.UserId, Category = NotificationCategory.Booking, SourceKey = "booking-cancelled:" + booking.Id,

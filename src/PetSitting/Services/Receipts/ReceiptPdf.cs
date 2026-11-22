@@ -84,7 +84,7 @@ public static class ReceiptPdf
             row.Borders.Bottom.Color = Sage;
             row.Borders.Bottom.Width = 0.7;
             row[0].AddParagraph(DashboardViewModel.Local(payment.PaidAtUtc ?? payment.CreatedAtUtc).ToString("d MMM yyyy", CultureInfo.InvariantCulture));
-            row[1].AddParagraph(payment.Provider == "Dummy" ? "Demo payment" : payment.Provider);
+            row[1].AddParagraph(payment.Provider == "Dummy" ? "Online payment" : payment.Provider);
             if (!string.IsNullOrWhiteSpace(payment.ProviderTransactionId))
             {
                 var transaction = row[1].AddParagraph(payment.ProviderTransactionId);
@@ -100,14 +100,6 @@ public static class ReceiptPdf
         total.Format.Alignment = ParagraphAlignment.Right;
         total.Format.SpaceBefore = 20;
         total.Format.SpaceAfter = 22;
-        if (payments.Any(p => p.Provider == "Dummy"))
-        {
-            var demo = section.AddParagraph("This receipt includes demo payment records. No real charge was made for those records.");
-            demo.Format.Font.Size = 9;
-            demo.Format.Font.Color = Muted;
-            demo.Format.SpaceBefore = 8;
-            demo.Format.SpaceAfter = 12;
-        }
         var footer = section.Footers.Primary.AddParagraph("Booking #" + model.Item.Reference + "  |  CareConnect");
         footer.Format.Font.Size = 8;
         footer.Format.Font.Color = Muted;
