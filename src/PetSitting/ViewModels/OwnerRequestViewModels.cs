@@ -25,6 +25,8 @@ public sealed class OwnerRequestForm
     // Sitters send offers and the customer chooses one, instead of the first sitter to accept being booked.
     public bool CompareOffers { get; set; } = true;
     public bool CareConfirmed { get; set; }
+    // A city the customer kept after being asked "did you mean ...?".
+    [StringLength(150)] public string? CityChecked { get; set; }
 
     public (DateTimeOffset Start, DateTimeOffset End)? Times()
     {

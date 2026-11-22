@@ -208,6 +208,17 @@ public sealed class ReviewFixesTests
         }
     }
 
+    [Theory]
+    [InlineData("Beruit", "Beirut")]      // swapped letters (the request that never reached any sitter)
+    [InlineData("Bruit", "Beirut")]
+    [InlineData("beirutt", "Beirut")]
+    [InlineData("Beirut", null)]          // exact match (any capitals): nothing to ask
+    [InlineData("BEIRUT", null)]
+    [InlineData("Jounieh", null)]         // a different city: allowed, no suggestion
+    [InlineData("Be", null)]              // too short to guess
+    public void Likely_city_typos_get_a_suggestion(string typed, string? expected) =>
+        Assert.Equal(expected, BabySitting.Services.Requests.CityNames.Suggest(typed, ["beirut", "Zahle"]));
+
     private static string Hidden(string html, string name) =>
         WebUtility.HtmlDecode(Regex.Match(html, $"<input(?=[^>]*name=\"{name}\")(?=[^>]*value=\"([^\"]*)\")[^>]*>").Groups[1].Value);
 }

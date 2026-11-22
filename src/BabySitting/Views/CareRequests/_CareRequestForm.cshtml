@@ -1,5 +1,6 @@
 @* Shared by Create and Edit, like _FamilyForm. *@
 @using BabySitting.ViewModels
+@inject BabySitting.Data.BabySittingDbContext CityDb
 @model CareRequestFormViewModel
 
 <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
@@ -47,7 +48,7 @@
 <div class="form-row">
     <div class="field">
         <label asp-for="City"></label>
-        <input asp-for="City" />
+        <input asp-for="City" list="sitter-cities" /><datalist id="sitter-cities">@foreach (var c in BabySitting.Services.Requests.CityNames.Distinct(CityDb.BabysitterProfiles.Where(p => p.IsAvailable && p.User.IsActive).Select(p => p.City).Distinct().ToList())) { <option value="@c"></option> }</datalist>
         <span asp-validation-for="City" class="field-error"></span>
     </div>
     <div class="field">

@@ -1,4 +1,5 @@
 @using PetSitting.ViewModels
+@inject PetSitting.Data.PetSittingDbContext CityDb
 @model OwnerRequestWizard
 @{
     ViewData["Title"] = "Create request";
@@ -63,7 +64,7 @@
                 <h2 id="location-heading">Where will care take place?</h2><p class="request-intro">Your exact address and access notes are shared only with the sitter who accepts.</p>
                 <div class="location-choice"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-home" /></svg></span><div><strong>@(Model.Form.ServiceType == ServiceType.Boarding ? "At the sitter’s home" : "At my home")</strong><small>@(Model.Form.ServiceType == ServiceType.Boarding ? "Choose a city to find boarding care nearby." : "Your sitter comes to your pet’s familiar surroundings.")</small></div></div>
                 <div class="request-location-grid"><div class="request-location-fields">
-                    <div class="request-field"><label asp-for="Form.City">City</label><input asp-for="Form.City" maxlength="150" placeholder="e.g. Beirut" autocomplete="address-level2" /><span asp-validation-for="Form.City"></span></div>
+                    <div class="request-field"><label asp-for="Form.City">City</label><input asp-for="Form.City" maxlength="150" placeholder="e.g. Beirut" autocomplete="address-level2" list="sitter-cities" /><input type="hidden" asp-for="Form.CityChecked" /><datalist id="sitter-cities">@foreach (var c in PetSitting.Services.Requests.CityNames.Distinct(CityDb.PetSitterProfiles.Where(p => p.IsAvailable && p.User.IsActive).Select(p => p.City).Distinct().ToList())) { <option value="@c"></option> }</datalist><span asp-validation-for="Form.City"></span></div>
                     <div class="request-field"><label asp-for="Form.Area">Area <small>optional</small></label><input asp-for="Form.Area" maxlength="120" placeholder="e.g. Achrafieh" autocomplete="address-level3" /></div>
                     @if (Model.Form.ServiceType != ServiceType.Boarding)
                     {

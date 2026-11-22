@@ -1,4 +1,5 @@
 @using BabySitting.ViewModels
+@inject BabySitting.Data.BabySittingDbContext CityDb
 @model ParentRequestWizard
 @{
     ViewData["Title"] = "Create request";
@@ -61,7 +62,7 @@
                 <h2 id="location-heading">Where will care take place?</h2><p class="request-intro">Your exact address and access notes are shared only with the sitter who accepts.</p>
                 <div class="location-choice"><span class="round-icon lime"><svg class="line-icon"><use href="#icon-home" /></svg></span><div><strong>At my home</strong><small>Your sitter comes to your children’s familiar surroundings.</small></div></div>
                 <div class="request-location-grid"><div class="request-location-fields">
-                    <div class="request-field"><label asp-for="Form.City">City</label><input asp-for="Form.City" maxlength="150" placeholder="e.g. Beirut" autocomplete="address-level2" /><span asp-validation-for="Form.City"></span></div>
+                    <div class="request-field"><label asp-for="Form.City">City</label><input asp-for="Form.City" maxlength="150" placeholder="e.g. Beirut" autocomplete="address-level2" list="sitter-cities" /><input type="hidden" asp-for="Form.CityChecked" /><datalist id="sitter-cities">@foreach (var c in BabySitting.Services.Requests.CityNames.Distinct(CityDb.BabysitterProfiles.Where(p => p.IsAvailable && p.User.IsActive).Select(p => p.City).Distinct().ToList())) { <option value="@c"></option> }</datalist><span asp-validation-for="Form.City"></span></div>
                     <div class="request-field"><label asp-for="Form.Area">Area <small>optional</small></label><input asp-for="Form.Area" maxlength="120" placeholder="e.g. Achrafieh" autocomplete="address-level3" /></div>
                     <div class="request-field"><label asp-for="Form.StreetAddress">Street address</label><input asp-for="Form.StreetAddress" maxlength="140" placeholder="Street name and number" autocomplete="address-line1" /><span asp-validation-for="Form.StreetAddress"></span></div>
                         <div class="request-field"><label asp-for="Form.Building">Building / floor <small>optional</small></label><input asp-for="Form.Building" maxlength="60" placeholder="Building name, floor" autocomplete="address-line2" /></div>

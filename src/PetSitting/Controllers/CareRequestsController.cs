@@ -227,6 +227,14 @@ public sealed partial class CareRequestsController(PetSittingDbContext db, UserM
                 break;
             case 4:
                 if (string.IsNullOrWhiteSpace(form.City)) Error("City", "Enter the city where care is needed.");
+                // Requests only reach sitters in the exact same city, so catch likely typos such as "Beruit".
+                else if (!string.Equals(form.CityChecked, form.City.Trim(), StringComparison.OrdinalIgnoreCase)
+                    && PetSitting.Services.Requests.CityNames.Suggest(form.City, db.PetSitterProfiles.AsNoTracking().Where(p => p.IsAvailable && p.User.IsActive).Select(p => p.City).Distinct().ToList()) is { } suggestion)
+                {
+                    form.CityChecked = form.City.Trim();
+                    ModelState.Remove("Form.CityChecked");
+                    Error("City", $"No sitters work in \u201c{form.City.Trim()}\u201d yet. Did you mean {suggestion}? If \u201c{form.City.Trim()}\u201d is right, press Continue again.");
+                }
                 if (form.ServiceType != ServiceType.Boarding && string.IsNullOrWhiteSpace(form.StreetAddress)) Error("StreetAddress", "Enter your street address.");
                 if (form.Address.Length > 300) Error("StreetAddress", "Keep the combined address, building, area and access notes within 300 characters.");
                 break;
