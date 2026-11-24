@@ -1,7 +1,7 @@
 @using PetSitting.ViewModels
 @using PetSitting.Models
 @model FindSittersViewModel
-@{ ViewData["PortalClass"] = "customer-page"; }
+@{ Layout = "_PortalLayout"; ViewData["PortalClass"] = "customer-page"; }
 <section class="account-page-heading"><div><h1>Find sitters</h1><p>Browse available sitters, or create a request to get AI recommendations based on your dates, service and budget.</p></div><div class="account-heading-actions"><a class="btn btn-dark btn-sm" asp-controller="CareRequests" asp-action="Create">Create a request</a></div></section>
 <form method="get" class="dash-card cp-filters" role="search">
     <label>City<input name="city" value="@Model.City" list="cp-cities" placeholder="Any city" /><datalist id="cp-cities">@foreach (var c in Model.Cities) { <option value="@c"></option> }</datalist></label>

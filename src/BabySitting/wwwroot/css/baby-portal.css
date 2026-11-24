@@ -244,19 +244,35 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 /* Last payout sent */
 .payout-last-paid { margin: 0 0 12px; font-size: .85rem; opacity: .85; }
 
-/* Owner/parent Find Sitters, Payments and Reviews pages (#13) */
-.cp-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
-.cp-filters label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .85rem; flex: 1 1 180px; }
-.cp-filters input, .cp-filters select { padding: 8px 10px; border: 1px solid #d9dde3; border-radius: 10px; font: inherit; font-weight: 400; }
-.cp-count { margin: 0 0 10px; }
-.cp-sitters, .cp-reviews { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.cp-sitter header, .cp-review header { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-.cp-sitter header { justify-content: flex-start; }
-.cp-sitter h2, .cp-review h2 { font-size: 1.05rem; margin: 0; }
-.cp-sitter small, .cp-review small, .cp-awaiting-row small { display: block; color: #6b7280; }
-.cp-rating, .cp-services { font-size: .85rem; color: #4b5563; margin: 8px 0 0; }
-.cp-bio { margin: 8px 0 0; font-size: .9rem; }
-.cp-sitter footer { margin-top: 10px; }
+/* Customer pages: sitter discovery uses the same rounded, calm portal language. */
+.customer-page .account-page-heading { align-items:center; margin-bottom:28px; }
+.customer-page .account-page-heading h1 { font-size:clamp(32px,4vw,48px); letter-spacing:-1.8px; }
+.customer-page .account-page-heading p { max-width:600px; font-size:13px; }
+.customer-page .account-heading-actions .btn { min-height:46px; padding-inline:22px; }
+.cp-filters { display:grid; grid-template-columns:minmax(150px,.8fr) minmax(170px,.9fr) minmax(220px,1.35fr) auto; gap:14px; align-items:end; margin-bottom:18px; padding:20px; border-radius:28px; background:white; box-shadow:0 10px 30px rgba(25,26,29,.04); }
+.cp-filters label { display:grid; gap:7px; min-width:0; font-size:11px; font-weight:700; color:var(--muted); }
+.cp-filters input, .cp-filters select { width:100%; min-width:0; height:46px; padding:0 14px; border:1px solid var(--border); border-radius:15px; background:#f5f7f3; color:var(--ink); font:inherit; font-size:12px; outline:none; transition:border-color .15s, box-shadow .15s; }
+.cp-filters input:focus, .cp-filters select:focus { border-color:var(--sage); box-shadow:0 0 0 3px rgba(170,187,176,.25); }
+.cp-filters .btn { height:46px; padding:0 24px; }
+.cp-count { margin:0 0 14px; font-size:12px; }
+.cp-sitters, .cp-reviews { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr)); gap:18px; }
+.cp-sitter { position:relative; overflow:hidden; display:flex; flex-direction:column; min-height:260px; padding:22px; border:1px solid rgba(25,26,29,.055); border-radius:28px; background:white; box-shadow:0 9px 28px rgba(25,26,29,.035); transition:transform .18s, box-shadow .18s; }
+.cp-sitter:hover { transform:translateY(-3px); box-shadow:0 16px 36px rgba(25,26,29,.08); }
+.cp-sitter header, .cp-review header { display:flex; gap:13px; align-items:center; justify-content:space-between; }
+.cp-sitter header { justify-content:flex-start; }
+.cp-sitter header > div { min-width:0; }
+.cp-sitter .portal-avatar { width:48px; height:48px; font-size:17px; }
+.cp-sitter h2, .cp-review h2 { font-size:16px; letter-spacing:-.35px; margin:0 0 4px; }
+.cp-sitter small, .cp-review small, .cp-awaiting-row small { display:block; color:var(--muted); font-size:10px; line-height:1.6; }
+.cp-rating { margin:19px 0 0; color:#9a6a00; font-size:11px; font-weight:700; }
+.cp-bio { margin:9px 0 0; color:#515c54; font-size:12px; line-height:1.75; }
+.cp-services { margin:14px 0 0; padding:9px 12px; border-radius:14px; background:var(--card-2); color:var(--ink); font-size:10px; font-weight:700; line-height:1.6; }
+.cp-sitter footer { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:auto; padding-top:16px; }
+.cp-sitter footer strong { font-size:19px; letter-spacing:-.5px; }
+.cp-sitter footer small { display:inline; font-size:10px; font-weight:500; }
+.cp-empty { padding:34px; border:1px dashed var(--sage); border-radius:28px; background:var(--card-2); }
+.cp-empty h2 { font-size:17px; margin:0 0 7px; }
+.cp-empty p { margin:0; color:var(--muted); font-size:12px; }
 .cp-table { width: 100%; border-collapse: collapse; }
 .cp-table th, .cp-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eef0f3; font-size: .9rem; }
 .cp-awaiting { margin-bottom: 14px; }
@@ -264,4 +280,6 @@ body.baby-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-f
 .cp-awaiting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #eef0f3; }
 .cp-stars { color: #d4a017; letter-spacing: 1px; white-space: nowrap; }
 .cp-reply { background: #f6f7f9; padding: 8px 10px; border-radius: 10px; font-size: .9rem; }
-.cp-empty h2 { font-size: 1.1rem; }
+.cp-empty h2 { font-size:17px; }
+@media(max-width:900px) { .cp-filters { grid-template-columns:1fr 1fr; } .cp-filters .btn { width:100%; } }
+@media(max-width:600px) { .customer-page .account-page-heading { align-items:flex-start; gap:14px; } .customer-page .account-heading-actions { width:100%; } .customer-page .account-heading-actions .btn { width:100%; } .cp-filters { grid-template-columns:1fr; padding:16px; border-radius:22px; } .cp-sitters { grid-template-columns:1fr; } .cp-sitter { padding:19px; } }
