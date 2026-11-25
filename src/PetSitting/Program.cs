@@ -55,6 +55,15 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<PetSitting.Service
 builder.Services.AddSingleton<PetSitting.Services.Notifications.NotificationBroadcastInterceptor>();
 builder.Services.AddScoped<PetSitting.Services.Notifications.INotificationFeedService, PetSitting.Services.Notifications.NotificationFeedService>();
 builder.Services.AddScoped<PetSitting.Services.Bookings.OwnerBookingService>();
+builder.Services.Configure<PetSitting.Services.Payments.StripeOptions>(builder.Configuration.GetSection("Stripe"));
+builder.Services.PostConfigure<PetSitting.Services.Payments.StripeOptions>(o =>
+{
+    if (string.IsNullOrWhiteSpace(o.SecretKey)) o.SecretKey = builder.Configuration["STRIPE_SECRET_KEY"] ?? "";
+    if (string.IsNullOrWhiteSpace(o.PublishableKey)) o.PublishableKey = builder.Configuration["STRIPE_PUBLISHABLE_KEY"] ?? "";
+    if (string.IsNullOrWhiteSpace(o.WebhookSecret)) o.WebhookSecret = builder.Configuration["STRIPE_WEBHOOK_SECRET"] ?? "";
+});
+builder.Services.AddScoped<PetSitting.Services.Payments.IStripePaymentService, PetSitting.Services.Payments.StripePaymentService>();
+builder.Services.AddScoped<PetSitting.Services.Payments.StripeWebhookHandler>();
 builder.Services.AddScoped<PetSitting.Services.Portal.ISitterReportingService, PetSitting.Services.Portal.SitterReportingService>();
 builder.Services.AddScoped<PetSitting.Services.Portal.ISitterAccountService, PetSitting.Services.Portal.SitterAccountService>();
 builder.Services.AddScoped<PetSitting.Services.Bookings.IBookingCancellationService, PetSitting.Services.Bookings.BookingCancellationService>();

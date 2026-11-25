@@ -246,3 +246,10 @@ body.pet-portal { margin:0; background:var(--auth-bg); color:var(--ink); font-fa
 .cp-empty h2 { font-size:17px; }
 @media(max-width:900px) { .cp-filters { grid-template-columns:1fr 1fr; } .cp-filters .btn { width:100%; } }
 @media(max-width:600px) { .customer-page .account-page-heading { align-items:flex-start; gap:14px; } .customer-page .account-heading-actions { width:100%; } .customer-page .account-heading-actions .btn { width:100%; } .cp-filters { grid-template-columns:1fr; padding:16px; border-radius:22px; } .cp-sitters { grid-template-columns:1fr; } .cp-sitter { padding:19px; } }
+
+/* Stripe Elements card payment */
+.stripe-pay-form { display:grid; gap:10px; margin-top:14px; }
+.stripe-card-field { padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:#fff; }
+.stripe-pay-form .pay-error { color:#b3261e; font-size:11px; line-height:1.5; margin:0; }
+.stripe-pay-form .pay-error:empty { display:none; }
+.stripe-pay-form button[disabled] { opacity:.65; cursor:progress; }

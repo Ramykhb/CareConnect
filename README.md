@@ -127,7 +127,7 @@ Entities use UTC timestamps, SQL Server row-version concurrency tokens, explicit
 
 Combined care uses explicit one-time invitation codes to link customer-owned requests in the two apps. Each customer signs in separately and supplies local pet or family details; the broker exchanges coordination state only. Invitations waiting to be claimed do not create actionable, ownerless requests. Childcare data contains child counts, age ranges, and essential care instructions without child names, birth dates, or school information; access controls must precede exposing this data through any future endpoints.
 
-Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, demo payments, customer reviews and sitter replies. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Payout requests reserve balances locally, and managers can mark requests paid after processing them manually. Bank transfers are not connected.
+Both apps implement Identity authentication and roles, pet/family profiles, request drafts and submission, sitter decisions, bookings, cancellation, card payments, customer reviews and sitter replies. When Stripe keys are configured, customers pay through Stripe Elements and the card is charged with a server-created PaymentIntent; without keys the local demo payment remains available. Sitter profiles, services/pricing, availability, care checklists, private photo updates, SignalR booking chat, notifications, analytics and exports are implemented. Card payments are collected on the platform account: sitters do not need Stripe accounts. A successful payment is recorded against the booking, appears in the sitter's in-app earnings, and sends the sitter a notification. Sitter payout requests are local records that a manager marks as paid; no bank transfer is performed.
 
 ## Manager operations and report exports
 
@@ -137,7 +137,39 @@ Sitters submit proof through `/Sitter/Verification`; managers approve or reject 
 
 ## Payment deadlines and expiration
 
-Payment endpoints and payment buttons accept an unpaid booking only before its scheduled start, including while the expiry worker has not run yet. Every five minutes, the expiry worker saves old open requests as expired, cancels bookings still awaiting payment at their start time, and cancels confirmed bookings that never started by their end time. Recorded demo payments on cancelled bookings are marked refunded. In-progress care remains active until the sitter completes it. Saved status/payment transitions enqueue the existing combined-care messages in the same database save.
+Payment endpoints and payment buttons accept an unpaid booking only before its scheduled start, including while the expiry worker has not run yet. Every five minutes, the expiry worker saves old open requests as expired, cancels bookings still awaiting payment at their start time, and cancels confirmed bookings that never started by their end time. Recorded payments on cancelled bookings are refunded (Stripe card payments through the Stripe API, demo payments locally). In-progress care remains active until the sitter completes it. Saved status/payment transitions enqueue the existing combined-care messages in the same database save.
+
+## Stripe card payments
+
+Set these in `.env` (Development) or as environment variables, then restart both apps:
+
+```sh
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...   # optional; from `stripe listen` or the dashboard webhook endpoint
+```
+
+Owners and parents pay by card from a booking's payment section. The card is confirmed with Stripe Elements and the server creates a PaymentIntent on the platform account. No Stripe Connect onboarding is required: sitters never enter Stripe details. A successful payment is recorded locally, confirmed on the booking, added to the sitter's in-app earnings, and announced in the sitter's notification feed. Refunds go through the Stripe API on the same account.
+
+Apply the latest migrations to both databases (this removes the unused Connect columns):
+
+```sh
+dotnet ef database update --project src/PetSitting -- --environment Development
+dotnet ef database update --project src/BabySitting -- --environment Development
+```
+
+### Stripe webhooks
+
+Both apps expose `POST /Stripe/Webhook`, verified with `STRIPE_WEBHOOK_SECRET`. It handles `payment_intent.succeeded`, which records the payment and confirms the booking if the browser closed before posting the result. This is idempotent with the browser flow through the unique Stripe transaction index, so a double delivery or a late browser post cannot double-charge or double-record. Recording the payment is what updates the sitter's earnings and notification feed.
+
+For local development, forward events to the app you are testing (use port `5102` for BabySitting):
+
+```sh
+stripe listen --forward-to http://localhost:5101/Stripe/Webhook \
+               --events payment_intent.succeeded
+```
+
+Copy the `whsec_...` signing secret printed by `stripe listen` into `STRIPE_WEBHOOK_SECRET` and restart the app. For a deployed endpoint, add `https://your-host/Stripe/Webhook` in the Stripe dashboard, select `payment_intent.succeeded`, and use that endpoint's signing secret. A missing secret returns `503`; an invalid signature returns `400`; handled or ignored events return `200`. Webhooks are optional in development: when the browser posts the result normally, the payment is recorded immediately.
 
 ## Durable notification email delivery
 
@@ -450,7 +482,7 @@ Fonts, CSS, JavaScript, and SVG assets live inside BabySitting so it remains ind
 
 Dashboard data comes from the signed-in account’s database records. Owners see their pets, requests, bookings, payments, and available sitters in their city. Sitters see their bookings and open requests in their profile/account city, filtered by configured services and excluding requests they have already responded to. Request addresses are not displayed on the dashboard. Dates use Beirut time. Analytics show the current calendar year and received/succeeded USD payments; individual payment and booking rows retain their recorded currencies.
 
-Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics and manager overview pages. Request creation, profile/pricing updates, booking chat, customer reviews, demo payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching is available through Groq in the request wizard. Real payment charges and bank transfers remain unimplemented; managers can review verifications, users, closures and payout records. Dashboard shortcuts link to the implemented pages.
+Tabs and sidebar links open the dashboard sections or dedicated workflow pages. Search filters the current view, booking rows open details, and reports support CSV plus PDF/XLSX on sitter analytics and manager overview pages. Request creation, profile/pricing updates, booking chat, customer reviews, card payments and payout reservations have local backend workflows. Availability, care updates and request decisions use their dedicated sitter pages. AI matching is available through Groq in the request wizard. Card payments are collected by the platform and recorded in the sitter's in-app earnings; bank transfers remain unimplemented, and managers can still review verifications, users, closures and payout records. Dashboard shortcuts link to the implemented pages.
 
 Dashboard HTTP tests cover role redirects, access denial, and rendering populated/empty accounts without external services. The SQL-backed scoping check runs with `CARECONNECT_SQL_TESTS=1`. For local visual QA, `CARECONNECT_DASHBOARD_QA=/tmp/careconnect-dashboard-qa dotnet test tests/PetSitting.Tests --filter Dashboard_renders` writes HTML using test-only fixtures; the running application never uses this fixture data.
 

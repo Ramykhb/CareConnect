@@ -4,11 +4,12 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
+using PetSitting.Services.Payments;
 using PetSitting.ViewModels;
 
 namespace PetSitting.Services.Bookings;
 
-public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clock)
+public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clock, IStripePaymentService? stripe = null)
 {
     private static IQueryable<PetCareRequest> Include(IQueryable<PetCareRequest> query) => query.Include(r => r.Pets).ThenInclude(p => p.Pet)
         .Include(r => r.Offers).ThenInclude(o => o.SitterProfile).ThenInclude(s => s.User)
@@ -91,7 +92,21 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
             return new(true, booking is null ? "Your request was cancelled." : "Booking cancelled. Your sitter was notified. Any payments were refunded.");
         });
     }
-    public async Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version)
+    // Creates the Stripe PaymentIntent whose client secret the browser confirms with Stripe Elements.
+    public async Task<StripeIntentResult> CreatePaymentIntentAsync(Guid owner, Guid bookingId, Guid token, string? version, CancellationToken ct = default)
+    {
+        if (token == Guid.Empty) return new(false, null, "Reload this page before paying.");
+        if (stripe is not { IsConfigured: true }) return new(false, null, "Card payments are not configured.");
+        var booking = await db.PetBookings.AsNoTracking().Include(b => b.Payments).Include(b => b.Request).Include(b => b.SitterProfile)
+            .SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner, ct);
+        if (booking is null) return new(false, null, "Booking not found.");
+        if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(false, null, "This payment was already recorded.");
+        if (!CanPay(booking, clock.GetUtcNow())) return new(false, null, "Payment is available only for accepted care before its scheduled start.");
+        if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, null, "The booking changed. Review the latest details and try again.");
+        var amount = booking.TotalAmount - BookingRules.Paid(booking);
+        return await stripe.CreateIntentAsync(amount, booking.Currency, booking.Id, owner, booking.Request.Title, ct);
+    }
+    public async Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version, string? paymentIntentId = null)
     {
         if (token == Guid.Empty) return new(false, "Reload this page before recording payment.");
         return await Write(async () =>
@@ -99,11 +114,25 @@ public sealed class OwnerBookingService(PetSittingDbContext db, TimeProvider clo
             var booking = await db.PetBookings.Include(b => b.Payments).Include(b => b.SitterProfile).Include(b => b.Request).SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == owner);
             if (booking is null) return new(false, "Booking not found.", true);
             if (booking.Payments.Any(p => p.IdempotencyKey == token)) return new(true, "This payment was already recorded.");
+            // The Stripe webhook may have recorded this PaymentIntent if it completed after the browser closed.
+            if (stripe is { IsConfigured: true } && !string.IsNullOrWhiteSpace(paymentIntentId) &&
+                booking.Payments.Any(p => p.Provider == "Stripe" && p.ProviderTransactionId == paymentIntentId.Trim()))
+                return new(true, "This payment was already recorded.");
             if (!CanPay(booking, clock.GetUtcNow())) return new(false, "Payment is available only for accepted care before its scheduled start.");
             if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details before recording payment.");
             var amount = booking.TotalAmount - BookingRules.Paid(booking);
+            var provider = "Dummy";
+            var providerTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
+            if (stripe is { IsConfigured: true })
+            {
+                if (string.IsNullOrWhiteSpace(paymentIntentId)) return new(false, "Enter your card details to pay.");
+                var verified = await stripe.VerifyAsync(paymentIntentId.Trim(), booking.Id, owner, amount, booking.Currency);
+                if (!verified.Succeeded) return new(false, verified.Error ?? "The card payment could not be verified.");
+                provider = "Stripe";
+                providerTransactionId = paymentIntentId.Trim();
+            }
             var payment = new Payment { BookingId = booking.Id, PayerId = owner, Amount = amount, Currency = booking.Currency,
-                Status = PaymentStatus.Succeeded, Provider = "Dummy", ProviderTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant(), IdempotencyKey = token, PaidAtUtc = clock.GetUtcNow() };
+                Status = PaymentStatus.Succeeded, Provider = provider, ProviderTransactionId = providerTransactionId, IdempotencyKey = token, PaidAtUtc = clock.GetUtcNow() };
             db.Payments.Add(payment); booking.Status = BookingStatus.Confirmed;
             db.Notifications.Add(new() { Category = NotificationCategory.Payment, SourceKey = $"payment:{payment.Id}:{PaymentStatus.Succeeded}", UserId = booking.SitterProfile.UserId,
                 Title = "Payment received", Body = booking.Request.Title + " is paid and confirmed.", RelativeUrl = "/SitterBookings/Details/" + booking.Id });

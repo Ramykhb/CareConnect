@@ -4,28 +4,46 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using BabySitting.Data;
 using BabySitting.Models;
+using BabySitting.Services.Payments;
 using BabySitting.ViewModels;
 
 namespace BabySitting.Services.Bookings;
 
 public interface IParentPaymentService
 {
-    Task<BookingWriteResult> PayAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, CancellationToken ct = default);
+    Task<StripeIntentResult> CreatePaymentIntentAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, CancellationToken ct = default);
+    Task<BookingWriteResult> PayAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, string? paymentIntentId = null, CancellationToken ct = default);
     Task<BookingWriteResult> ReviewAsync(Guid parentId, Guid bookingId, int rating, string? comment, CancellationToken ct = default);
     Task<IReadOnlyList<Notification>> NotificationsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> MarkReadAsync(Guid userId, Guid? id, CancellationToken ct = default);
 }
 
-// The parent's side of a booking: a demo payment, a review after care, and in-app notifications.
+// The parent's side of a booking: a card payment, a review after care, and in-app notifications.
 // The one place where a parent pays for or reviews a booking (the care-request page and the bookings page both use it).
-public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider clock) : IParentPaymentService
+public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider clock, IStripePaymentService? stripe = null) : IParentPaymentService
 {
     public static bool CanPay(BabysittingBooking b, DateTimeOffset? now = null) => b.Status == BookingStatus.AwaitingPayment && !BookingRules.FullyPaid(b) && (now ?? DateTimeOffset.UtcNow) < b.StartsAtUtc;
     public static bool CanReview(BabysittingBooking b) => b.Status == BookingStatus.Completed && b.Review is null;
 
-    // Demo payment: no card details are collected and no money moves. The client token makes a
-    // double-clicked or resubmitted form record the payment only once (unique IdempotencyKey).
-    public async Task<BookingWriteResult> PayAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, CancellationToken ct = default)
+    // Creates the Stripe PaymentIntent whose client secret the browser confirms with Stripe Elements.
+    public async Task<StripeIntentResult> CreatePaymentIntentAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, CancellationToken ct = default)
+    {
+        if (clientToken == Guid.Empty) return new(false, null, "Reload the page and try again.");
+        if (stripe is not { IsConfigured: true }) return new(false, null, "Card payments are not configured.");
+        var booking = await db.BabysittingBookings.AsNoTracking().Include(b => b.Payments).Include(b => b.Request).Include(b => b.SitterProfile)
+            .SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == parentId, ct);
+        if (booking is null) return new(false, null, "Booking not found.");
+        if (booking.Payments.Any(p => p.IdempotencyKey == clientToken)) return new(false, null, "This payment was already recorded.");
+        if (!CanPay(booking, clock.GetUtcNow())) return new(false, null, BookingRules.FullyPaid(booking) ? "This booking is already paid." : "Payment is available only for accepted care before its scheduled start.");
+        if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, null, "The booking changed. Review the latest details and try again.");
+        var amount = booking.TotalAmount - BookingRules.Paid(booking);
+        return await stripe.CreateIntentAsync(amount, booking.Currency, booking.Id, parentId, booking.Request.Title, ct);
+    }
+
+    // Demo payment when Stripe is not configured: no card details are collected and no money moves.
+    // With Stripe configured the card is confirmed in the browser and the PaymentIntent is verified here.
+    // The client token makes a double-clicked or resubmitted form record the payment only once (unique IdempotencyKey).
+    public async Task<BookingWriteResult> PayAsync(Guid parentId, Guid bookingId, Guid clientToken, string? version, string? paymentIntentId = null, CancellationToken ct = default)
     {
         if (clientToken == Guid.Empty) return new(false, "Reload the page and try again.");
         try
@@ -38,12 +56,26 @@ public sealed class ParentPaymentService(BabySittingDbContext db, TimeProvider c
                     .SingleOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == parentId, ct);
                 if (booking is null) return new BookingWriteResult(false, "Booking not found.", true);
                 if (booking.Payments.Any(p => p.IdempotencyKey == clientToken)) return new(true, "This payment was already recorded.");
+                // The Stripe webhook may have recorded this PaymentIntent if it completed after the browser closed.
+                if (stripe is { IsConfigured: true } && !string.IsNullOrWhiteSpace(paymentIntentId) &&
+                    booking.Payments.Any(p => p.Provider == "Stripe" && p.ProviderTransactionId == paymentIntentId.Trim()))
+                    return new(true, "This payment was already recorded.");
                 if (!CanPay(booking, clock.GetUtcNow())) return new(false, BookingRules.FullyPaid(booking) ? "This booking is already paid." : "Payment is available only for accepted care before its scheduled start.");
                 if (booking.Request.Status != RequestStatus.Booked || !Matches(booking.RowVersion, version)) return new(false, "The booking changed. Review the latest details and try again.");
                 var now = clock.GetUtcNow();
                 var amount = booking.TotalAmount - BookingRules.Paid(booking);
+                var provider = "Dummy";
+                var providerTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
+                if (stripe is { IsConfigured: true })
+                {
+                    if (string.IsNullOrWhiteSpace(paymentIntentId)) return new(false, "Enter your card details to pay.");
+                    var verified = await stripe.VerifyAsync(paymentIntentId.Trim(), booking.Id, parentId, amount, booking.Currency, ct);
+                    if (!verified.Succeeded) return new(false, verified.Error ?? "The card payment could not be verified.");
+                    provider = "Stripe";
+                    providerTransactionId = paymentIntentId.Trim();
+                }
                 var payment = new Payment { BookingId = booking.Id, PayerId = parentId, Amount = amount, Currency = booking.Currency, Status = PaymentStatus.Succeeded,
-                    Provider = "Dummy", ProviderTransactionId = "DEMO-" + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant(), IdempotencyKey = clientToken, PaidAtUtc = now, CreatedAtUtc = now };
+                    Provider = provider, ProviderTransactionId = providerTransactionId, IdempotencyKey = clientToken, PaidAtUtc = now, CreatedAtUtc = now };
                 db.Payments.Add(payment);
                 booking.Status = BookingStatus.Confirmed;
                 // Same key as the sitter's notification feed, so the sitter is told once.

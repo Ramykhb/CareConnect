@@ -35,8 +35,25 @@ public sealed class ParentBookingsController(ParentBookingService bookings, User
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(Guid id, string? version, string? reason) => Finish(await bookings.CancelAsync(OwnerId, id, version, reason), id);
+    // Starts a Stripe card payment: the browser confirms the returned client secret with Stripe Elements.
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Pay(Guid id, Guid clientToken, string? version) => Finish(await bookings.PayAsync(OwnerId, id, clientToken, version), id);
+    public async Task<IActionResult> PayIntent(Guid id, Guid clientToken, string? version)
+    {
+        var result = await bookings.CreatePaymentIntentAsync(OwnerId, id, clientToken, version);
+        return result.Succeeded
+            ? Json(new { clientSecret = result.ClientSecret })
+            : Json(new { error = result.Error ?? "The card payment could not be started." });
+    }
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pay(Guid id, Guid clientToken, string? version, string? paymentIntentId = null)
+    {
+        var result = await bookings.PayAsync(OwnerId, id, clientToken, version, paymentIntentId);
+        if (result.NotFound) return NotFound();
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Message;
+        if (string.Equals(Request.Headers["X-Requested-With"], "fetch", StringComparison.OrdinalIgnoreCase))
+            return Json(new { ok = result.Succeeded, message = result.Message, redirect = Url.Action(nameof(Details), new { id }) });
+        return RedirectToAction(nameof(Details), new { id });
+    }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(Guid id, int rating, string? comment) => Finish(await bookings.ReviewAsync(OwnerId, id, rating, comment), id);
     [HttpPost, ValidateAntiForgeryToken]

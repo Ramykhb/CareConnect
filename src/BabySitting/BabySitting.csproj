@@ -7,6 +7,7 @@
     <PackageReference Include="PDFsharp-MigraDoc" />
     <EmbeddedResource Include="wwwroot/fonts/manrope-400.ttf" LogicalName="BabySitting.ReceiptFonts.manrope-400.ttf" />
     <EmbeddedResource Include="wwwroot/fonts/manrope-600.ttf" LogicalName="BabySitting.ReceiptFonts.manrope-600.ttf" />
+    <PackageReference Include="Stripe.net" />
     <ProjectReference Include="../CareConnect.Messaging/CareConnect.Messaging.csproj" />
     <ProjectReference Include="../CareConnect.Contracts/CareConnect.Contracts.csproj" />
     <ProjectReference Include="../CareConnect.Ai/CareConnect.Ai.csproj" />

@@ -10,7 +10,9 @@ public static class DevelopmentAiEnvironment
 {
     private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)
     {
-        "GROQ_API_KEY", "Ai:ApiKey", "Ai:Enabled", "Ai:Model", "Ai:TimeoutSeconds", "Ai:MaxCandidates", "Ai:AssistantTimeoutSeconds"
+        "GROQ_API_KEY", "Ai:ApiKey", "Ai:Enabled", "Ai:Model", "Ai:TimeoutSeconds", "Ai:MaxCandidates", "Ai:AssistantTimeoutSeconds",
+        "STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET",
+        "Stripe:SecretKey", "Stripe:PublishableKey", "Stripe:WebhookSecret"
     };
 
     // Local development convenience only. Never execute .env text or import unrelated credentials.

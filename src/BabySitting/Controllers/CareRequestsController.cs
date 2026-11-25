@@ -117,14 +117,27 @@ public sealed partial class CareRequestsController(BabySittingDbContext db, ICar
         return RedirectToAction(nameof(Details), new { id = requestId });
     }
 
-    // POST /CareRequests/Pay — demo payment for an accepted booking (no card details, no real charge).
+    // POST /CareRequests/PayIntent — starts a Stripe card payment for an accepted booking.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Pay(Guid requestId, Guid bookingId, Guid clientToken, string? version)
+    public async Task<IActionResult> PayIntent(Guid requestId, Guid bookingId, Guid clientToken, string? version)
     {
-        var result = await parentBookings.PayAsync(UserId, bookingId, clientToken, version);
+        var result = await parentBookings.CreatePaymentIntentAsync(UserId, bookingId, clientToken, version);
+        return result.Succeeded
+            ? Json(new { clientSecret = result.ClientSecret })
+            : Json(new { error = result.Error ?? "The card payment could not be started." });
+    }
+
+    // POST /CareRequests/Pay — records the confirmed card payment (or the local demo payment when Stripe is not configured).
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pay(Guid requestId, Guid bookingId, Guid clientToken, string? version, string? paymentIntentId = null)
+    {
+        var result = await parentBookings.PayAsync(UserId, bookingId, clientToken, version, paymentIntentId);
         if (result.NotFound) return NotFound();
         TempData[result.Succeeded ? "Success" : "Error"] = result.Message;
+        if (string.Equals(Request.Headers["X-Requested-With"], "fetch", StringComparison.OrdinalIgnoreCase))
+            return Json(new { ok = result.Succeeded, message = result.Message, redirect = Url.Action(nameof(Details), new { id = requestId }) });
         return RedirectToAction(nameof(Details), new { id = requestId });
     }
 

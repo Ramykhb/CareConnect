@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
+using PetSitting.Services.Payments;
 using PetSitting.ViewModels;
 
 namespace PetSitting.Services.Bookings;
@@ -13,7 +14,7 @@ public interface IBookingCancellationService
 
 // Either side may cancel a booking before care starts. The owner's cancel closes the request;
 // the sitter's cancel withdraws their offer and reopens the request for other sitters.
-public sealed class BookingCancellationService(PetSittingDbContext db, TimeProvider clock) : IBookingCancellationService
+public sealed class BookingCancellationService(PetSittingDbContext db, TimeProvider clock, IStripePaymentService? stripe = null) : IBookingCancellationService
 {
     public static bool CanCancel(PetBooking b) => b.Status is BookingStatus.Pending or BookingStatus.AwaitingPayment or BookingStatus.Confirmed;
 
@@ -38,10 +39,18 @@ public sealed class BookingCancellationService(PetSittingDbContext db, TimeProvi
                 booking.Status = BookingStatus.Cancelled;
                 booking.CancelledAtUtc = now;
                 booking.CancellationReason = (bySitter ? "Cancelled by the sitter: " : "Cancelled by the pet owner: ") + reason;
-                // Dummy payments only: no money moves, the records show what would be refunded.
+                // Demo payments are only relabelled; real card payments are refunded in Stripe first.
                 foreach (var p in booking.Payments)
                 {
-                    if (p.Status == PaymentStatus.Succeeded) p.Status = PaymentStatus.Refunded;
+                    if (p.Status == PaymentStatus.Succeeded)
+                    {
+                        if (p.Provider == "Stripe" && !string.IsNullOrWhiteSpace(p.ProviderTransactionId))
+                        {
+                            if (stripe is not null && await stripe.RefundAsync(p.ProviderTransactionId, ct)) p.Status = PaymentStatus.Refunded;
+                            else p.FailureReason = "Automatic refund failed. Refund this payment in Stripe.";
+                        }
+                        else p.Status = PaymentStatus.Refunded;
+                    }
                     else if (p.Status == PaymentStatus.Pending) { p.Status = PaymentStatus.Failed; p.FailureReason = "Booking cancelled."; }
                 }
                 if (bySitter)

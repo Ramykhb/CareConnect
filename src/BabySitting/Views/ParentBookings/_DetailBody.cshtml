@@ -1,5 +1,6 @@
 @using BabySitting.ViewModels
 @using BabySitting.Services.Bookings
+@inject BabySitting.Services.Payments.IStripePaymentService Stripe
 @model ParentBookingDetails
 @{
     var item = Model.Item;
@@ -87,9 +88,22 @@
     <section class="ob-card ob-payment-card @(paid ? "settled" : "")"><div class="ob-card-heading"><h2>Payment</h2><span class="ob-status @(Model.Refunded > 0 ? "muted" : paid ? "paid" : "pending")">@(Model.Refunded > 0 ? "Refunded" : b is null ? "Not due yet" : item.Bucket == "cancelled" ? "Closed" : paid ? b.TotalAmount == 0 ? "No payment due" : "Successful" : "Pending")</span></div><dl><div><dt>@(b is null ? "Initial offer" : "Care total")</dt><dd>@DashboardViewModel.Money(item.Amount, item.Currency)</dd></div><div><dt>Paid</dt><dd>@DashboardViewModel.Money(Model.Paid, item.Currency)</dd></div>@if (Model.Refunded > 0) { <div><dt>Refunded</dt><dd>@DashboardViewModel.Money(Model.Refunded, item.Currency)</dd></div> }<div class="ob-payment-total"><dt>@(paid ? "Total" : "Remaining")</dt><dd>@DashboardViewModel.Money(item.Bucket == "cancelled" ? 0 : paid ? item.Amount : Math.Max(0, item.Amount - Model.Paid - Model.Refunded), item.Currency)</dd></div></dl>
         @if (Model.CanPay)
         {
-            <form asp-action="Pay" method="post"><input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" /><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay now</button></form>
+            var due = Math.Max(0, item.Amount - Model.Paid - Model.Refunded);
+            @if (Stripe.IsConfigured)
+            {
+                <form asp-action="Pay" method="post" class="stripe-pay-form" data-stripe-pay data-publishable-key="@Stripe.PublishableKey" data-intent-url="@Url.Action("PayIntent")">
+                    <input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" />
+                    <div class="stripe-card-field" data-stripe-card></div>
+                    <p class="pay-error" data-stripe-error role="alert"></p>
+                    <button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(due, item.Currency)</button>
+                </form>
+            }
+            else
+            {
+                <form asp-action="Pay" method="post"><input type="hidden" name="id" value="@b!.Id" /><input type="hidden" name="version" value="@Model.Version" /><input type="hidden" name="clientToken" value="@Guid.NewGuid()" /><button type="submit" class="btn btn-dark"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay now</button></form>
+            }
         }
-        @if (b?.Payments.Any(p => p.Provider == "Dummy") == true) { <p class="ob-payment-footnote">Payment recorded.</p> }
+        @if (b?.Payments.Any(p => p.Status == PaymentStatus.Succeeded) == true) { <p class="ob-payment-footnote">Payment recorded.</p> }
     </section>
     <a class="ob-pet-summary" asp-controller="Family" asp-action="Index"><span class="ob-pet-art"><svg class="line-icon"><use href="#icon-family" /></svg></span><span><strong>@DashboardViewModel.Children(Model.Request)</strong><small>@(Model.Request.FamilyProfile?.HealthNotes is { Length: > 0 } ? "Health notes on file" : "View family profile")</small></span><svg class="line-icon"><use href="#icon-chevron" /></svg></a>
 </aside></div>

@@ -63,6 +63,15 @@ builder.Services.AddScoped<IFamilyRepository, FamilyRepository>();
 builder.Services.AddScoped<ICareRequestRepository, CareRequestRepository>();
 builder.Services.AddScoped<BabySitting.Services.Bookings.ParentBookingService>();
 builder.Services.AddScoped<BabySitting.Services.Bookings.IParentPaymentService, BabySitting.Services.Bookings.ParentPaymentService>();
+builder.Services.Configure<BabySitting.Services.Payments.StripeOptions>(builder.Configuration.GetSection("Stripe"));
+builder.Services.PostConfigure<BabySitting.Services.Payments.StripeOptions>(o =>
+{
+    if (string.IsNullOrWhiteSpace(o.SecretKey)) o.SecretKey = builder.Configuration["STRIPE_SECRET_KEY"] ?? "";
+    if (string.IsNullOrWhiteSpace(o.PublishableKey)) o.PublishableKey = builder.Configuration["STRIPE_PUBLISHABLE_KEY"] ?? "";
+    if (string.IsNullOrWhiteSpace(o.WebhookSecret)) o.WebhookSecret = builder.Configuration["STRIPE_WEBHOOK_SECRET"] ?? "";
+});
+builder.Services.AddScoped<BabySitting.Services.Payments.IStripePaymentService, BabySitting.Services.Payments.StripePaymentService>();
+builder.Services.AddScoped<BabySitting.Services.Payments.StripeWebhookHandler>();
 builder.Services.AddScoped<BabySitting.Services.Bookings.IBookingCancellationService, BabySitting.Services.Bookings.BookingCancellationService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterReportingService, BabySitting.Services.Portal.SitterReportingService>();
 builder.Services.AddScoped<BabySitting.Services.Portal.ISitterAccountService, BabySitting.Services.Portal.SitterAccountService>();

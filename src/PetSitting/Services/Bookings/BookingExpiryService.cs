@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PetSitting.Data;
 using PetSitting.Models;
+using PetSitting.Services.Payments;
 
 namespace PetSitting.Services.Bookings;
 
@@ -14,7 +15,7 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
     public static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
 
     // customerId limits the sweep to one customer's records (used by tests); the background job passes null.
-    public static async Task<int> RunAsync(PetSittingDbContext db, DateTimeOffset now, CancellationToken ct = default, Guid? customerId = null)
+    public static async Task<int> RunAsync(PetSittingDbContext db, DateTimeOffset now, CancellationToken ct = default, Guid? customerId = null, IStripePaymentService? stripe = null)
     {
         var changed = 0;
         var expired = await db.PetCareRequests.Include(r => r.Offers).Where(r => r.Status == RequestStatus.Open && r.StartsAtUtc <= now && (customerId == null || r.CustomerId == customerId)).Take(200).ToListAsync(ct);
@@ -40,7 +41,15 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
             if (booking.Request.Status == RequestStatus.Booked) booking.Request.Status = RequestStatus.Expired;
             foreach (var payment in booking.Payments)
             {
-                if (payment.Status == PaymentStatus.Succeeded) payment.Status = PaymentStatus.Refunded;
+                if (payment.Status == PaymentStatus.Succeeded)
+                {
+                    if (payment.Provider == "Stripe" && !string.IsNullOrWhiteSpace(payment.ProviderTransactionId))
+                    {
+                        if (stripe is not null && await stripe.RefundAsync(payment.ProviderTransactionId, ct)) payment.Status = PaymentStatus.Refunded;
+                        else payment.FailureReason = "Automatic refund failed. Refund this payment in Stripe.";
+                    }
+                    else payment.Status = PaymentStatus.Refunded;
+                }
                 else if (payment.Status == PaymentStatus.Pending) { payment.Status = PaymentStatus.Failed; payment.FailureReason = "Booking cancelled automatically."; }
             }
             var title = unpaid ? "Booking cancelled: not paid in time" : "Booking cancelled: care never started";
@@ -64,7 +73,8 @@ public sealed class BookingExpiryService(IServiceScopeFactory scopes, TimeProvid
             try
             {
                 using var scope = scopes.CreateScope();
-                var changed = await RunAsync(scope.ServiceProvider.GetRequiredService<PetSittingDbContext>(), clock.GetUtcNow(), stoppingToken);
+                var changed = await RunAsync(scope.ServiceProvider.GetRequiredService<PetSittingDbContext>(), clock.GetUtcNow(), stoppingToken,
+                    stripe: scope.ServiceProvider.GetRequiredService<IStripePaymentService>());
                 if (changed > 0) logger.LogInformation("Expired or cancelled {Count} overdue requests and bookings.", changed);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogWarning(ex, "Booking expiry check failed; it will retry."); }

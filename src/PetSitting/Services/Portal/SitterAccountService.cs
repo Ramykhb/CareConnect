@@ -138,3 +138,4 @@ public sealed class SitterAccountService(PetSittingDbContext db, UserManager<App
     }
     private static bool Matches(byte[] actual, string? value) { try { return actual.Length == 8 && actual.SequenceEqual(Convert.FromBase64String(value ?? "")); } catch (FormatException) { return false; } }
 }
+

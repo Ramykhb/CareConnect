@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="PDFsharp-MigraDoc" />
+    <PackageReference Include="Stripe.net" />
     <EmbeddedResource Include="wwwroot/fonts/manrope-400.ttf" LogicalName="PetSitting.ReceiptFonts.manrope-400.ttf" />
     <EmbeddedResource Include="wwwroot/fonts/manrope-600.ttf" LogicalName="PetSitting.ReceiptFonts.manrope-600.ttf" />
     <ProjectReference Include="../CareConnect.Messaging/CareConnect.Messaging.csproj" />

@@ -4,11 +4,12 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using BabySitting.Data;
 using BabySitting.Models;
+using BabySitting.Services.Payments;
 using BabySitting.ViewModels;
 
 namespace BabySitting.Services.Bookings;
 
-public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider clock)
+public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider clock, IStripePaymentService? stripe = null)
 {
     private static IQueryable<ChildcareRequest> Include(IQueryable<ChildcareRequest> query) => query.Include(r => r.FamilyProfile)
         .Include(r => r.Offers).ThenInclude(o => o.SitterProfile).ThenInclude(s => s.User)
@@ -91,8 +92,10 @@ public sealed class ParentBookingService(BabySittingDbContext db, TimeProvider c
         });
     }
     // Paying and reviewing live in ParentPaymentService only, so both pages follow the same rules.
-    public Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version) =>
-        new ParentPaymentService(db, clock).PayAsync(owner, bookingId, token, version);
+    public Task<StripeIntentResult> CreatePaymentIntentAsync(Guid owner, Guid bookingId, Guid token, string? version) =>
+        new ParentPaymentService(db, clock, stripe).CreatePaymentIntentAsync(owner, bookingId, token, version);
+    public Task<BookingWriteResult> PayAsync(Guid owner, Guid bookingId, Guid token, string? version, string? paymentIntentId = null) =>
+        new ParentPaymentService(db, clock, stripe).PayAsync(owner, bookingId, token, version, paymentIntentId);
     public Task<BookingWriteResult> ReviewAsync(Guid owner, Guid bookingId, int rating, string? comment) =>
         new ParentPaymentService(db, clock).ReviewAsync(owner, bookingId, rating, comment);
     public async Task<Guid?> AgainAsync(Guid owner, Guid id)

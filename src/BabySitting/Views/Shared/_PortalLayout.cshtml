@@ -2,6 +2,7 @@
 @using BabySitting.ViewModels
 @inject UserManager<ApplicationUser> UserManager
 @inject BabySitting.Services.Chat.IChatService Chat
+@inject BabySitting.Services.Payments.IStripePaymentService StripePay
 @{
     var portal = Model as IPortalViewModel;
     var user = portal?.Account ?? await UserManager.GetUserAsync(User);
@@ -113,6 +114,7 @@
         <script src="~/lib/microsoft-signalr/signalr.min.js" asp-append-version="true"></script>
         <script src="~/js/live-notifications.js" asp-append-version="true"></script>
     }
+    @if (StripePay.IsConfigured) { <script src="https://js.stripe.com/v3/"></script> }
     @await RenderSectionAsync("Scripts", required: false)
 <partial name="/Views/Shared/_RequestAssistant.cshtml" />
 </body>

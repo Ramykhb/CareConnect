@@ -1,6 +1,7 @@
 @using BabySitting.Models
 @using BabySitting.ViewModels
 @using BabySitting.Services.Bookings
+@inject BabySitting.Services.Payments.IStripePaymentService Stripe
 @model MyRequestItem
 @{
     var r = Model.Request;
@@ -56,12 +57,17 @@
             @if (b.Status == BookingStatus.Cancelled) { <p class="pet-meta">@b.CancellationReason</p> }
             @if (ParentPaymentService.CanPay(b))
             {
-                <form asp-action="Pay" method="post" class="pay-form">
+                <form asp-action="Pay" method="post" class="pay-form@(Stripe.IsConfigured ? " stripe-pay-form" : "")" data-stripe-pay="@(Stripe.IsConfigured ? "true" : null)" data-publishable-key="@(Stripe.IsConfigured ? Stripe.PublishableKey : null)" data-intent-url="@(Stripe.IsConfigured ? Url.Action("PayIntent") : null)">
                     <input type="hidden" name="requestId" value="@r.Id" />
                     <input type="hidden" name="bookingId" value="@b.Id" />
                     <input type="hidden" name="clientToken" value="@Guid.NewGuid()" />
                     <input type="hidden" name="version" value="@Convert.ToBase64String(b.RowVersion)" />
                     <p class="pet-meta">Your sitter accepted. Pay to confirm the booking.</p>
+                    @if (Stripe.IsConfigured)
+                    {
+                        <div class="stripe-card-field" data-stripe-card></div>
+                        <p class="pay-error" data-stripe-error role="alert"></p>
+                    }
                     <button type="submit" class="btn btn-lime"><svg class="line-icon"><use href="#icon-lock" /></svg>Pay @DashboardViewModel.Money(b.TotalAmount - BookingRules.Paid(b), b.Currency)</button>
                 </form>
             }
@@ -107,4 +113,4 @@
     </section>
     </aside>
 </div>
-@section Scripts { <script src="~/js/parent-requests.js" asp-append-version="true"></script> }
+@section Scripts { <script src="~/js/parent-requests.js" asp-append-version="true"></script><script src="~/js/stripe-pay.js" asp-append-version="true"></script> }

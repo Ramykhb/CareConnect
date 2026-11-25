@@ -28,7 +28,9 @@
     if (!target) return;
     let failures = 0;
     const refresh = async () => {
-        const editing = detail && (dirty || detail.contains(document.activeElement) || detail.querySelector('details[open]'));
+        // Never replace the details while a Stripe card form is on the page: replacing the DOM detaches the
+        // mounted Card Element (its iframe), so confirmCardPayment would see an empty card.
+        const editing = detail && (dirty || detail.contains(document.activeElement) || detail.querySelector('details[open]') || detail.querySelector('[data-stripe-pay]'));
         if (!document.hidden && !editing && !(list && list.contains(document.activeElement))) {
             try {
                 const response = await fetch(target.dataset.refreshUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
